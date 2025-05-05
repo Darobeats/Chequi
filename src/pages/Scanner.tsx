@@ -42,7 +42,7 @@ const Scanner = () => {
       </div>
       
       <footer className="py-4 text-center text-gray-500 text-xs">
-        &copy; {new Date().getFullYear()} Evento QR Access - Todos los derechos reservados
+        &copy; {new Date().getFullYear()} Chequi - Todos los derechos reservados - Hecho en Colombia con ❤️
       </footer>
     </div>
   );

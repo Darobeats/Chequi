@@ -51,7 +51,7 @@ const Index = () => {
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md p-8 space-y-8 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-dorado mb-2">Evento QR</h1>
+            <h1 className="text-3xl font-bold text-dorado mb-2">Chequi</h1>
             <p className="text-gray-400">Sistema de control de acceso para eventos</p>
           </div>
           
@@ -90,7 +90,7 @@ const Index = () => {
       </div>
       
       <footer className="py-4 text-center text-gray-500 text-xs">
-        &copy; {new Date().getFullYear()} Evento QR Access - Todos los derechos reservados
+        &copy; {new Date().getFullYear()} Chequi - Todos los derechos reservados - Hecho en Colombia con ❤️
       </footer>
     </div>
   );

@@ -8,7 +8,7 @@ interface HeaderProps {
   title?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ title = 'EVENTO QR ACCESS' }) => {
+const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
   const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
 
