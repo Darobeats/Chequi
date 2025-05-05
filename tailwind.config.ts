@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,11 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Custom color palette
+				empresarial: '#0A0A0A',
+				dorado: '#D4AF37',
+				hueso: '#F8F9FA',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -70,25 +75,29 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' }
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' }
+				},
+				'scan-line': {
+					'0%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(300px)' },
+					'100%': { transform: 'translateY(0)' }
+				},
+				'qr-pulse': {
+					'0%': { boxShadow: '0 0 0 0 rgba(212, 175, 55, 0.7)' },
+					'70%': { boxShadow: '0 0 0 15px rgba(212, 175, 55, 0)' },
+					'100%': { boxShadow: '0 0 0 0 rgba(212, 175, 55, 0)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'scan-line': 'scan-line 2s ease-in-out infinite',
+				'qr-pulse': 'qr-pulse 2s infinite'
 			}
 		}
 	},
