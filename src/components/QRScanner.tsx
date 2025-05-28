@@ -1,53 +1,95 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from "@/components/ui/sonner";
-import { mockAttendees } from '@/utils/mockData';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useControlTypes, useProcessQRCode } from '@/hooks/useSupabaseData';
+import { Ticket, Utensils, Wine, Crown } from 'lucide-react';
 
 const QRScanner: React.FC = () => {
   const [scanning, setScanning] = useState(false);
-  const [lastResult, setLastResult] = useState<null | { success: boolean; attendee?: any }>(null);
+  const [selectedControlType, setSelectedControlType] = useState<string>('');
+  const [lastResult, setLastResult] = useState<null | { 
+    success: boolean; 
+    attendee?: any;
+    usageCount?: number;
+    controlType?: string;
+  }>(null);
 
-  // Mock QR scanning functionality
-  // In a real app, this would use react-qr-scanner or a similar library
+  const { data: controlTypes, isLoading: loadingControlTypes } = useControlTypes();
+  const processQRMutation = useProcessQRCode();
+
+  // Set default control type to "ingreso"
+  useEffect(() => {
+    if (controlTypes && controlTypes.length > 0 && !selectedControlType) {
+      const ingresoControl = controlTypes.find(ct => ct.name === 'ingreso');
+      if (ingresoControl) {
+        setSelectedControlType(ingresoControl.id);
+      }
+    }
+  }, [controlTypes, selectedControlType]);
+
+  const getControlIcon = (iconName: string | null) => {
+    switch (iconName) {
+      case 'ticket': return <Ticket className="w-6 h-6" />;
+      case 'utensils': return <Utensils className="w-6 h-6" />;
+      case 'wine': return <Wine className="w-6 h-6" />;
+      case 'crown': return <Crown className="w-6 h-6" />;
+      default: return <Ticket className="w-6 h-6" />;
+    }
+  };
+
   const startScanning = () => {
+    if (!selectedControlType) {
+      toast.error('Por favor selecciona un tipo de control');
+      return;
+    }
+
     setScanning(true);
     
-    // For demo purposes, let's simulate scanning after a delay
+    // Simular escaneo - en producción esto sería con una librería de QR
     setTimeout(() => {
       simulateScan();
     }, 2000);
   };
 
   const simulateScan = () => {
-    // Randomly select valid or invalid QR code for demo
-    const randomIndex = Math.floor(Math.random() * mockAttendees.length);
-    const scannedAttendee = mockAttendees[randomIndex];
+    // Lista de tickets disponibles para demo
+    const availableTickets = [
+      'CLIENT-3A9B-2024',
+      'CLIENT-7C2D-2024', 
+      'CLIENT-1F5G-2024',
+      'CLIENT-8H3J-2024',
+      'CLIENT-5K9L-2024'
+    ];
     
-    processQRCode(scannedAttendee.ticketID);
+    const randomTicket = availableTickets[Math.floor(Math.random() * availableTickets.length)];
+    processQRCode(randomTicket);
   };
 
-  const processQRCode = (code: string) => {
-    // Find the attendee with the matching ticket ID
-    const attendee = mockAttendees.find(a => a.ticketID === code);
-    
-    if (!attendee) {
+  const processQRCode = async (ticketId: string) => {
+    try {
+      const result = await processQRMutation.mutateAsync({
+        ticketId,
+        controlType: selectedControlType
+      });
+
+      const selectedControl = controlTypes?.find(ct => ct.id === selectedControlType);
+      
+      setLastResult({ 
+        success: true, 
+        attendee: result.attendee,
+        usageCount: result.usageCount,
+        controlType: selectedControl?.name 
+      });
+      
+      toast.success('Control registrado exitosamente', {
+        description: `${selectedControl?.description} - ${result.attendee.name}`
+      });
+    } catch (error: any) {
       setLastResult({ success: false });
-      toast.error('QR inválido', {
-        description: 'El código QR no corresponde a ningún ticket registrado.'
-      });
-      return;
-    }
-    
-    if (attendee.status === 'used') {
-      setLastResult({ success: false, attendee });
-      toast.error('Acceso denegado', {
-        description: 'Este ticket ya ha sido utilizado.'
-      });
-    } else {
-      // In a real app, we would update the database here
-      setLastResult({ success: true, attendee });
-      toast.success('Acceso concedido', {
-        description: `Bienvenido, ${attendee.nombre}`
+      toast.error('Error al procesar el código QR', {
+        description: error.message
       });
     }
     
@@ -61,7 +103,7 @@ const QRScanner: React.FC = () => {
     if (lastResult) {
       timer = setTimeout(() => {
         setLastResult(null);
-      }, 3000);
+      }, 4000);
     }
     
     return () => {
@@ -69,8 +111,38 @@ const QRScanner: React.FC = () => {
     };
   }, [lastResult]);
 
+  if (loadingControlTypes) {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <p className="text-hueso">Cargando tipos de control...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center">
+      <div className="w-full mb-6">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Tipo de Control
+        </label>
+        <Select value={selectedControlType} onValueChange={setSelectedControlType}>
+          <SelectTrigger className="bg-gray-800 border-gray-700 text-hueso">
+            <SelectValue placeholder="Selecciona el tipo de control" />
+          </SelectTrigger>
+          <SelectContent className="bg-gray-800 border-gray-700">
+            {controlTypes?.map((controlType) => (
+              <SelectItem key={controlType.id} value={controlType.id} className="text-hueso">
+                <div className="flex items-center gap-2">
+                  {getControlIcon(controlType.icon)}
+                  <span className="capitalize">{controlType.name}</span>
+                  <span className="text-xs text-gray-400">- {controlType.description}</span>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="w-80 h-80 scan-border rounded-md mb-6">
         {scanning && <div className="scan-line"></div>}
         <div className="flex flex-col items-center justify-center h-full">
@@ -79,6 +151,14 @@ const QRScanner: React.FC = () => {
               <div className="text-center mb-4">
                 <p className="text-lg font-medium">Acerque su código QR al marco</p>
                 <p className="text-sm text-gray-400">Coloque el código QR dentro del área marcada</p>
+                {selectedControlType && (
+                  <div className="mt-2 flex items-center justify-center gap-2 text-dorado">
+                    {getControlIcon(controlTypes?.find(ct => ct.id === selectedControlType)?.icon || null)}
+                    <span className="capitalize">
+                      {controlTypes?.find(ct => ct.id === selectedControlType)?.name}
+                    </span>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -86,6 +166,9 @@ const QRScanner: React.FC = () => {
           {scanning && (
             <div className="text-center">
               <p className="text-lg font-medium animate-pulse">Escaneando...</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Control: {controlTypes?.find(ct => ct.id === selectedControlType)?.name}
+              </p>
             </div>
           )}
           
@@ -95,12 +178,17 @@ const QRScanner: React.FC = () => {
                 {lastResult.success ? '✓' : '✗'}
               </div>
               <p className="text-lg font-medium">
-                {lastResult.success ? 'Acceso Concedido' : 'Acceso Denegado'}
+                {lastResult.success ? 'Control Registrado' : 'Control Denegado'}
               </p>
               {lastResult.attendee && (
-                <p className="text-sm">
-                  {lastResult.attendee.nombre} - {lastResult.attendee.empresa}
-                </p>
+                <>
+                  <p className="text-sm mt-1">
+                    {lastResult.attendee.name} - {lastResult.attendee.company}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {lastResult.controlType} - Uso #{lastResult.usageCount}
+                  </p>
+                </>
               )}
             </div>
           )}
@@ -108,21 +196,22 @@ const QRScanner: React.FC = () => {
       </div>
       
       {!scanning && !lastResult && (
-        <button
-          className="px-6 py-3 bg-dorado text-empresarial font-semibold rounded-md hover:bg-dorado/90 transition-colors"
+        <Button
+          className="px-6 py-3 bg-dorado text-empresarial font-semibold hover:bg-dorado/90 disabled:opacity-50"
           onClick={startScanning}
+          disabled={!selectedControlType || processQRMutation.isPending}
         >
           Iniciar Escaneo
-        </button>
+        </Button>
       )}
       
       {scanning && (
-        <button
-          className="px-6 py-3 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700 transition-colors"
+        <Button
+          className="px-6 py-3 bg-red-600 text-white font-semibold hover:bg-red-700"
           onClick={() => setScanning(false)}
         >
           Cancelar Escaneo
-        </button>
+        </Button>
       )}
     </div>
   );

@@ -9,7 +9,182 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      attendees: {
+        Row: {
+          category_id: string
+          company: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          status: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          status?: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          status?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendees_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      category_controls: {
+        Row: {
+          category_id: string
+          control_type_id: string
+          created_at: string
+          id: string
+          max_uses: number | null
+        }
+        Insert: {
+          category_id: string
+          control_type_id: string
+          created_at?: string
+          id?: string
+          max_uses?: number | null
+        }
+        Update: {
+          category_id?: string
+          control_type_id?: string
+          created_at?: string
+          id?: string
+          max_uses?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_controls_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "category_controls_control_type_id_fkey"
+            columns: ["control_type_id"]
+            isOneToOne: false
+            referencedRelation: "control_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      control_types: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      control_usage: {
+        Row: {
+          attendee_id: string
+          control_type_id: string
+          device: string | null
+          id: string
+          notes: string | null
+          used_at: string
+        }
+        Insert: {
+          attendee_id: string
+          control_type_id: string
+          device?: string | null
+          id?: string
+          notes?: string | null
+          used_at?: string
+        }
+        Update: {
+          attendee_id?: string
+          control_type_id?: string
+          device?: string | null
+          id?: string
+          notes?: string | null
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "control_usage_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "attendees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "control_usage_control_type_id_fkey"
+            columns: ["control_type_id"]
+            isOneToOne: false
+            referencedRelation: "control_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
