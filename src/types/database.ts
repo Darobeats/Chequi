@@ -49,3 +49,25 @@ export interface ControlUsage {
   control_type?: ControlType;
   attendee?: Attendee;
 }
+
+export interface EventConfig {
+  id: string;
+  event_name: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  logo_url: string | null;
+  event_image_url: string | null;
+  font_family: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+export interface AdminUser {
+  id: string;
+  user_id: string;
+  email: string;
+  role: string;
+  created_at: string;
+}

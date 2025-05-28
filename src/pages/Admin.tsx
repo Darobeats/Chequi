@@ -6,9 +6,10 @@ import Header from '@/components/Header';
 import AttendeeList from '@/components/AttendeeList';
 import ControlAnalytics from '@/components/ControlAnalytics';
 import ExportButton from '@/components/ExportButton';
+import EventConfig from '@/components/EventConfig';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
-import { BarChart3, Users, FileText } from 'lucide-react';
+import { BarChart3, Users, FileText, Settings } from 'lucide-react';
 
 const Admin = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -96,7 +97,7 @@ const Admin = () => {
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-gray-900/50 border border-gray-800">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-900/50 border border-gray-800">
             <TabsTrigger 
               value="analytics" 
               className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -117,6 +118,13 @@ const Admin = () => {
             >
               <FileText className="h-4 w-4" />
               Resumen
+            </TabsTrigger>
+            <TabsTrigger 
+              value="config" 
+              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+            >
+              <Settings className="h-4 w-4" />
+              Configuración
             </TabsTrigger>
           </TabsList>
 
@@ -170,6 +178,10 @@ const Admin = () => {
                 </div>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="config" className="space-y-6">
+            <EventConfig />
           </TabsContent>
         </Tabs>
       </div>

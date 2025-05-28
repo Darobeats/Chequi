@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       attendees: {
         Row: {
           category_id: string
@@ -161,6 +185,48 @@ export type Database = {
           },
         ]
       }
+      event_configs: {
+        Row: {
+          accent_color: string | null
+          created_at: string
+          event_image_url: string | null
+          event_name: string
+          font_family: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string
+          event_image_url?: string | null
+          event_name: string
+          font_family?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string
+          event_image_url?: string | null
+          event_name?: string
+          font_family?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ticket_categories: {
         Row: {
           color: string | null
@@ -190,7 +256,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_active_event_config: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          event_name: string
+          primary_color: string
+          secondary_color: string
+          accent_color: string
+          logo_url: string
+          event_image_url: string
+          font_family: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
