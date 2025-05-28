@@ -1,11 +1,14 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/Header';
 import AttendeeList from '@/components/AttendeeList';
+import ControlAnalytics from '@/components/ControlAnalytics';
 import ExportButton from '@/components/ExportButton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
+import { BarChart3, Users, FileText } from 'lucide-react';
 
 const Admin = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -91,49 +94,84 @@ const Admin = () => {
           </div>
         </div>
 
-        {/* Control Types Usage */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
-            <h3 className="text-xl font-semibold text-dorado mb-4">Uso por Tipo de Control</h3>
-            <div className="space-y-3">
-              {usageByControlType.map((usage) => (
-                <div key={usage.name} className="flex justify-between items-center">
-                  <span className="text-hueso capitalize">{usage.name}</span>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: usage.color || '#64748B' }}
-                    ></div>
-                    <span className="text-dorado font-medium">{usage.count}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Tabs Navigation */}
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-gray-900/50 border border-gray-800">
+            <TabsTrigger 
+              value="analytics" 
+              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Análisis
+            </TabsTrigger>
+            <TabsTrigger 
+              value="attendees" 
+              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+            >
+              <Users className="h-4 w-4" />
+              Asistentes
+            </TabsTrigger>
+            <TabsTrigger 
+              value="summary" 
+              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+            >
+              <FileText className="h-4 w-4" />
+              Resumen
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
-            <h3 className="text-xl font-semibold text-dorado mb-4">Asistentes por Categoría</h3>
-            <div className="space-y-3">
-              {attendeesByCategory.map((category) => (
-                <div key={category.name} className="flex justify-between items-center">
-                  <span className="text-hueso capitalize">{category.name}</span>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: category.color || '#64748B' }}
-                    ></div>
-                    <span className="text-dorado font-medium">{category.count}</span>
-                  </div>
-                </div>
-              ))}
+          <TabsContent value="analytics" className="space-y-6">
+            <ControlAnalytics />
+          </TabsContent>
+
+          <TabsContent value="attendees" className="space-y-6">
+            <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
+              <h2 className="text-xl font-semibold text-dorado mb-4">Lista de Asistentes</h2>
+              <AttendeeList />
             </div>
-          </div>
-        </div>
-        
-        <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
-          <h2 className="text-xl font-semibold text-dorado mb-4">Lista de Asistentes</h2>
-          <AttendeeList />
-        </div>
+          </TabsContent>
+
+          <TabsContent value="summary" className="space-y-6">
+            {/* Control Types Usage */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
+                <h3 className="text-xl font-semibold text-dorado mb-4">Uso por Tipo de Control</h3>
+                <div className="space-y-3">
+                  {usageByControlType.map((usage) => (
+                    <div key={usage.name} className="flex justify-between items-center">
+                      <span className="text-hueso capitalize">{usage.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: usage.color || '#64748B' }}
+                        ></div>
+                        <span className="text-dorado font-medium">{usage.count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
+                <h3 className="text-xl font-semibold text-dorado mb-4">Asistentes por Categoría</h3>
+                <div className="space-y-3">
+                  {attendeesByCategory.map((category) => (
+                    <div key={category.name} className="flex justify-between items-center">
+                      <span className="text-hueso capitalize">{category.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: category.color || '#64748B' }}
+                        ></div>
+                        <span className="text-dorado font-medium">{category.count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
