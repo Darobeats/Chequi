@@ -40,6 +40,7 @@ const AttendeeList: React.FC = () => {
       return (
         attendee.name.toLowerCase().includes(searchTermLower) ||
         attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
+        attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
         attendee.company?.toLowerCase().includes(searchTermLower) ||
         attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
       );
@@ -75,7 +76,7 @@ const AttendeeList: React.FC = () => {
         </div>
         <Input
           type="search"
-          placeholder="Buscar por nombre, ID, empresa o categoría..."
+          placeholder="Buscar por nombre, ID, QR code, empresa o categoría..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-xs bg-empresarial border-gray-800 text-hueso"
@@ -89,6 +90,7 @@ const AttendeeList: React.FC = () => {
               <TableHead className="text-hueso">Nombre</TableHead>
               <TableHead className="text-hueso">Empresa</TableHead>
               <TableHead className="text-hueso">Categoría</TableHead>
+              <TableHead className="text-hueso">Código QR</TableHead>
               <TableHead className="text-hueso">Último Uso</TableHead>
               <TableHead className="text-hueso">Total Usos</TableHead>
               <TableHead className="text-hueso">Ticket ID</TableHead>
@@ -106,6 +108,13 @@ const AttendeeList: React.FC = () => {
                   >
                     {attendee.ticket_category?.name || 'N/A'}
                   </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs text-gray-300">
+                  {attendee.qr_code ? (
+                    <span className="bg-gray-800 px-2 py-1 rounded">{attendee.qr_code}</span>
+                  ) : (
+                    <span className="text-red-400">No generado</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-gray-300">
                   {attendee.formattedLastUsage}
@@ -130,7 +139,7 @@ const AttendeeList: React.FC = () => {
             ))}
             {filteredAttendees.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-400">
                   No se encontraron asistentes que coincidan con la búsqueda
                 </TableCell>
               </TableRow>

@@ -34,6 +34,7 @@ export interface Attendee {
   company: string | null;
   category_id: string;
   status: 'valid' | 'used' | 'blocked';
+  qr_code: string | null;
   created_at: string;
   updated_at: string;
   ticket_category?: TicketCategory;
@@ -70,4 +71,13 @@ export interface AdminUser {
   email: string;
   role: string;
   created_at: string;
+}
+
+export interface QRTemplate {
+  id: string;
+  category_id: string;
+  prefix: string;
+  pattern: string;
+  created_at: string;
+  ticket_category?: TicketCategory;
 }

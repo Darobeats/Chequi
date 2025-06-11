@@ -41,6 +41,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          qr_code: string | null
           status: string
           ticket_id: string
           updated_at: string
@@ -52,6 +53,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          qr_code?: string | null
           status?: string
           ticket_id: string
           updated_at?: string
@@ -63,6 +65,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          qr_code?: string | null
           status?: string
           ticket_id?: string
           updated_at?: string
@@ -227,6 +230,38 @@ export type Database = {
         }
         Relationships: []
       }
+      qr_templates: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          pattern: string
+          prefix: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          pattern?: string
+          prefix?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          pattern?: string
+          prefix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_categories: {
         Row: {
           color: string | null
@@ -256,6 +291,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_qr_code: {
+        Args: { p_category_id: string }
+        Returns: string
+      }
       get_active_event_config: {
         Args: Record<PropertyKey, never>
         Returns: {

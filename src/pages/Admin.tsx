@@ -4,12 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/Header';
 import AttendeeList from '@/components/AttendeeList';
+import AttendeesManager from '@/components/AttendeesManager';
 import ControlAnalytics from '@/components/ControlAnalytics';
 import ExportButton from '@/components/ExportButton';
 import EventConfig from '@/components/EventConfig';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
-import { BarChart3, Users, FileText, Settings } from 'lucide-react';
+import { BarChart3, Users, FileText, Settings, UserPlus } from 'lucide-react';
 
 const Admin = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -41,6 +42,7 @@ const Admin = () => {
   const totalAttendees = attendees.length;
   const totalUsages = controlUsage.length;
   const attendeesWithUsage = new Set(controlUsage.map(usage => usage.attendee_id)).size;
+  const attendeesWithQR = attendees.filter(a => a.qr_code).length;
 
   // Usage by control type
   const usageByControlType = controlTypes.map(controlType => {
@@ -73,10 +75,15 @@ const Admin = () => {
         </div>
         
         {/* Main Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow card-hover">
             <h3 className="text-hueso text-lg font-medium mb-1">Total Asistentes</h3>
             <p className="text-3xl font-bold text-dorado">{totalAttendees}</p>
+          </div>
+          
+          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow card-hover">
+            <h3 className="text-hueso text-lg font-medium mb-1">Con QR Generado</h3>
+            <p className="text-3xl font-bold text-dorado">{attendeesWithQR}</p>
           </div>
           
           <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow card-hover">
@@ -97,7 +104,7 @@ const Admin = () => {
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-gray-900/50 border border-gray-800">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-900/50 border border-gray-800">
             <TabsTrigger 
               value="analytics" 
               className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -111,6 +118,13 @@ const Admin = () => {
             >
               <Users className="h-4 w-4" />
               Asistentes
+            </TabsTrigger>
+            <TabsTrigger 
+              value="management" 
+              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+            >
+              <UserPlus className="h-4 w-4" />
+              Gestión QR
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -136,6 +150,12 @@ const Admin = () => {
             <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
               <h2 className="text-xl font-semibold text-dorado mb-4">Lista de Asistentes</h2>
               <AttendeeList />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="management" className="space-y-6">
+            <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
+              <AttendeesManager />
             </div>
           </TabsContent>
 
