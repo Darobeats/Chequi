@@ -9,7 +9,7 @@ import { toast } from '@/components/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Auth = () => {
-  const { signIn, signUp, loading } = useSupabaseAuth();
+  const { user, signIn, signUp, loading } = useSupabaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -17,11 +17,10 @@ const Auth = () => {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    const { user } = useSupabaseAuth();
     if (user && !loading) {
       navigate('/dashboard');
     }
-  }, [loading, navigate]);
+  }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
