@@ -291,6 +291,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auth_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      auth_uid: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_qr_code: {
         Args: { p_category_id: string }
         Returns: string
@@ -307,6 +315,10 @@ export type Database = {
           event_image_url: string
           font_family: string
         }[]
+      }
+      is_authenticated: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
     }
     Enums: {
