@@ -1,21 +1,25 @@
 
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import Header from '@/components/Header';
 import QRScanner from '@/components/QRScanner';
 
 const Scanner = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, loading } = useSupabaseAuth();
+  const { canAccessScanner, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated && !loading) {
-      navigate('/');
+    if (!user && !loading) {
+      navigate('/auth');
+    } else if (user && !roleLoading && !canAccessScanner) {
+      navigate('/dashboard');
     }
-  }, [isAuthenticated, loading, navigate]);
+  }, [user, loading, canAccessScanner, roleLoading, navigate]);
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-empresarial flex flex-col">
         <Header title="SCANNER" />

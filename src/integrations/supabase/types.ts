@@ -230,6 +230,44 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          attendee_id: string | null
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+        }
+        Insert: {
+          attendee_id?: string | null
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Update: {
+          attendee_id?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "attendees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       qr_templates: {
         Row: {
           category_id: string
@@ -316,13 +354,21 @@ export type Database = {
           font_family: string
         }[]
       }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      has_role: {
+        Args: { required_role: Database["public"]["Enums"]["user_role"] }
+        Returns: boolean
+      }
       is_authenticated: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "control" | "attendee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -437,6 +483,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["admin", "control", "attendee"],
+    },
   },
 } as const
