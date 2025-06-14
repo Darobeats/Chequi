@@ -7,6 +7,8 @@ type UserRole = Database['public']['Enums']['user_role'];
 export const useUserRole = () => {
   const { profile, loading } = useSupabaseAuth();
   
+  console.log('useUserRole - profile:', profile, 'loading:', loading);
+  
   const role = profile?.role || null;
   
   const isAdmin = role === 'admin';

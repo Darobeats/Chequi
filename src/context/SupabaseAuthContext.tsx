@@ -37,6 +37,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -48,6 +49,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return null;
       }
 
+      console.log('Profile fetched successfully:', data);
       return data as Profile;
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -68,6 +70,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
           // Defer profile fetching to prevent deadlocks
           setTimeout(async () => {
             const userProfile = await fetchProfile(session.user.id);
+            console.log('Setting profile:', userProfile);
             setProfile(userProfile);
             setLoading(false);
           }, 0);
@@ -80,12 +83,14 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       if (session) {
         setSession(session);
         setUser(session.user);
         
         setTimeout(async () => {
           const userProfile = await fetchProfile(session.user.id);
+          console.log('Setting initial profile:', userProfile);
           setProfile(userProfile);
           setLoading(false);
         }, 0);
