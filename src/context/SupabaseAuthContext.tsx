@@ -35,46 +35,10 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const fetchProfile = async (userId: string, retryCount = 0) => {
+  const fetchProfile = async (userId: string) => {
     try {
-      console.log(`Attempting to fetch profile for user: ${userId} (attempt ${retryCount + 1})`);
+      console.log(`Fetching profile for user: ${userId}`);
       
-      // First check if the profile exists at all
-      const { data: profileExists, error: checkError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('Error checking if profile exists:', checkError);
-        throw checkError;
-      }
-
-      if (!profileExists) {
-        console.log('Profile does not exist for user, creating one...');
-        // Profile doesn't exist, this shouldn't happen due to trigger but let's create it
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              email: userData.user.email || '',
-              full_name: userData.user.user_metadata?.full_name || userData.user.email || '',
-              role: 'attendee' as UserRole
-            });
-          
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-            throw insertError;
-          }
-          
-          console.log('Profile created successfully, fetching again...');
-        }
-      }
-
-      // Now fetch the complete profile
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -83,14 +47,6 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (error) {
         console.error('Error fetching profile:', error);
-        
-        // If it's a PGRST116 error (no rows returned), retry a few times
-        if (error.code === 'PGRST116' && retryCount < 3) {
-          console.log('No profile found, retrying in 1 second...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          return fetchProfile(userId, retryCount + 1);
-        }
-        
         throw error;
       }
 

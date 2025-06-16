@@ -33,13 +33,6 @@ const Dashboard = () => {
       return;
     }
 
-    // Si hay usuario pero no hay rol después de que termine la carga, hay un problema
-    if (user && !role && !loading && !roleLoading) {
-      console.log('User found but no role after loading completed - this indicates a profile issue');
-      // Mostrar un error o redirigir a una página de error
-      return;
-    }
-
     // Si hay usuario y rol, redirigir según el rol
     if (user && role) {
       console.log('User and role found, redirecting based on role:', role);
