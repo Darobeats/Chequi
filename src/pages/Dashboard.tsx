@@ -22,6 +22,7 @@ const Dashboard = () => {
 
     // Esperar a que termine la carga de autenticación y rol
     if (loading || roleLoading) {
+      console.log('Still loading, waiting...');
       return;
     }
 
@@ -32,9 +33,10 @@ const Dashboard = () => {
       return;
     }
 
-    // Si hay usuario pero no hay rol, esperar un poco más
-    if (user && !role) {
-      console.log('User found but no role, waiting...');
+    // Si hay usuario pero no hay rol después de que termine la carga, hay un problema
+    if (user && !role && !loading && !roleLoading) {
+      console.log('User found but no role after loading completed - this indicates a profile issue');
+      // Mostrar un error o redirigir a una página de error
       return;
     }
 
@@ -57,7 +59,7 @@ const Dashboard = () => {
   }, [user, role, loading, roleLoading, isAdmin, isControl, isAttendee, navigate]);
 
   // Mostrar estado de carga mientras se resuelve la autenticación
-  if (loading || roleLoading || (user && !role)) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-empresarial flex items-center justify-center">
         <div className="text-center">
@@ -66,8 +68,27 @@ const Dashboard = () => {
           <p className="text-gray-400 text-sm">
             {loading && 'Verificando autenticación...'}
             {!loading && roleLoading && 'Cargando perfil...'}
-            {!loading && !roleLoading && user && !role && 'Configurando usuario...'}
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si hay usuario pero no hay rol después de cargar, mostrar error
+  if (user && !role) {
+    return (
+      <div className="min-h-screen bg-empresarial flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-2">Error al cargar el perfil de usuario</p>
+          <p className="text-gray-400 text-sm mb-4">
+            No se pudo obtener la información del perfil. Revisa los logs de la consola.
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-dorado text-empresarial px-4 py-2 rounded hover:bg-dorado/80"
+          >
+            Reintentar
+          </button>
         </div>
       </div>
     );
