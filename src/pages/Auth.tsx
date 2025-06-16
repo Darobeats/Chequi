@@ -17,13 +17,18 @@ const Auth = () => {
   const navigate = useNavigate();
 
   React.useEffect(() => {
+    console.log('Auth page - user:', !!user, 'loading:', loading);
     if (user && !loading) {
+      console.log('User found in Auth page, redirecting to dashboard');
       navigate('/dashboard');
     }
   }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('Sign in attempt:', { email, hasPassword: !!password });
+    
     if (!email || !password) {
       toast.error('Error', { description: 'Por favor complete todos los campos' });
       return;
@@ -31,14 +36,21 @@ const Auth = () => {
 
     setSubmitting(true);
     try {
+      console.log('Calling signIn...');
       const { error } = await signIn(email, password);
+      
+      console.log('SignIn result:', { error });
+      
       if (error) {
+        console.error('SignIn error:', error);
         toast.error('Error de inicio de sesión', { description: error.message });
       } else {
+        console.log('SignIn successful');
         toast.success('Inicio de sesión exitoso');
         navigate('/dashboard');
       }
     } catch (error) {
+      console.error('SignIn catch error:', error);
       toast.error('Error', { description: 'Hubo un problema al procesar su solicitud.' });
     } finally {
       setSubmitting(false);
@@ -47,6 +59,9 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('Sign up attempt:', { email, hasPassword: !!password, fullName });
+    
     if (!email || !password || !fullName) {
       toast.error('Error', { description: 'Por favor complete todos los campos' });
       return;
@@ -54,20 +69,32 @@ const Auth = () => {
 
     setSubmitting(true);
     try {
+      console.log('Calling signUp...');
       const { error } = await signUp(email, password, fullName);
+      
+      console.log('SignUp result:', { error });
+      
       if (error) {
+        console.error('SignUp error:', error);
         toast.error('Error de registro', { description: error.message });
       } else {
+        console.log('SignUp successful');
         toast.success('Registro exitoso', {
           description: 'Revisa tu email para confirmar tu cuenta'
         });
       }
     } catch (error) {
+      console.error('SignUp catch error:', error);
       toast.error('Error', { description: 'Hubo un problema al procesar su solicitud.' });
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Si hay usuario, no mostrar la página de auth
+  if (user && !loading) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-empresarial flex flex-col">
@@ -131,7 +158,7 @@ const Auth = () => {
                 <Button
                   type="submit"
                   className="w-full bg-dorado hover:bg-dorado/90 text-empresarial font-medium"
-                  disabled={submitting || loading}
+                  disabled={submitting}
                 >
                   {submitting ? 'Procesando...' : 'Iniciar Sesión'}
                 </Button>
@@ -188,7 +215,7 @@ const Auth = () => {
                 <Button
                   type="submit"
                   className="w-full bg-dorado hover:bg-dorado/90 text-empresarial font-medium"
-                  disabled={submitting || loading}
+                  disabled={submitting}
                 >
                   {submitting ? 'Procesando...' : 'Registrarse'}
                 </Button>
