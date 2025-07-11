@@ -38,6 +38,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const fetchProfile = async (userId: string) => {
     try {
       console.log(`Fetching profile for user: ${userId}`);
+      console.log('Auth state:', { userId, sessionExists: !!session });
       
       const { data, error } = await supabase
         .from('profiles')
@@ -176,6 +177,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const signOut = async () => {
     try {
       setLoading(true);
+      // Clear all local storage to ensure clean logout
+      localStorage.clear();
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
