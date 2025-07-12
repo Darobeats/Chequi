@@ -35,13 +35,23 @@ const Index = () => {
               Gestiona el acceso a tus eventos de manera eficiente y segura
             </p>
             
-            <Button
-              onClick={handleGetStarted}
-              className="w-full bg-dorado hover:bg-dorado/90 text-empresarial font-medium"
-              disabled={loading}
-            >
-              {loading ? 'Cargando...' : 'Comenzar'}
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate('/scanner')}
+                className="w-full bg-dorado hover:bg-dorado/90 text-empresarial font-medium"
+              >
+                Scanner
+              </Button>
+              
+              <Button
+                onClick={handleGetStarted}
+                variant="outline"
+                className="w-full border-dorado text-dorado hover:bg-dorado/10"
+                disabled={loading}
+              >
+                {loading ? 'Cargando...' : 'Iniciar Sesión'}
+              </Button>
+            </div>
           </div>
           
           <div className="text-center text-sm text-gray-400">

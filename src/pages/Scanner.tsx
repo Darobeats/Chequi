@@ -7,28 +7,6 @@ import Header from '@/components/Header';
 import QRScanner from '@/components/QRScanner';
 
 const Scanner = () => {
-  const { user, loading } = useSupabaseAuth();
-  const { canAccessScanner, loading: roleLoading } = useUserRole();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!user && !loading) {
-      navigate('/auth');
-    } else if (user && !roleLoading && !canAccessScanner) {
-      navigate('/dashboard');
-    }
-  }, [user, loading, canAccessScanner, roleLoading, navigate]);
-
-  if (loading || roleLoading) {
-    return (
-      <div className="min-h-screen bg-empresarial flex flex-col">
-        <Header title="SCANNER" />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-hueso">Cargando...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-empresarial flex flex-col">
