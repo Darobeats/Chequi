@@ -14,7 +14,7 @@ import { BarChart3, Users, FileText, Settings, UserPlus } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading } = useSupabaseAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isControl, canAccessAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   
   const { data: attendees = [] } = useAttendees();
@@ -25,10 +25,10 @@ const Admin = () => {
   useEffect(() => {
     if (!user && !loading) {
       navigate('/auth');
-    } else if (user && !roleLoading && !isAdmin) {
+    } else if (user && !roleLoading && !canAccessAdmin) {
       navigate('/dashboard');
     }
-  }, [user, loading, isAdmin, roleLoading, navigate]);
+  }, [user, loading, canAccessAdmin, roleLoading, navigate]);
 
   if (loading || roleLoading) {
     return (
@@ -107,7 +107,7 @@ const Admin = () => {
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-gray-900/50 border border-gray-800">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} bg-gray-900/50 border border-gray-800`}>
             <TabsTrigger 
               value="analytics" 
               className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -122,13 +122,15 @@ const Admin = () => {
               <Users className="h-4 w-4" />
               Asistentes
             </TabsTrigger>
-            <TabsTrigger 
-              value="management" 
-              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
-            >
-              <UserPlus className="h-4 w-4" />
-              Gestión QR
-            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger 
+                value="management" 
+                className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+              >
+                <UserPlus className="h-4 w-4" />
+                Gestión QR
+              </TabsTrigger>
+            )}
             <TabsTrigger 
               value="summary" 
               className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -136,13 +138,15 @@ const Admin = () => {
               <FileText className="h-4 w-4" />
               Resumen
             </TabsTrigger>
-            <TabsTrigger 
-              value="config" 
-              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
-            >
-              <Settings className="h-4 w-4" />
-              Configuración
-            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger 
+                value="config" 
+                className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+              >
+                <Settings className="h-4 w-4" />
+                Configuración
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="analytics" className="space-y-6">
@@ -156,11 +160,13 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="management" className="space-y-6">
-            <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
-              <AttendeesManager />
-            </div>
-          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="management" className="space-y-6">
+              <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
+                <AttendeesManager />
+              </div>
+            </TabsContent>
+          )}
 
           <TabsContent value="summary" className="space-y-6">
             {/* Control Types Usage */}
@@ -203,9 +209,11 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="config" className="space-y-6">
-            <EventConfig />
-          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="config" className="space-y-6">
+              <EventConfig />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

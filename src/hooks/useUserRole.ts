@@ -17,7 +17,7 @@ export const useUserRole = () => {
   
   const hasRole = (requiredRole: UserRole) => role === requiredRole;
   
-  const canAccessAdmin = isAdmin;
+  const canAccessAdmin = isAdmin || isControl;
   const canAccessScanner = isAdmin || isControl;
   const canAccessProfile = isAdmin || isAttendee;
   
