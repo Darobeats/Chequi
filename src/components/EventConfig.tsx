@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { useEventConfigs, useUpdateEventConfig, useCreateEventConfig, useActivateEventConfig, useAdminUser } from '@/hooks/useEventConfig';
+import { useEventConfigs, useUpdateEventConfig, useCreateEventConfig, useActivateEventConfig } from '@/hooks/useEventConfig';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +25,7 @@ const FONT_OPTIONS = [
 
 const EventConfig = () => {
   const { data: eventConfigs = [], isLoading } = useEventConfigs();
-  const { data: adminUser } = useAdminUser();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const updateEventConfig = useUpdateEventConfig();
   const createEventConfig = useCreateEventConfig();
   const activateEventConfig = useActivateEventConfig();
@@ -43,7 +44,15 @@ const EventConfig = () => {
     is_active: false
   });
 
-  if (!adminUser) {
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p className="text-hueso">Cargando...</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
     return (
       <div className="flex items-center justify-center p-8">
         <Card className="w-full max-w-md">
