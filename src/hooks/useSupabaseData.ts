@@ -97,6 +97,9 @@ export const useProcessQRCode = () => {
   
   return useMutation({
     mutationFn: async ({ ticketId, controlType }: { ticketId: string; controlType: string }) => {
+      console.log('ProcessQRCode - Scanned data:', ticketId);
+      console.log('ProcessQRCode - Control type:', controlType);
+      
       // Buscar el asistente por QR code
       const { data: attendee, error: attendeeError } = await supabase
         .from('attendees')
@@ -106,6 +109,8 @@ export const useProcessQRCode = () => {
         `)
         .eq('qr_code', ticketId)
         .single();
+
+      console.log('ProcessQRCode - Query result:', { attendee, attendeeError });
 
       if (attendeeError || !attendee) {
         throw new Error('Ticket no encontrado');
