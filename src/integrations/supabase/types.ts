@@ -38,6 +38,42 @@ export type Database = {
         }
         Relationships: []
       }
+      asistentes: {
+        Row: {
+          categoria: string | null
+          creado_en: string | null
+          email: string
+          empresa: string | null
+          id: string
+          nombre: string
+          qr_token: string
+          ticket_id: string
+          usos_disponibles: number | null
+        }
+        Insert: {
+          categoria?: string | null
+          creado_en?: string | null
+          email: string
+          empresa?: string | null
+          id?: string
+          nombre: string
+          qr_token: string
+          ticket_id: string
+          usos_disponibles?: number | null
+        }
+        Update: {
+          categoria?: string | null
+          creado_en?: string | null
+          email?: string
+          empresa?: string | null
+          id?: string
+          nombre?: string
+          qr_token?: string
+          ticket_id?: string
+          usos_disponibles?: number | null
+        }
+        Relationships: []
+      }
       attendees: {
         Row: {
           category_id: string
@@ -235,6 +271,35 @@ export type Database = {
         }
         Relationships: []
       }
+      logs_entrada: {
+        Row: {
+          fecha_ingreso: string | null
+          id: string
+          punto_control: string | null
+          qr_token: string
+        }
+        Insert: {
+          fecha_ingreso?: string | null
+          id?: string
+          punto_control?: string | null
+          qr_token: string
+        }
+        Update: {
+          fecha_ingreso?: string | null
+          id?: string
+          punto_control?: string | null
+          qr_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logs_entrada_qr_token_fkey"
+            columns: ["qr_token"]
+            isOneToOne: false
+            referencedRelation: "asistentes"
+            referencedColumns: ["qr_token"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           attendee_id: string | null
@@ -374,6 +439,10 @@ export type Database = {
       is_authenticated: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      validar_ticket: {
+        Args: { qr: string; punto?: string }
+        Returns: string
       }
     }
     Enums: {

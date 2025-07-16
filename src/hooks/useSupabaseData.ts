@@ -97,14 +97,14 @@ export const useProcessQRCode = () => {
   
   return useMutation({
     mutationFn: async ({ ticketId, controlType }: { ticketId: string; controlType: string }) => {
-      // Buscar el asistente
+      // Buscar el asistente por QR code
       const { data: attendee, error: attendeeError } = await supabase
         .from('attendees')
         .select(`
           *,
           ticket_category:ticket_categories(*)
         `)
-        .eq('ticket_id', ticketId)
+        .eq('qr_code', ticketId)
         .single();
 
       if (attendeeError || !attendee) {
