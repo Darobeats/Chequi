@@ -37,8 +37,13 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
       qrScannerRef.current = new QrScanner(
         videoRef.current,
         (result) => {
-          console.log('QR Code detected:', result.data);
-          onQRDetected(result.data);
+          console.log('=== QR Scanner Debug ===');
+          console.log('Raw QR data detected:', result.data);
+          console.log('QR data length:', result.data.length);
+          console.log('QR data type:', typeof result.data);
+          console.log('QR data trimmed:', result.data.trim());
+          console.log('========================');
+          onQRDetected(result.data.trim());
         },
         {
           highlightScanRegion: true,
