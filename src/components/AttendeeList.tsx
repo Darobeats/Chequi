@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
+import QRCodeDisplay from '@/components/QRCodeDisplay';
 
 const AttendeeList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,12 +110,18 @@ const AttendeeList: React.FC = () => {
                     {attendee.ticket_category?.name || 'N/A'}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-mono text-xs text-gray-300">
-                  {attendee.qr_code ? (
-                    <span className="bg-gray-800 px-2 py-1 rounded">{attendee.qr_code}</span>
-                  ) : (
-                    <span className="text-red-400">No generado</span>
-                  )}
+                <TableCell className="text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <QRCodeDisplay 
+                      value={attendee.qr_code || ''} 
+                      size={48}
+                    />
+                    {attendee.qr_code && (
+                      <span className="font-mono text-xs text-gray-400 break-all max-w-[100px]">
+                        {attendee.qr_code}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="text-gray-300">
                   {attendee.formattedLastUsage}
