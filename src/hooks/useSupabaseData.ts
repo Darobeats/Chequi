@@ -102,9 +102,11 @@ export const useProcessQRCode = () => {
       console.log('ProcessQRCode - Scanned data length:', ticketId.length);
       console.log('ProcessQRCode - Scanned data type:', typeof ticketId);
       console.log('ProcessQRCode - Control type:', controlType);
+      console.log('ProcessQRCode - Hexadecimal representation:', [...ticketId].map(c => c.charCodeAt(0).toString(16)).join(' '));
       console.log('==========================');
       
-      // Buscar el asistente por QR code o ticket_id
+      // Buscar el asistente por QR code
+      console.log('🔍 Searching by qr_code:', ticketId);
       let { data: attendee, error: attendeeError } = await supabase
         .from('attendees')
         .select(`
@@ -114,8 +116,11 @@ export const useProcessQRCode = () => {
         .eq('qr_code', ticketId)
         .maybeSingle();
 
+      console.log('📊 QR Code search result:', { attendee, attendeeError });
+
       // Si no se encuentra por QR code, buscar por ticket_id
       if (!attendee && !attendeeError) {
+        console.log('🔍 Searching by ticket_id:', ticketId);
         const { data: attendeeByTicket, error: ticketError } = await supabase
           .from('attendees')
           .select(`
@@ -125,11 +130,19 @@ export const useProcessQRCode = () => {
           .eq('ticket_id', ticketId)
           .maybeSingle();
         
+        console.log('📊 Ticket ID search result:', { attendeeByTicket, ticketError });
         attendee = attendeeByTicket;
         attendeeError = ticketError;
       }
 
-      console.log('ProcessQRCode - Query result:', { attendee, attendeeError });
+      // Verificar todos los attendees para debugging
+      const { data: allAttendees } = await supabase
+        .from('attendees')
+        .select('id, ticket_id, qr_code, name')
+        .limit(5);
+      
+      console.log('📋 All attendees for comparison:', allAttendees);
+      console.log('ProcessQRCode - Final result:', { attendee, attendeeError });
 
       if (attendeeError || !attendee) {
         throw new Error('Ticket no encontrado');
