@@ -65,6 +65,12 @@ const QRScanner: React.FC = () => {
   };
 
   const processQRCode = async (ticketId: string) => {
+    console.log('🚨 QRScanner - Received data:', ticketId);
+    console.log('🚨 QRScanner - Data length:', ticketId.length);
+    console.log('🚨 QRScanner - Data type:', typeof ticketId);
+    console.log('🚨 QRScanner - Selected control type:', selectedControlType);
+    console.log('🚨 QRScanner - Hexadecimal:', [...ticketId].map(c => c.charCodeAt(0).toString(16)).join(' '));
+    
     try {
       const result = await processQRMutation.mutateAsync({
         ticketId,
