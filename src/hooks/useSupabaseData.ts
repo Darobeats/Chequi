@@ -104,15 +104,30 @@ export const useProcessQRCode = () => {
       console.log('ProcessQRCode - Control type:', controlType);
       console.log('==========================');
       
-      // Buscar el asistente por QR code
-      const { data: attendee, error: attendeeError } = await supabase
+      // Buscar el asistente por QR code o ticket_id
+      let { data: attendee, error: attendeeError } = await supabase
         .from('attendees')
         .select(`
           *,
           ticket_category:ticket_categories(*)
         `)
         .eq('qr_code', ticketId)
-        .single();
+        .maybeSingle();
+
+      // Si no se encuentra por QR code, buscar por ticket_id
+      if (!attendee && !attendeeError) {
+        const { data: attendeeByTicket, error: ticketError } = await supabase
+          .from('attendees')
+          .select(`
+            *,
+            ticket_category:ticket_categories(*)
+          `)
+          .eq('ticket_id', ticketId)
+          .maybeSingle();
+        
+        attendee = attendeeByTicket;
+        attendeeError = ticketError;
+      }
 
       console.log('ProcessQRCode - Query result:', { attendee, attendeeError });
 
