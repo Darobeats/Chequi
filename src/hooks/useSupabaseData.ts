@@ -97,8 +97,12 @@ export const useProcessQRCode = () => {
   
   return useMutation({
     mutationFn: async ({ ticketId, controlType }: { ticketId: string; controlType: string }) => {
+      console.log('=== PROCESANDO QR CODE ===');
       console.log('ProcessQRCode - Scanned data:', ticketId);
+      console.log('ProcessQRCode - Scanned data length:', ticketId.length);
+      console.log('ProcessQRCode - Scanned data type:', typeof ticketId);
       console.log('ProcessQRCode - Control type:', controlType);
+      console.log('==========================');
       
       // Buscar el asistente por QR code
       const { data: attendee, error: attendeeError } = await supabase
