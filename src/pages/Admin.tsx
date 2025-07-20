@@ -107,7 +107,7 @@ const Admin = () => {
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-5' : 'grid-cols-4'} bg-gray-900/50 border border-gray-800`}>
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800`}>
             <TabsTrigger 
               value="analytics" 
               className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -122,15 +122,6 @@ const Admin = () => {
               <Users className="h-4 w-4" />
               Asistentes
             </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger 
-                value="management" 
-                className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
-              >
-                <UserPlus className="h-4 w-4" />
-                Gestión QR
-              </TabsTrigger>
-            )}
             <TabsTrigger 
               value="summary" 
               className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -160,13 +151,6 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          {isAdmin && (
-            <TabsContent value="management" className="space-y-6">
-              <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
-                <AttendeesManager />
-              </div>
-            </TabsContent>
-          )}
 
           <TabsContent value="summary" className="space-y-6">
             {/* Control Types Usage */}

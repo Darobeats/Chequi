@@ -9,8 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { EventConfig as EventConfigType } from '@/types/database';
-import { Palette, Type, Image, Settings, Save, Plus, Check } from 'lucide-react';
+import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import AttendeesManager from '@/components/AttendeesManager';
 
 const FONT_OPTIONS = [
   { name: 'Inter', value: 'Inter, sans-serif' },
@@ -145,12 +146,16 @@ const EventConfig = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 bg-gray-900/50 border border-gray-800">
+        <TabsList className="grid w-full grid-cols-3 bg-gray-900/50 border border-gray-800">
           <TabsTrigger value="existing" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
-            Configuraciones Existentes
+            Configuraciones de Evento
           </TabsTrigger>
           <TabsTrigger value="new" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
             Nueva Configuración
+          </TabsTrigger>
+          <TabsTrigger value="qr-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
+            <QrCode className="h-4 w-4" />
+            Gestión de QR
           </TabsTrigger>
         </TabsList>
 
@@ -402,6 +407,23 @@ const EventConfig = () => {
                   Crear Configuración
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="qr-management" className="space-y-6">
+          <Card className="bg-gray-900/50 border border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-dorado flex items-center gap-2">
+                <UserPlus className="h-5 w-5" />
+                Gestión de Asistentes y QR
+              </CardTitle>
+              <CardDescription>
+                Administra asistentes, genera QR codes y gestiona el acceso al evento
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AttendeesManager />
             </CardContent>
           </Card>
         </TabsContent>
