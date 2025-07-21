@@ -69,6 +69,7 @@ const QRScanner: React.FC = () => {
     const testQRCode = 'EVT-BAS-93F8-2025'; // QR de Azula
     console.log('🧪 TESTING QR SCAN with:', testQRCode);
     console.log('🧪 Selected control type:', selectedControlType);
+    console.log('🧪 Control types available:', controlTypes);
     
     if (!selectedControlType) {
       console.error('❌ No control type selected!');
@@ -76,12 +77,37 @@ const QRScanner: React.FC = () => {
       return;
     }
     
+    // Buscar el control type por ID para confirmar
+    const controlType = controlTypes?.find(ct => ct.id === selectedControlType);
+    console.log('🧪 Found control type:', controlType);
+    
     try {
-      console.log('🧪 Calling processQRCode...');
-      await processQRCode(testQRCode);
-      console.log('🧪 processQRCode completed successfully');
+      console.log('🧪 Calling processQRMutation.mutateAsync...');
+      const result = await processQRMutation.mutateAsync({
+        ticketId: testQRCode,
+        controlType: selectedControlType
+      });
+      console.log('🧪 SUCCESS! Result:', result);
+      
+      // Mostrar resultado exitoso
+      const selectedControl = controlTypes?.find(ct => ct.id === selectedControlType);
+      setLastResult({ 
+        success: true, 
+        attendee: result.attendee,
+        usageCount: result.usageCount,
+        controlType: selectedControl?.name 
+      });
+      
+      toast.success('✅ TEST EXITOSO - Control registrado', {
+        description: `${selectedControl?.description} - ${result.attendee.name}`
+      });
+      
     } catch (error) {
-      console.error('🧪 Error in processQRCode:', error);
+      console.error('🧪 ERROR in test:', error);
+      setLastResult({ success: false });
+      toast.error('❌ ERROR EN TEST', {
+        description: error.message
+      });
     }
   };
 
