@@ -64,6 +64,13 @@ const QRScanner: React.FC = () => {
     setScanning(false);
   };
 
+  // Función de prueba temporal para debug
+  const testQRScan = async () => {
+    const testQRCode = 'EVT-BAS-93F8-2025'; // QR de Azula
+    console.log('🧪 TESTING QR SCAN with:', testQRCode);
+    await processQRCode(testQRCode);
+  };
+
   const processQRCode = async (ticketId: string) => {
     const cleanedData = ticketId.trim();
     console.log('🚨 QRScanner - Received data original:', `"${ticketId}"`);
@@ -135,6 +142,14 @@ const QRScanner: React.FC = () => {
         onControlTypeChange={setSelectedControlType}
         isLoading={loadingControlTypes}
       />
+
+      {/* Botón de prueba temporal para debugging */}
+      <button 
+        onClick={testQRScan}
+        className="mb-4 px-4 py-2 bg-red-500 text-white rounded"
+      >
+        🧪 TEST QR SCAN (Azula - EVT-BAS-93F8-2025)
+      </button>
 
       {lastResult ? (
         <ScanResult result={lastResult} />
