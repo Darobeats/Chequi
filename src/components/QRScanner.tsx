@@ -68,7 +68,21 @@ const QRScanner: React.FC = () => {
   const testQRScan = async () => {
     const testQRCode = 'EVT-BAS-93F8-2025'; // QR de Azula
     console.log('🧪 TESTING QR SCAN with:', testQRCode);
-    await processQRCode(testQRCode);
+    console.log('🧪 Selected control type:', selectedControlType);
+    
+    if (!selectedControlType) {
+      console.error('❌ No control type selected!');
+      toast.error('Por favor selecciona un tipo de control');
+      return;
+    }
+    
+    try {
+      console.log('🧪 Calling processQRCode...');
+      await processQRCode(testQRCode);
+      console.log('🧪 processQRCode completed successfully');
+    } catch (error) {
+      console.error('🧪 Error in processQRCode:', error);
+    }
   };
 
   const processQRCode = async (ticketId: string) => {
