@@ -97,42 +97,62 @@ export const useProcessQRCode = () => {
   
   return useMutation({
     mutationFn: async ({ ticketId, controlType }: { ticketId: string; controlType: string }) => {
+      const cleanTicketId = ticketId.trim();
       console.log('=== PROCESANDO QR CODE ===');
-      console.log('ProcessQRCode - Scanned data:', ticketId);
-      console.log('ProcessQRCode - Scanned data length:', ticketId.length);
-      console.log('ProcessQRCode - Scanned data type:', typeof ticketId);
+      console.log('ProcessQRCode - Scanned data original:', `"${ticketId}"`);
+      console.log('ProcessQRCode - Scanned data cleaned:', `"${cleanTicketId}"`);
+      console.log('ProcessQRCode - Length original:', ticketId.length);
+      console.log('ProcessQRCode - Length cleaned:', cleanTicketId.length);
       console.log('ProcessQRCode - Control type:', controlType);
-      console.log('ProcessQRCode - Hexadecimal representation:', [...ticketId].map(c => c.charCodeAt(0).toString(16)).join(' '));
+      console.log('ProcessQRCode - First 5 chars ASCII:', [...cleanTicketId.slice(0, 5)].map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
       console.log('==========================');
       
       // Buscar el asistente por QR code
-      console.log('🔍 Searching by qr_code:', ticketId);
+      console.log('🔍 Searching by qr_code:', `"${cleanTicketId}"`);
       let { data: attendee, error: attendeeError } = await supabase
         .from('attendees')
         .select(`
           *,
           ticket_category:ticket_categories(*)
         `)
-        .eq('qr_code', ticketId)
+        .eq('qr_code', cleanTicketId)
         .maybeSingle();
 
       console.log('📊 QR Code search result:', { attendee, attendeeError });
 
       // Si no se encuentra por QR code, buscar por ticket_id
       if (!attendee && !attendeeError) {
-        console.log('🔍 Searching by ticket_id:', ticketId);
+        console.log('🔍 Searching by ticket_id:', `"${cleanTicketId}"`);
         const { data: attendeeByTicket, error: ticketError } = await supabase
           .from('attendees')
           .select(`
             *,
             ticket_category:ticket_categories(*)
           `)
-          .eq('ticket_id', ticketId)
+          .eq('ticket_id', cleanTicketId)
           .maybeSingle();
         
         console.log('📊 Ticket ID search result:', { attendeeByTicket, ticketError });
         attendee = attendeeByTicket;
         attendeeError = ticketError;
+      }
+      
+      // Búsqueda adicional con LIKE por si hay problemas de formato
+      if (!attendee && !attendeeError) {
+        console.log('🔍 Searching with LIKE pattern for:', `"${cleanTicketId}"`);
+        const { data: attendeeWithLike, error: likeError } = await supabase
+          .from('attendees')
+          .select(`
+            *,
+            ticket_category:ticket_categories(*)
+          `)
+          .or(`qr_code.ilike.%${cleanTicketId}%,ticket_id.ilike.%${cleanTicketId}%`)
+          .limit(1)
+          .maybeSingle();
+        
+        console.log('📊 LIKE search result:', { attendeeWithLike, likeError });
+        attendee = attendeeWithLike;
+        attendeeError = likeError;
       }
 
       // Verificar todos los attendees para debugging
@@ -194,8 +214,13 @@ export const useProcessQRCode = () => {
       return { success: true, attendee, usageCount: usageCount + 1 };
     },
     onSuccess: () => {
+      // Invalidar queries para actualización inmediata
       queryClient.invalidateQueries({ queryKey: ['control_usage'] });
       queryClient.invalidateQueries({ queryKey: ['attendees'] });
+      
+      // Forzar refetch para actualización en tiempo real
+      queryClient.refetchQueries({ queryKey: ['control_usage'] });
+      queryClient.refetchQueries({ queryKey: ['attendees'] });
     }
   });
 };
