@@ -98,120 +98,112 @@ export const useProcessQRCode = () => {
   return useMutation({
     mutationFn: async ({ ticketId, controlType }: { ticketId: string; controlType: string }) => {
       const cleanTicketId = ticketId.trim();
-      console.log('=== PROCESANDO QR CODE ===');
-      console.log('ProcessQRCode - Scanned data original:', `"${ticketId}"`);
-      console.log('ProcessQRCode - Scanned data cleaned:', `"${cleanTicketId}"`);
-      console.log('ProcessQRCode - Length original:', ticketId.length);
-      console.log('ProcessQRCode - Length cleaned:', cleanTicketId.length);
+      console.log('=== PROCESANDO QR CODE CON AUTENTICACIÓN ===');
+      console.log('ProcessQRCode - Ticket ID:', cleanTicketId);
       console.log('ProcessQRCode - Control type:', controlType);
-      console.log('ProcessQRCode - First 5 chars ASCII:', [...cleanTicketId.slice(0, 5)].map(c => `${c}(${c.charCodeAt(0)})`).join(' '));
-      console.log('==========================');
       
-      // Buscar el asistente por QR code
-      console.log('🔍 Searching by qr_code:', `"${cleanTicketId}"`);
-      let { data: attendee, error: attendeeError } = await supabase
-        .from('attendees')
-        .select(`
-          *,
-          ticket_category:ticket_categories(*)
-        `)
-        .eq('qr_code', cleanTicketId)
-        .maybeSingle();
-
-      console.log('📊 QR Code search result:', { attendee, attendeeError });
-
-      // Si no se encuentra por QR code, buscar por ticket_id
-      if (!attendee && !attendeeError) {
-        console.log('🔍 Searching by ticket_id:', `"${cleanTicketId}"`);
-        const { data: attendeeByTicket, error: ticketError } = await supabase
-          .from('attendees')
-          .select(`
-            *,
-            ticket_category:ticket_categories(*)
-          `)
-          .eq('ticket_id', cleanTicketId)
-          .maybeSingle();
-        
-        console.log('📊 Ticket ID search result:', { attendeeByTicket, ticketError });
-        attendee = attendeeByTicket;
-        attendeeError = ticketError;
-      }
-      
-      // Búsqueda adicional con LIKE por si hay problemas de formato
-      if (!attendee && !attendeeError) {
-        console.log('🔍 Searching with LIKE pattern for:', `"${cleanTicketId}"`);
-        const { data: attendeeWithLike, error: likeError } = await supabase
-          .from('attendees')
-          .select(`
-            *,
-            ticket_category:ticket_categories(*)
-          `)
-          .or(`qr_code.ilike.%${cleanTicketId}%,ticket_id.ilike.%${cleanTicketId}%`)
-          .limit(1)
-          .maybeSingle();
-        
-        console.log('📊 LIKE search result:', { attendeeWithLike, likeError });
-        attendee = attendeeWithLike;
-        attendeeError = likeError;
+      // 1. Verificar autenticación
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        console.error('❌ Authentication error:', authError);
+        throw new Error('Usuario no autenticado. Inicie sesión para usar el scanner.');
       }
 
-      // Verificar todos los attendees para debugging
-      const { data: allAttendees } = await supabase
-        .from('attendees')
-        .select('id, ticket_id, qr_code, name')
-        .limit(5);
-      
-      console.log('📋 All attendees for comparison:', allAttendees);
-      console.log('ProcessQRCode - Final result:', { attendee, attendeeError });
+      console.log('✅ User authenticated:', user.id);
 
-      if (attendeeError || !attendee) {
-        throw new Error('Ticket no encontrado');
-      }
-
-      if (attendee.status === 'blocked') {
-        throw new Error('Ticket bloqueado');
-      }
-
-      // Verificar si la categoría del ticket permite este control
-      const { data: categoryControl, error: categoryError } = await supabase
-        .from('category_controls')
-        .select('*')
-        .eq('category_id', attendee.category_id)
-        .eq('control_type_id', controlType)
+      // 2. Verificar rol del usuario
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
         .single();
 
-      if (categoryError || !categoryControl) {
-        throw new Error('Este ticket no tiene acceso a este tipo de control');
+      if (profileError || !profile) {
+        console.error('❌ Profile error:', profileError);
+        throw new Error('Perfil de usuario no encontrado');
       }
 
-      // Verificar usos previos
-      const { data: previousUses, error: usageError } = await supabase
-        .from('control_usage')
+      if (!['admin', 'control'].includes(profile.role)) {
+        console.error('❌ Insufficient permissions:', profile.role);
+        throw new Error('Permisos insuficientes. Solo usuarios admin o control pueden usar el scanner.');
+      }
+
+      console.log('✅ User has valid role:', profile.role);
+
+      // 3. Usar función de validación de acceso
+      const { data: validation, error: validationError } = await supabase
+        .rpc('validate_control_access', {
+          p_ticket_id: cleanTicketId,
+          p_control_type_id: controlType
+        });
+
+      if (validationError) {
+        console.error('❌ Validation error:', validationError);
+        throw new Error('Error al validar acceso: ' + validationError.message);
+      }
+
+      if (!validation || validation.length === 0) {
+        console.error('❌ No validation result');
+        throw new Error('Error en validación de ticket');
+      }
+
+      const validationResult = validation[0];
+      console.log('📋 Validation result:', validationResult);
+
+      if (!validationResult.can_access) {
+        console.error('❌ Access denied:', validationResult.error_message);
+        throw new Error(validationResult.error_message);
+      }
+
+      // 4. Obtener datos del asistente usando función segura
+      const { data: attendeeData, error: attendeeError } = await supabase
+        .rpc('find_attendee_by_ticket', { ticket_id: cleanTicketId });
+
+      if (attendeeError || !attendeeData || attendeeData.length === 0) {
+        console.error('❌ Attendee not found:', attendeeError);
+        throw new Error('Datos del asistente no encontrados');
+      }
+
+      const attendee = attendeeData[0];
+      console.log('✅ Found attendee:', attendee);
+
+      // 5. Obtener información adicional de la categoría
+      const { data: ticketCategory, error: categoryError } = await supabase
+        .from('ticket_categories')
         .select('*')
-        .eq('attendee_id', attendee.id)
-        .eq('control_type_id', controlType);
+        .eq('id', attendee.category_id)
+        .single();
 
-      if (usageError) throw usageError;
-
-      const usageCount = previousUses?.length || 0;
-      
-      // Verificar límites (si max_uses es -1, es ilimitado)
-      if (categoryControl.max_uses !== -1 && usageCount >= categoryControl.max_uses) {
-        throw new Error(`Límite de usos alcanzado para este control (${categoryControl.max_uses})`);
+      if (categoryError) {
+        console.warn('⚠️ Could not fetch ticket category:', categoryError);
       }
 
-      // Registrar el uso
+      // 6. Registrar uso
       const { error: insertError } = await supabase
         .from('control_usage')
         .insert({
-          attendee_id: attendee.id,
+          attendee_id: validationResult.attendee_id,
           control_type_id: controlType,
-          device: 'Terminal-Web'
+          device: `Scanner Web - ${navigator.userAgent?.split(' ')[0] || 'Unknown'}`,
+          notes: `Usuario: ${profile.role} (${user.email})`
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('❌ Error inserting usage:', insertError);
+        throw new Error('Error al registrar acceso: ' + insertError.message);
+      }
 
-      return { success: true, attendee, usageCount: usageCount + 1 };
+      console.log('✅ Usage registered successfully');
+      
+      return {
+        success: true,
+        attendee: {
+          ...attendee,
+          ticket_category: ticketCategory
+        },
+        usageCount: validationResult.current_uses + 1,
+        maxUses: validationResult.max_uses
+      };
     },
     onSuccess: () => {
       // Invalidar queries para actualización inmediata
