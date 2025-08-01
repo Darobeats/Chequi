@@ -67,7 +67,8 @@ export const useControlUsage = () => {
         control_type: ControlType;
         attendee: Attendee;
       })[];
-    }
+    },
+    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
   });
 };
 

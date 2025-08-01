@@ -64,7 +64,7 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         
         if (!isMounted) return;
@@ -73,32 +73,41 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          try {
-            console.log('User found, fetching profile...');
-            const userProfile = await fetchProfile(session.user.id);
+          // Use setTimeout to defer profile fetching and prevent deadlocks
+          setTimeout(() => {
             if (isMounted) {
-              console.log('Setting profile:', userProfile);
-              setProfile(userProfile);
+              fetchProfile(session.user.id)
+                .then(userProfile => {
+                  if (isMounted) {
+                    console.log('Setting profile:', userProfile);
+                    setProfile(userProfile);
+                  }
+                })
+                .catch(error => {
+                  console.error('Failed to fetch profile:', error);
+                  if (isMounted) {
+                    setProfile(null);
+                  }
+                })
+                .finally(() => {
+                  if (isMounted) {
+                    setLoading(false);
+                  }
+                });
             }
-          } catch (error) {
-            console.error('Failed to fetch profile:', error);
-            if (isMounted) {
-              setProfile(null);
-            }
-          }
+          }, 0);
         } else {
           console.log('No user, clearing profile');
           setProfile(null);
-        }
-        
-        if (isMounted) {
-          setLoading(false);
+          if (isMounted) {
+            setLoading(false);
+          }
         }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Initial session check:', session?.user?.email);
       
       if (!isMounted) return;
@@ -107,23 +116,33 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setSession(session);
         setUser(session.user);
         
-        try {
-          console.log('Initial session found, fetching profile...');
-          const userProfile = await fetchProfile(session.user.id);
+        // Use setTimeout to defer profile fetching
+        setTimeout(() => {
           if (isMounted) {
-            console.log('Setting initial profile:', userProfile);
-            setProfile(userProfile);
+            fetchProfile(session.user.id)
+              .then(userProfile => {
+                if (isMounted) {
+                  console.log('Setting initial profile:', userProfile);
+                  setProfile(userProfile);
+                }
+              })
+              .catch(error => {
+                console.error('Failed to fetch initial profile:', error);
+                if (isMounted) {
+                  setProfile(null);
+                }
+              })
+              .finally(() => {
+                if (isMounted) {
+                  setLoading(false);
+                }
+              });
           }
-        } catch (error) {
-          console.error('Failed to fetch initial profile:', error);
-          if (isMounted) {
-            setProfile(null);
-          }
+        }, 0);
+      } else {
+        if (isMounted) {
+          setLoading(false);
         }
-      }
-      
-      if (isMounted) {
-        setLoading(false);
       }
     });
 
