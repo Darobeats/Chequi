@@ -422,6 +422,21 @@ export type Database = {
           updated_at: string
         }[]
       }
+      find_attendee_by_ticket_public: {
+        Args: { ticket_id: string }
+        Returns: {
+          id: string
+          ticket_id: string
+          name: string
+          email: string
+          company: string
+          category_id: string
+          status: string
+          qr_code: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       generate_qr_code: {
         Args: { p_category_id: string }
         Returns: string
@@ -460,6 +475,17 @@ export type Database = {
         Returns: string
       }
       validate_control_access: {
+        Args: { p_ticket_id: string; p_control_type_id: string }
+        Returns: {
+          can_access: boolean
+          attendee_id: string
+          category_id: string
+          max_uses: number
+          current_uses: number
+          error_message: string
+        }[]
+      }
+      validate_control_access_public: {
         Args: { p_ticket_id: string; p_control_type_id: string }
         Returns: {
           can_access: boolean

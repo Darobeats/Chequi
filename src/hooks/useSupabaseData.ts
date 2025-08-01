@@ -99,41 +99,13 @@ export const useProcessQRCode = () => {
   return useMutation({
     mutationFn: async ({ ticketId, controlType }: { ticketId: string; controlType: string }) => {
       const cleanTicketId = ticketId.trim();
-      console.log('=== PROCESANDO QR CODE CON AUTENTICACIÓN ===');
+      console.log('=== PROCESANDO QR CODE SIN AUTENTICACIÓN ===');
       console.log('ProcessQRCode - Ticket ID:', cleanTicketId);
       console.log('ProcessQRCode - Control type:', controlType);
       
-      // 1. Verificar autenticación
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        console.error('❌ Authentication error:', authError);
-        throw new Error('Usuario no autenticado. Inicie sesión para usar el scanner.');
-      }
-
-      console.log('✅ User authenticated:', user.id);
-
-      // 2. Verificar rol del usuario
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError || !profile) {
-        console.error('❌ Profile error:', profileError);
-        throw new Error('Perfil de usuario no encontrado');
-      }
-
-      if (!['admin', 'control'].includes(profile.role)) {
-        console.error('❌ Insufficient permissions:', profile.role);
-        throw new Error('Permisos insuficientes. Solo usuarios admin o control pueden usar el scanner.');
-      }
-
-      console.log('✅ User has valid role:', profile.role);
-
-      // 3. Usar función de validación de acceso
+      // 1. Usar función pública de validación de acceso
       const { data: validation, error: validationError } = await supabase
-        .rpc('validate_control_access', {
+        .rpc('validate_control_access_public', {
           p_ticket_id: cleanTicketId,
           p_control_type_id: controlType
         });
@@ -156,9 +128,9 @@ export const useProcessQRCode = () => {
         throw new Error(validationResult.error_message);
       }
 
-      // 4. Obtener datos del asistente usando función segura
+      // 2. Obtener datos del asistente usando función pública
       const { data: attendeeData, error: attendeeError } = await supabase
-        .rpc('find_attendee_by_ticket', { ticket_id: cleanTicketId });
+        .rpc('find_attendee_by_ticket_public', { ticket_id: cleanTicketId });
 
       if (attendeeError || !attendeeData || attendeeData.length === 0) {
         console.error('❌ Attendee not found:', attendeeError);
@@ -168,7 +140,7 @@ export const useProcessQRCode = () => {
       const attendee = attendeeData[0];
       console.log('✅ Found attendee:', attendee);
 
-      // 5. Obtener información adicional de la categoría
+      // 3. Obtener información adicional de la categoría
       const { data: ticketCategory, error: categoryError } = await supabase
         .from('ticket_categories')
         .select('*')
@@ -179,14 +151,14 @@ export const useProcessQRCode = () => {
         console.warn('⚠️ Could not fetch ticket category:', categoryError);
       }
 
-      // 6. Registrar uso
+      // 4. Registrar uso (sin autenticación requerida)
       const { error: insertError } = await supabase
         .from('control_usage')
         .insert({
           attendee_id: validationResult.attendee_id,
           control_type_id: controlType,
           device: `Scanner Web - ${navigator.userAgent?.split(' ')[0] || 'Unknown'}`,
-          notes: `Usuario: ${profile.role} (${user.email})`
+          notes: `Scanner público - Acceso sin autenticación`
         });
 
       if (insertError) {
