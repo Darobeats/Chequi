@@ -11,10 +11,12 @@ import ScanResult from './scanner/ScanResult';
 const QRScanner: React.FC = () => {
   const [scanning, setScanning] = useState(false);
   const [selectedControlType, setSelectedControlType] = useState<string>('');
+  const [lastScannedCode, setLastScannedCode] = useState<string>('');
   const [lastResult, setLastResult] = useState<null | { 
     success: boolean; 
     attendee?: any;
     usageCount?: number;
+    maxUses?: number;
     controlType?: string;
   }>(null);
 
@@ -67,12 +69,15 @@ const QRScanner: React.FC = () => {
 
   const processQRCode = async (ticketId: string) => {
     const cleanedData = ticketId.trim();
-    console.log('🚨 QRScanner - Received data original:', `"${ticketId}"`);
-    console.log('🚨 QRScanner - Received data cleaned:', `"${cleanedData}"`);
-    console.log('🚨 QRScanner - Data length:', ticketId.length, '→', cleanedData.length);
-    console.log('🚨 QRScanner - Data type:', typeof ticketId);
-    console.log('🚨 QRScanner - Selected control type:', selectedControlType);
-    console.log('🚨 QRScanner - Characters check:', [...cleanedData.slice(0, 10)].map(c => `${c}(${c.charCodeAt(0)})`));
+    
+    // Evitar procesamiento duplicado del mismo código
+    if (cleanedData === lastScannedCode) {
+      console.log('🚫 Código QR ya procesado, ignorando...');
+      return;
+    }
+    
+    setLastScannedCode(cleanedData);
+    console.log('🚨 QRScanner - Processing QR:', cleanedData);
     
     try {
       const result = await processQRMutation.mutateAsync({
@@ -86,6 +91,7 @@ const QRScanner: React.FC = () => {
         success: true, 
         attendee: result.attendee,
         usageCount: result.usageCount,
+        maxUses: result.maxUses,
         controlType: selectedControl?.name 
       });
       
@@ -109,7 +115,8 @@ const QRScanner: React.FC = () => {
     if (lastResult) {
       timer = setTimeout(() => {
         setLastResult(null);
-      }, 4000);
+        setLastScannedCode(''); // Reset para permitir re-escaneo del mismo código
+      }, 5000);
     }
     
     return () => {
