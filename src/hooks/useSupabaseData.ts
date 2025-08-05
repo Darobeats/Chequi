@@ -58,14 +58,17 @@ export const useControlUsage = () => {
         .select(`
           *,
           control_type:control_types(*),
-          attendee:attendees(*)
+          attendee:attendees(
+            *,
+            ticket_category:ticket_categories(*)
+          )
         `)
         .order('used_at', { ascending: false });
       
       if (error) throw error;
       return data as (ControlUsage & { 
         control_type: ControlType;
-        attendee: Attendee;
+        attendee: Attendee & { ticket_category: TicketCategory };
       })[];
     },
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
