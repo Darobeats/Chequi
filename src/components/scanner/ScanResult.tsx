@@ -1,5 +1,7 @@
 
 import React from 'react';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ScanResultProps {
   result: {
@@ -9,9 +11,10 @@ interface ScanResultProps {
     maxUses?: number;
     controlType?: string;
   };
+  onClose: () => void;
 }
 
-const ScanResult: React.FC<ScanResultProps> = ({ result }) => {
+const ScanResult: React.FC<ScanResultProps> = ({ result, onClose }) => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'valid': return { text: 'Válido', color: 'text-green-500' };
@@ -22,7 +25,15 @@ const ScanResult: React.FC<ScanResultProps> = ({ result }) => {
   };
 
   return (
-    <div className={`w-full max-w-md mx-auto p-6 rounded-lg ${result.success ? 'bg-green-800/20 border border-green-500/30' : 'bg-red-800/20 border border-red-500/30'}`}>
+    <div className={`w-full max-w-md mx-auto p-6 rounded-lg relative ${result.success ? 'bg-green-800/20 border border-green-500/30' : 'bg-red-800/20 border border-red-500/30'}`}>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onClose}
+        className="absolute top-2 right-2 h-8 w-8 hover:bg-white/10"
+      >
+        <X className="h-4 w-4" />
+      </Button>
       <div className="text-center">
         <div className={`text-4xl mb-3 ${result.success ? 'text-green-500' : 'text-red-500'}`}>
           {result.success ? '✓' : '✗'}

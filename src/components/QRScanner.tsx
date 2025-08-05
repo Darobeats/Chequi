@@ -146,7 +146,7 @@ const QRScanner: React.FC = () => {
 
 
       {lastResult ? (
-        <ScanResult result={lastResult} />
+        <ScanResult result={lastResult} onClose={() => setLastResult(null)} />
       ) : needsPermission ? (
         <CameraPermissions
           hasCamera={hasCamera}

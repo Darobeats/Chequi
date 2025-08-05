@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useAttendees } from '@/hooks/useSupabaseData';
+import { useAttendees, useResetControlUsage } from '@/hooks/useSupabaseData';
 import { useDeleteAttendee, useRegenerateQRCode } from '@/hooks/useAttendeeManagement';
 import { Attendee } from '@/types/database';
 import { toast } from '@/components/ui/sonner';
@@ -24,6 +24,7 @@ const AttendeesManager: React.FC = () => {
   const { data: attendees = [], isLoading } = useAttendees();
   const deleteMutation = useDeleteAttendee();
   const regenerateQRMutation = useRegenerateQRCode();
+  const resetControlUsage = useResetControlUsage();
 
   const filteredAttendees = attendees.filter(attendee => {
     const searchTermLower = searchTerm.toLowerCase();
@@ -82,6 +83,30 @@ const AttendeesManager: React.FC = () => {
     }
   };
 
+  const handleResetUsage = async (attendeeId: string, attendeeName: string) => {
+    try {
+      await resetControlUsage.mutateAsync(attendeeId);
+      toast.success(`Entradas reseteadas para ${attendeeName}`);
+    } catch (error: any) {
+      toast.error('Error al resetear entradas', {
+        description: error.message
+      });
+    }
+  };
+
+  const handleResetAllUsage = async () => {
+    if (window.confirm("¿Está seguro de que desea resetear todas las entradas? Esta acción no se puede deshacer.")) {
+      try {
+        await resetControlUsage.mutateAsync(null);
+        toast.success("Todas las entradas han sido reseteadas exitosamente");
+      } catch (error: any) {
+        toast.error("Error al resetear todas las entradas", {
+          description: error.message,
+        });
+      }
+    }
+  };
+
   const handleFormSuccess = () => {
     setSelectedAttendee(null);
     setShowForm(false);
@@ -112,6 +137,14 @@ const AttendeesManager: React.FC = () => {
           >
             <Upload className="w-4 h-4" />
             Importar Masivo
+          </Button>
+          <Button
+            onClick={handleResetAllUsage}
+            variant="destructive"
+            className="bg-red-600 hover:bg-red-700 flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Resetear Todas las Entradas
           </Button>
           <Button
             onClick={() => {
@@ -193,8 +226,19 @@ const AttendeesManager: React.FC = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => handleRegenerateQR(attendee.id, attendee.name)}
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300"
                       disabled={regenerateQRMutation.isPending}
+                      title="Regenerar QR"
+                    >
+                      <QrCode className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleResetUsage(attendee.id, attendee.name)}
+                      className="h-8 w-8 p-0 text-orange-400 hover:text-orange-300"
+                      disabled={resetControlUsage.isPending}
+                      title="Resetear entradas"
                     >
                       <RotateCcw className="w-4 h-4" />
                     </Button>

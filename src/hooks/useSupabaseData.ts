@@ -189,3 +189,37 @@ export const useProcessQRCode = () => {
     }
   });
 };
+
+export const useResetControlUsage = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (attendeeId: string | null) => {
+      if (attendeeId) {
+        // Reset usage for specific attendee
+        const { error } = await supabase
+          .from('control_usage')
+          .delete()
+          .eq('attendee_id', attendeeId);
+
+        if (error) {
+          throw new Error('Error al resetear las entradas del asistente');
+        }
+      } else {
+        // Reset all usage
+        const { error } = await supabase
+          .from('control_usage')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+
+        if (error) {
+          throw new Error('Error al resetear todas las entradas');
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['control_usage'] });
+      queryClient.invalidateQueries({ queryKey: ['attendees'] });
+    }
+  });
+};
