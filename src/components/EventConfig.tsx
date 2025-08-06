@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { EventConfig as EventConfigType } from '@/types/database';
-import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode } from 'lucide-react';
+import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AttendeesManager from '@/components/AttendeesManager';
+import TicketManagement from '@/components/TicketManagement';
 
 const FONT_OPTIONS = [
   { name: 'Inter', value: 'Inter, sans-serif' },
@@ -32,7 +33,7 @@ const EventConfig = () => {
   const activateEventConfig = useActivateEventConfig();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('existing');
+  const [activeTab, setActiveTab] = useState('configuration');
   const [editingConfig, setEditingConfig] = useState<EventConfigType | null>(null);
   const [newConfig, setNewConfig] = useState({
     event_name: '',
@@ -104,7 +105,7 @@ const EventConfig = () => {
         font_family: 'Inter, sans-serif',
         is_active: false
       });
-      setActiveTab('existing');
+      setActiveTab('configuration');
     } catch (error) {
       toast({
         title: "Error",
@@ -147,11 +148,13 @@ const EventConfig = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3 bg-gray-900/50 border border-gray-800">
-          <TabsTrigger value="existing" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
-            Configuraciones de Evento
+          <TabsTrigger value="configuration" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Configuración de Evento
           </TabsTrigger>
-          <TabsTrigger value="new" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
-            Nueva Configuración
+          <TabsTrigger value="ticket-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            Gestión de Tickets
           </TabsTrigger>
           <TabsTrigger value="qr-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
             <QrCode className="h-4 w-4" />
@@ -159,85 +162,88 @@ const EventConfig = () => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="existing" className="space-y-4">
-          {eventConfigs.map((config) => (
-            <Card key={config.id} className="bg-gray-900/50 border border-gray-800">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-dorado flex items-center gap-2">
-                      {config.event_name}
-                      {config.is_active && <Badge className="bg-green-600">Activo</Badge>}
-                    </CardTitle>
-                    <CardDescription>
-                      Creado: {new Date(config.created_at).toLocaleDateString()}
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    {!config.is_active && (
+        <TabsContent value="configuration" className="space-y-6">
+          {/* Existing Configurations */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-dorado">Configuraciones Existentes</h3>
+            {eventConfigs.map((config) => (
+              <Card key={config.id} className="bg-gray-900/50 border border-gray-800">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-dorado flex items-center gap-2">
+                        {config.event_name}
+                        {config.is_active && <Badge className="bg-green-600">Activo</Badge>}
+                      </CardTitle>
+                      <CardDescription>
+                        Creado: {new Date(config.created_at).toLocaleDateString()}
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      {!config.is_active && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleActivateConfig(config.id)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Activar
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        onClick={() => handleActivateConfig(config.id)}
-                        className="bg-green-600 hover:bg-green-700"
+                        variant="outline"
+                        onClick={() => setEditingConfig(config)}
+                        className="border-dorado text-dorado hover:bg-dorado hover:text-empresarial"
                       >
-                        <Check className="h-4 w-4 mr-1" />
-                        Activar
+                        Editar
                       </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditingConfig(config)}
-                      className="border-dorado text-dorado hover:bg-dorado hover:text-empresarial"
-                    >
-                      Editar
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <Label className="text-sm text-gray-400">Color Primario</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div 
-                        className="w-6 h-6 rounded border border-gray-600" 
-                        style={{ backgroundColor: config.primary_color }}
-                      />
-                      <span className="text-hueso text-sm">{config.primary_color}</span>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-sm text-gray-400">Color Secundario</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div 
-                        className="w-6 h-6 rounded border border-gray-600" 
-                        style={{ backgroundColor: config.secondary_color }}
-                      />
-                      <span className="text-hueso text-sm">{config.secondary_color}</span>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <Label className="text-sm text-gray-400">Color Primario</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div 
+                          className="w-6 h-6 rounded border border-gray-600" 
+                          style={{ backgroundColor: config.primary_color }}
+                        />
+                        <span className="text-hueso text-sm">{config.primary_color}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-gray-400">Color Secundario</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div 
+                          className="w-6 h-6 rounded border border-gray-600" 
+                          style={{ backgroundColor: config.secondary_color }}
+                        />
+                        <span className="text-hueso text-sm">{config.secondary_color}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-gray-400">Color de Acento</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div 
+                          className="w-6 h-6 rounded border border-gray-600" 
+                          style={{ backgroundColor: config.accent_color }}
+                        />
+                        <span className="text-hueso text-sm">{config.accent_color}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-gray-400">Fuente</Label>
+                      <p className="text-hueso text-sm mt-1">{config.font_family}</p>
                     </div>
                   </div>
-                  <div>
-                    <Label className="text-sm text-gray-400">Color de Acento</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div 
-                        className="w-6 h-6 rounded border border-gray-600" 
-                        style={{ backgroundColor: config.accent_color }}
-                      />
-                      <span className="text-hueso text-sm">{config.accent_color}</span>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-gray-400">Fuente</Label>
-                    <p className="text-hueso text-sm mt-1">{config.font_family}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-        <TabsContent value="new" className="space-y-6">
+          {/* New Configuration Form */}
           <Card className="bg-gray-900/50 border border-gray-800">
             <CardHeader>
               <CardTitle className="text-dorado flex items-center gap-2">
@@ -409,6 +415,10 @@ const EventConfig = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="ticket-management" className="space-y-6">
+          <TicketManagement />
         </TabsContent>
 
         <TabsContent value="qr-management" className="space-y-6">
