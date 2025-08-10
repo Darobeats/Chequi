@@ -26,7 +26,6 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    company: '',
     category_id: '',
     ticket_id: ''
   });
@@ -40,7 +39,6 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
       setFormData({
         name: attendee.name,
         email: attendee.email || '',
-        company: attendee.company || '',
         category_id: attendee.category_id,
         ticket_id: attendee.ticket_id
       });
@@ -48,7 +46,6 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
       setFormData({
         name: '',
         email: '',
-        company: '',
         category_id: '',
         ticket_id: ''
       });
@@ -125,15 +122,6 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="company">Empresa</Label>
-            <Input
-              id="company"
-              value={formData.company}
-              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              className="bg-gray-800 border-gray-700"
-            />
-          </div>
 
           <div className="space-y-2">
             <Label>Categoría de Ticket *</Label>

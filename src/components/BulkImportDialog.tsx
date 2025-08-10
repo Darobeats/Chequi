@@ -29,10 +29,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   const bulkCreateMutation = useBulkCreateAttendees();
 
   const downloadTemplate = () => {
-    const csvContent = 'nombre,email,empresa,categoria,ticket_id\n' +
-                      'Juan Pérez,juan@ejemplo.com,Empresa ABC,basico,\n' +
-                      'María García,maria@ejemplo.com,Empresa XYZ,premium,\n' +
-                      'Carlos López,carlos@ejemplo.com,Freelancer,vip,';
+    const csvContent = 'nombre,email,categoria,ticket_id\n' +
+                      'Juan Pérez,juan@ejemplo.com,basico,\n' +
+                      'María García,maria@ejemplo.com,premium,\n' +
+                      'Carlos López,carlos@ejemplo.com,vip,';
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -122,7 +122,6 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         return {
           name: row.nombre || '',
           email: row.email || null,
-          company: row.empresa || null,
           category_id: categoryId,
           ticket_id: row.ticket_id || generateTicketId()
         };
@@ -225,7 +224,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               <div className="max-h-32 overflow-y-auto text-xs text-gray-400">
                 {csvData.slice(0, 5).map((row, index) => (
                   <div key={index}>
-                    {row.nombre} - {row.email} - {row.empresa}
+                    {row.nombre} - {row.email}
                   </div>
                 ))}
                 {csvData.length > 5 && <div>... y {csvData.length - 5} más</div>}
@@ -235,7 +234,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
           <div className="text-sm text-gray-400 p-3 bg-gray-800/50 rounded">
             <strong>Formato CSV esperado:</strong>
-            <br />• Columnas: nombre, email, empresa, categoria, ticket_id
+            <br />• Columnas: nombre, email, categoria, ticket_id
             <br />• La columna 'categoria' debe coincidir con los nombres de categorías existentes
             <br />• Si ticket_id está vacío, se generará automáticamente
             <br />• Se generará un código QR único para cada asistente

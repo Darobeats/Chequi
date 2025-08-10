@@ -10,7 +10,6 @@ export const useCreateAttendee = () => {
     mutationFn: async (attendeeData: {
       name: string;
       email?: string;
-      company?: string;
       category_id: string;
       ticket_id: string;
     }) => {
@@ -81,7 +80,6 @@ export const useBulkCreateAttendees = () => {
     mutationFn: async (attendeesData: Array<{
       name: string;
       email?: string;
-      company?: string;
       category_id: string;
       ticket_id: string;
     }>) => {

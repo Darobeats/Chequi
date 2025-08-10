@@ -77,7 +77,6 @@ export type Database = {
       attendees: {
         Row: {
           category_id: string
-          company: string | null
           created_at: string
           email: string | null
           id: string
@@ -89,7 +88,6 @@ export type Database = {
         }
         Insert: {
           category_id: string
-          company?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -101,7 +99,6 @@ export type Database = {
         }
         Update: {
           category_id?: string
-          company?: string | null
           created_at?: string
           email?: string | null
           id?: string

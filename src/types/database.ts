@@ -31,7 +31,6 @@ export interface Attendee {
   ticket_id: string;
   name: string;
   email: string | null;
-  company: string | null;
   category_id: string;
   status: 'valid' | 'used' | 'blocked';
   qr_code: string | null;

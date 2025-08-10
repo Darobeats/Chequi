@@ -42,7 +42,7 @@ const AttendeeList: React.FC = () => {
         attendee.name.toLowerCase().includes(searchTermLower) ||
         attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
         attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
-        attendee.company?.toLowerCase().includes(searchTermLower) ||
+        
         attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
       );
     });
@@ -77,7 +77,7 @@ const AttendeeList: React.FC = () => {
         </div>
         <Input
           type="search"
-          placeholder="Buscar por nombre, ID, QR code, empresa o categoría..."
+          placeholder="Buscar por nombre, ID, QR code o categoría..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-xs bg-empresarial border-gray-800 text-hueso"
@@ -89,7 +89,6 @@ const AttendeeList: React.FC = () => {
           <TableHeader className="bg-gray-900">
             <TableRow>
               <TableHead className="text-hueso">Nombre</TableHead>
-              <TableHead className="text-hueso">Empresa</TableHead>
               <TableHead className="text-hueso">Categoría</TableHead>
               <TableHead className="text-hueso">Código QR</TableHead>
               <TableHead className="text-hueso">Último Uso</TableHead>
@@ -102,7 +101,6 @@ const AttendeeList: React.FC = () => {
             {filteredAttendees.map((attendee) => (
               <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
                 <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
-                <TableCell className="text-gray-300">{attendee.company || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge 
                     className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}
@@ -146,7 +144,7 @@ const AttendeeList: React.FC = () => {
             ))}
             {filteredAttendees.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
                   No se encontraron asistentes que coincidan con la búsqueda
                 </TableCell>
               </TableRow>

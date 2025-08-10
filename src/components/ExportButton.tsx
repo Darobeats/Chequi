@@ -53,7 +53,7 @@ const ExportButton: React.FC = () => {
           return {
             'Ticket ID': attendee.ticket_id,
             'Nombre': attendee.name,
-            'Empresa': attendee.company || 'N/A',
+            
             'Email': attendee.email || 'N/A',
             'Categoría': attendee.ticket_category?.name || 'N/A',
             'Código QR': attendee.qr_code || 'No generado',
@@ -82,7 +82,6 @@ const ExportButton: React.FC = () => {
       const columnWidths = [
         { wch: 15 }, // Ticket ID
         { wch: 25 }, // Nombre
-        { wch: 20 }, // Empresa
         { wch: 25 }, // Email
         { wch: 12 }, // Categoría
         { wch: 20 }, // Código QR

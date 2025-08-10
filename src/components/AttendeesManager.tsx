@@ -32,7 +32,7 @@ const AttendeesManager: React.FC = () => {
       attendee.name.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
       attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
-      attendee.company?.toLowerCase().includes(searchTermLower) ||
+      
       attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
     );
   });
@@ -162,7 +162,7 @@ const AttendeesManager: React.FC = () => {
       <div className="flex justify-between items-center">
         <Input
           type="search"
-          placeholder="Buscar por nombre, ticket ID, QR code, empresa..."
+          placeholder="Buscar por nombre, ticket ID, QR code..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-md bg-empresarial border-gray-800 text-hueso"
@@ -175,7 +175,6 @@ const AttendeesManager: React.FC = () => {
             <TableRow>
               <TableHead className="text-hueso">Nombre</TableHead>
               <TableHead className="text-hueso">Email</TableHead>
-              <TableHead className="text-hueso">Empresa</TableHead>
               <TableHead className="text-hueso">Categoría</TableHead>
               <TableHead className="text-hueso">Ticket ID</TableHead>
               <TableHead className="text-hueso">Código QR</TableHead>
@@ -188,7 +187,6 @@ const AttendeesManager: React.FC = () => {
               <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
                 <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
                 <TableCell className="text-gray-300">{attendee.email || 'N/A'}</TableCell>
-                <TableCell className="text-gray-300">{attendee.company || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge 
                     className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}
@@ -256,7 +254,7 @@ const AttendeesManager: React.FC = () => {
             ))}
             {filteredAttendees.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
                   {searchTerm ? 'No se encontraron asistentes que coincidan con la búsqueda' : 'No hay asistentes registrados'}
                 </TableCell>
               </TableRow>
