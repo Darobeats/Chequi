@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useTicketCategories, useCreateTicketCategory, useUpdateTicketCategory, useDeleteTicketCategory, useCategoryControls, useCreateCategoryControl, useUpdateCategoryControl, useDeleteCategoryControl } from '@/hooks/useTicketCategories';
 import { useControlTypes } from '@/hooks/useSupabaseData';
-import { Plus, Edit, Trash2, Tag, Settings } from 'lucide-react';
+import { useCreateControlType, useUpdateControlType, useDeleteControlType } from '@/hooks/useControlTypeManagement';
+import { Plus, Edit, Trash2, Tag, Settings, Shield, Palette } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { TicketCategory, ControlType } from '@/types/database';
 
@@ -21,6 +22,9 @@ const TicketManagement = () => {
   const createCategoryControl = useCreateCategoryControl();
   const updateCategoryControl = useUpdateCategoryControl();
   const deleteCategoryControl = useDeleteCategoryControl();
+  const createControlType = useCreateControlType();
+  const updateControlType = useUpdateControlType();
+  const deleteControlType = useDeleteControlType();
   const { toast } = useToast();
 
   const [newCategory, setNewCategory] = useState({
@@ -32,6 +36,17 @@ const TicketManagement = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
   const [showEditCategoryDialog, setShowEditCategoryDialog] = useState(false);
+  
+  // Control type management state
+  const [newControlType, setNewControlType] = useState({
+    name: '',
+    description: '',
+    color: '#D4AF37',
+    icon: ''
+  });
+  const [editingControlType, setEditingControlType] = useState<ControlType | null>(null);
+  const [showNewControlTypeDialog, setShowNewControlTypeDialog] = useState(false);
+  const [showEditControlTypeDialog, setShowEditControlTypeDialog] = useState(false);
 
   const handleCreateCategory = async () => {
     try {
@@ -133,6 +148,61 @@ const TicketManagement = () => {
     }
   };
 
+  // Control type handlers
+  const handleCreateControlType = async () => {
+    try {
+      await createControlType.mutateAsync(newControlType);
+      setNewControlType({ name: '', description: '', color: '#D4AF37', icon: '' });
+      setShowNewControlTypeDialog(false);
+      toast({
+        title: "Tipo de control creado",
+        description: "Nuevo tipo de acceso creado exitosamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo crear el tipo de acceso.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateControlType = async () => {
+    if (!editingControlType) return;
+    
+    try {
+      await updateControlType.mutateAsync(editingControlType);
+      setEditingControlType(null);
+      setShowEditControlTypeDialog(false);
+      toast({
+        title: "Tipo de control actualizado",
+        description: "Los cambios se han guardado correctamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el tipo de acceso.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteControlType = async (controlTypeId: string) => {
+    try {
+      await deleteControlType.mutateAsync(controlTypeId);
+      toast({
+        title: "Tipo de control eliminado",
+        description: "El tipo de acceso ha sido eliminado correctamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el tipo de acceso.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getCategoryControlMaxUses = (categoryId: string, controlTypeId: string) => {
     const control = categoryControls.find(cc => 
       cc.category_id === categoryId && cc.control_type_id === controlTypeId
@@ -142,10 +212,206 @@ const TicketManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Control Types Management Section */}
+      <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Shield className="h-6 w-6 text-dorado" />
+            <h3 className="text-xl font-bold text-dorado">Tipos de Acceso</h3>
+          </div>
+          <Dialog open={showNewControlTypeDialog} onOpenChange={setShowNewControlTypeDialog}>
+            <DialogTrigger asChild>
+              <Button className="bg-dorado text-empresarial hover:bg-dorado/90">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Tipo
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-gray-900 border-gray-800">
+              <DialogHeader>
+                <DialogTitle className="text-dorado">Crear Nuevo Tipo de Acceso</DialogTitle>
+                <DialogDescription>
+                  Crea un nuevo tipo de control para el scanner
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="control_name" className="text-hueso">Nombre del Tipo</Label>
+                  <Input
+                    id="control_name"
+                    value={newControlType.name}
+                    onChange={(e) => setNewControlType({ ...newControlType, name: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-hueso"
+                    placeholder="Entrada, Consumibles, VIP..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="control_description" className="text-hueso">Descripción</Label>
+                  <Input
+                    id="control_description"
+                    value={newControlType.description}
+                    onChange={(e) => setNewControlType({ ...newControlType, description: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-hueso"
+                    placeholder="Descripción del tipo de acceso..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="control_icon" className="text-hueso">Icono (opcional)</Label>
+                  <Input
+                    id="control_icon"
+                    value={newControlType.icon}
+                    onChange={(e) => setNewControlType({ ...newControlType, icon: e.target.value })}
+                    className="bg-gray-800 border-gray-700 text-hueso"
+                    placeholder="shield, user, star..."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="control_color" className="text-hueso">Color</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="control_color"
+                      type="color"
+                      value={newControlType.color}
+                      onChange={(e) => setNewControlType({ ...newControlType, color: e.target.value })}
+                      className="w-12 h-8 p-1 bg-gray-800 border-gray-700"
+                    />
+                    <Input
+                      value={newControlType.color}
+                      onChange={(e) => setNewControlType({ ...newControlType, color: e.target.value })}
+                      className="bg-gray-800 border-gray-700 text-hueso"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setShowNewControlTypeDialog(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleCreateControlType}
+                    disabled={!newControlType.name}
+                    className="bg-dorado text-empresarial hover:bg-dorado/90"
+                  >
+                    Crear Tipo
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+        
+        <div className="grid gap-3">
+          {controlTypes.map((controlType) => (
+            <div key={controlType.id} className="flex items-center justify-between p-4 bg-gray-800/30 rounded-lg border border-gray-700">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: controlType.color || '#D4AF37' }}
+                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-hueso font-medium">{controlType.name}</span>
+                    {controlType.icon && (
+                      <Badge variant="outline" className="text-xs">
+                        {controlType.icon}
+                      </Badge>
+                    )}
+                  </div>
+                  {controlType.description && (
+                    <span className="text-sm text-gray-400">{controlType.description}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Dialog open={showEditControlTypeDialog} onOpenChange={setShowEditControlTypeDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditingControlType(controlType)}
+                      className="border-dorado text-dorado hover:bg-dorado hover:text-empresarial"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-gray-900 border-gray-800">
+                    <DialogHeader>
+                      <DialogTitle className="text-dorado">Editar Tipo de Acceso</DialogTitle>
+                    </DialogHeader>
+                    {editingControlType && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-hueso">Nombre</Label>
+                          <Input
+                            value={editingControlType.name}
+                            onChange={(e) => setEditingControlType({ ...editingControlType, name: e.target.value })}
+                            className="bg-gray-800 border-gray-700 text-hueso"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-hueso">Descripción</Label>
+                          <Input
+                            value={editingControlType.description || ''}
+                            onChange={(e) => setEditingControlType({ ...editingControlType, description: e.target.value })}
+                            className="bg-gray-800 border-gray-700 text-hueso"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-hueso">Icono</Label>
+                          <Input
+                            value={editingControlType.icon || ''}
+                            onChange={(e) => setEditingControlType({ ...editingControlType, icon: e.target.value })}
+                            className="bg-gray-800 border-gray-700 text-hueso"
+                            placeholder="shield, user, star..."
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-hueso">Color</Label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={editingControlType.color || '#D4AF37'}
+                              onChange={(e) => setEditingControlType({ ...editingControlType, color: e.target.value })}
+                              className="w-12 h-8 p-1 bg-gray-800 border-gray-700"
+                            />
+                            <Input
+                              value={editingControlType.color || '#D4AF37'}
+                              onChange={(e) => setEditingControlType({ ...editingControlType, color: e.target.value })}
+                              className="bg-gray-800 border-gray-700 text-hueso"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-4">
+                          <Button variant="outline" onClick={() => setShowEditControlTypeDialog(false)}>
+                            Cancelar
+                          </Button>
+                          <Button 
+                            onClick={handleUpdateControlType}
+                            className="bg-dorado text-empresarial hover:bg-dorado/90"
+                          >
+                            Guardar Cambios
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleDeleteControlType(controlType.id)}
+                  className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Tag className="h-6 w-6 text-dorado" />
-          <h2 className="text-2xl font-bold text-dorado">Gestión de Tickets</h2>
+          <h2 className="text-2xl font-bold text-dorado">Categorías de Tickets</h2>
         </div>
         <Dialog open={showNewCategoryDialog} onOpenChange={setShowNewCategoryDialog}>
           <DialogTrigger asChild>
