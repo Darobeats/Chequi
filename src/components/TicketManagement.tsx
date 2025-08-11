@@ -11,6 +11,7 @@ import { useCreateControlType, useUpdateControlType, useDeleteControlType } from
 import { Plus, Edit, Trash2, Tag, Settings, Shield, Palette } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { TicketCategory, ControlType } from '@/types/database';
+import { supabase } from '@/integrations/supabase/client';
 
 const TicketManagement = () => {
   const { data: categories = [], refetch: refetchCategories } = useTicketCategories();
@@ -87,16 +88,32 @@ const TicketManagement = () => {
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
+    // Check if category has attendees
+    const { data: attendeesCount } = await supabase
+      .from('attendees')
+      .select('id', { count: 'exact' })
+      .eq('category_id', categoryId);
+
+    if (attendeesCount && attendeesCount.length > 0) {
+      toast({
+        title: "No se puede eliminar",
+        description: "Esta categoría tiene asistentes asociados. Elimine primero los asistentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await deleteCategory.mutateAsync(categoryId);
       toast({
         title: "Categoría eliminada",
         description: "La categoría ha sido eliminada correctamente.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
       toast({
         title: "Error",
-        description: "No se pudo eliminar la categoría.",
+        description: error.message || "No se pudo eliminar la categoría.",
         variant: "destructive",
       });
     }
@@ -194,10 +211,11 @@ const TicketManagement = () => {
         title: "Tipo de control eliminado",
         description: "El tipo de acceso ha sido eliminado correctamente.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error deleting control type:', error);
       toast({
         title: "Error",
-        description: "No se pudo eliminar el tipo de acceso.",
+        description: error.message || "No se pudo eliminar el tipo de acceso.",
         variant: "destructive",
       });
     }
