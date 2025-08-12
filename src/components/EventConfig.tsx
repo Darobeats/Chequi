@@ -9,10 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { EventConfig as EventConfigType } from '@/types/database';
-import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag } from 'lucide-react';
+import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AttendeesManager from '@/components/AttendeesManager';
 import TicketManagement from '@/components/TicketManagement';
+import AttendeeManagement from '@/components/AttendeeManagement';
 
 const FONT_OPTIONS = [
   { name: 'Inter', value: 'Inter, sans-serif' },
@@ -147,7 +148,7 @@ const EventConfig = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 bg-gray-900/50 border border-gray-800">
+        <TabsList className="grid w-full grid-cols-4 bg-gray-900/50 border border-gray-800">
           <TabsTrigger value="configuration" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Configuración de Evento
@@ -155,6 +156,10 @@ const EventConfig = () => {
           <TabsTrigger value="ticket-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
             <Tag className="h-4 w-4" />
             Gestión de Tickets
+          </TabsTrigger>
+          <TabsTrigger value="attendee-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Gestión de Asistentes
           </TabsTrigger>
           <TabsTrigger value="qr-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
             <QrCode className="h-4 w-4" />
@@ -419,6 +424,10 @@ const EventConfig = () => {
 
         <TabsContent value="ticket-management" className="space-y-6">
           <TicketManagement />
+        </TabsContent>
+
+        <TabsContent value="attendee-management" className="space-y-6">
+          <AttendeeManagement />
         </TabsContent>
 
         <TabsContent value="qr-management" className="space-y-6">
