@@ -90,8 +90,8 @@ const QRScanner: React.FC = () => {
       setLastResult({ 
         success: true, 
         attendee: result.attendee,
-        usageCount: result.usageCount,
-        maxUses: result.maxUses,
+          usageCount: result.usage?.currentUses || 0,
+          maxUses: result.usage?.maxUses || 0,
         controlType: selectedControl?.name 
       });
       

@@ -102,93 +102,47 @@ export const useProcessQRCode = () => {
   return useMutation({
     mutationFn: async ({ ticketId, controlType }: { ticketId: string; controlType: string }) => {
       const cleanTicketId = ticketId.trim();
-      console.log('=== PROCESANDO QR CODE SIN AUTENTICACIÓN ===');
+      console.log('=== PROCESANDO QR CODE MEDIANTE EDGE FUNCTION SEGURA ===');
       console.log('ProcessQRCode - Ticket ID:', cleanTicketId);
       console.log('ProcessQRCode - Control type:', controlType);
       
-      // 1. Usar función pública de validación de acceso
-      const { data: validation, error: validationError } = await supabase
-        .rpc('validate_control_access_public', {
-          p_ticket_id: cleanTicketId,
-          p_control_type_id: controlType
-        });
+      // Usar Edge Function segura para procesar el escaneado
+      const { data, error } = await supabase.functions.invoke('process-qr-scan', {
+        body: {
+          ticketId: cleanTicketId,
+          controlTypeId: controlType,
+          device: `Scanner Web - ${navigator.userAgent?.split(' ')[0] || 'Unknown'}`
+        }
+      });
 
-      if (validationError) {
-        console.error('❌ Validation error:', validationError);
-        throw new Error('Error al validar acceso: ' + validationError.message);
+      if (error) {
+        console.error('❌ Edge Function error:', error);
+        throw new Error('Error al procesar el escaneado: ' + error.message);
       }
 
-      if (!validation || validation.length === 0) {
-        console.error('❌ No validation result');
-        throw new Error('Error en validación de ticket');
+      if (data.error) {
+        console.error('❌ Scanner error:', data.error);
+        throw new Error(data.error);
       }
 
-      const validationResult = validation[0];
-      console.log('📋 Validation result:', validationResult);
-
-      if (!validationResult.can_access) {
-        console.error('❌ Access denied:', validationResult.error_message);
-        throw new Error(validationResult.error_message);
+      if (!data.success) {
+        console.error('❌ Scanner failed:', data);
+        throw new Error(data.error || 'Error desconocido al procesar escaneado');
       }
 
-      // 2. Obtener datos del asistente usando función pública
-      const { data: attendeeData, error: attendeeError } = await supabase
-        .rpc('find_attendee_by_ticket_public', { ticket_id: cleanTicketId });
-
-      if (attendeeError || !attendeeData || attendeeData.length === 0) {
-        console.error('❌ Attendee not found:', attendeeError);
-        throw new Error('Datos del asistente no encontrados');
-      }
-
-      const attendee = attendeeData[0];
-      console.log('✅ Found attendee:', attendee);
-
-      // 3. Obtener información adicional de la categoría
-      const { data: ticketCategory, error: categoryError } = await supabase
-        .from('ticket_categories')
-        .select('*')
-        .eq('id', attendee.category_id)
-        .single();
-
-      if (categoryError) {
-        console.warn('⚠️ Could not fetch ticket category:', categoryError);
-      }
-
-      // 4. Registrar uso (sin autenticación requerida)
-      const { error: insertError } = await supabase
-        .from('control_usage')
-        .insert({
-          attendee_id: validationResult.attendee_id,
-          control_type_id: controlType,
-          device: `Scanner Web - ${navigator.userAgent?.split(' ')[0] || 'Unknown'}`,
-          notes: `Scanner público - Acceso sin autenticación`
-        });
-
-      if (insertError) {
-        console.error('❌ Error inserting usage:', insertError);
-        throw new Error('Error al registrar acceso: ' + insertError.message);
-      }
-
-      console.log('✅ Usage registered successfully');
+      console.log('✅ Scanner success:', data);
       
       return {
-        success: true,
-        attendee: {
-          ...attendee,
-          ticket_category: ticketCategory
-        },
-        usageCount: validationResult.current_uses + 1,
-        maxUses: validationResult.max_uses
+        attendee: data.attendee,
+        usage: data.usage,
+        message: data.message,
+        canAccess: data.canAccess
       };
     },
     onSuccess: () => {
-      // Invalidar queries para actualización inmediata
+      // Invalidar queries relacionadas
       queryClient.invalidateQueries({ queryKey: ['control_usage'] });
       queryClient.invalidateQueries({ queryKey: ['attendees'] });
-      
-      // Forzar refetch para actualización en tiempo real
-      queryClient.refetchQueries({ queryKey: ['control_usage'] });
-      queryClient.refetchQueries({ queryKey: ['attendees'] });
     }
   });
 };
