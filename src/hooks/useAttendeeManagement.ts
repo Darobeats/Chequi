@@ -60,6 +60,15 @@ export const useDeleteAttendee = () => {
   
   return useMutation({
     mutationFn: async (attendeeId: string) => {
+      // First delete related control_usage records
+      const { error: usageError } = await supabase
+        .from('control_usage')
+        .delete()
+        .eq('attendee_id', attendeeId);
+
+      if (usageError) throw usageError;
+
+      // Then delete the attendee
       const { error } = await supabase
         .from('attendees')
         .delete()
@@ -69,6 +78,7 @@ export const useDeleteAttendee = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendees'] });
+      queryClient.invalidateQueries({ queryKey: ['control_usage'] });
     }
   });
 };

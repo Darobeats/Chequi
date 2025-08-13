@@ -5,7 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Attendee, ControlType, TicketCategory, ControlUsage, CategoryControl } from '@/types/database';
 
 export const useAttendees = () => {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ['attendees'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -19,6 +21,31 @@ export const useAttendees = () => {
       return data as (Attendee & { ticket_category: TicketCategory })[];
     }
   });
+
+  // Set up real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendees'
+        },
+        (payload) => {
+          console.log('Attendees real-time update:', payload);
+          queryClient.invalidateQueries({ queryKey: ['attendees'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
 };
 
 export const useControlTypes = () => {
