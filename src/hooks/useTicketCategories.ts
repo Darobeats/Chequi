@@ -60,6 +60,50 @@ export const useDeleteTicketCategory = () => {
   
   return useMutation({
     mutationFn: async (categoryId: string) => {
+      // First delete related QR templates
+      const { error: qrTemplateError } = await supabase
+        .from('qr_templates')
+        .delete()
+        .eq('category_id', categoryId);
+
+      if (qrTemplateError) throw qrTemplateError;
+
+      // Delete related category_controls
+      const { error: categoryControlError } = await supabase
+        .from('category_controls')
+        .delete()
+        .eq('category_id', categoryId);
+
+      if (categoryControlError) throw categoryControlError;
+
+      // Get attendees for this category to delete their control usage
+      const { data: attendees, error: attendeesError } = await supabase
+        .from('attendees')
+        .select('id')
+        .eq('category_id', categoryId);
+
+      if (attendeesError) throw attendeesError;
+
+      // Delete control usage for attendees in this category
+      if (attendees && attendees.length > 0) {
+        const attendeeIds = attendees.map(a => a.id);
+        const { error: usageError } = await supabase
+          .from('control_usage')
+          .delete()
+          .in('attendee_id', attendeeIds);
+
+        if (usageError) throw usageError;
+      }
+
+      // Delete attendees in this category
+      const { error: attendeeDeleteError } = await supabase
+        .from('attendees')
+        .delete()
+        .eq('category_id', categoryId);
+
+      if (attendeeDeleteError) throw attendeeDeleteError;
+
+      // Finally delete the ticket category
       const { error } = await supabase
         .from('ticket_categories')
         .delete()
@@ -69,6 +113,9 @@ export const useDeleteTicketCategory = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ticket_categories'] });
+      queryClient.invalidateQueries({ queryKey: ['attendees'] });
+      queryClient.invalidateQueries({ queryKey: ['category_controls'] });
+      queryClient.invalidateQueries({ queryKey: ['control_usage'] });
     }
   });
 };

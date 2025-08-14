@@ -60,21 +60,32 @@ export const useDeleteAttendee = () => {
   
   return useMutation({
     mutationFn: async (attendeeId: string) => {
-      // First delete related control_usage records
-      const { error: usageError } = await supabase
-        .from('control_usage')
-        .delete()
-        .eq('attendee_id', attendeeId);
+      try {
+        // First delete related control_usage records
+        const { error: usageError } = await supabase
+          .from('control_usage')
+          .delete()
+          .eq('attendee_id', attendeeId);
 
-      if (usageError) throw usageError;
+        if (usageError) {
+          console.error('Error deleting control usage:', usageError);
+          throw usageError;
+        }
 
-      // Then delete the attendee
-      const { error } = await supabase
-        .from('attendees')
-        .delete()
-        .eq('id', attendeeId);
+        // Then delete the attendee
+        const { error } = await supabase
+          .from('attendees')
+          .delete()
+          .eq('id', attendeeId);
 
-      if (error) throw error;
+        if (error) {
+          console.error('Error deleting attendee:', error);
+          throw error;
+        }
+      } catch (error) {
+        console.error('Delete attendee error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendees'] });
