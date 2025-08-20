@@ -105,32 +105,43 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     }
 
     try {
-      const attendeesData = csvData.map(row => {
+      // Validate data before processing
+      const invalidRows = csvData.filter((row, index) => !row.nombre || row.nombre.trim() === '');
+      if (invalidRows.length > 0) {
+        toast.error(`Filas inválidas encontradas (sin nombre): ${invalidRows.length} filas`);
+        return;
+      }
+
+      const attendeesData = csvData.map((row, index) => {
         // Find category by name or use default
         let categoryId = defaultCategoryId;
-        if (row.categoria) {
+        if (row.categoria && row.categoria.trim()) {
           const category = categories.find(cat => 
-            cat.name.toLowerCase() === row.categoria.toLowerCase()
+            cat.name.toLowerCase().trim() === row.categoria.toLowerCase().trim()
           );
           if (category) categoryId = category.id;
         }
 
         if (!categoryId) {
-          throw new Error('Debe seleccionar una categoría por defecto o especificar categorías válidas en el CSV');
+          throw new Error(`Debe seleccionar una categoría por defecto o especificar categorías válidas en el CSV. Fila ${index + 1}: "${row.categoria}"`);
         }
 
         return {
-          name: row.nombre || '',
-          email: row.email || null,
+          name: row.nombre.trim(),
+          email: row.email && row.email.trim() ? row.email.trim() : null,
           category_id: categoryId,
-          ticket_id: row.ticket_id || generateTicketId()
+          ticket_id: (row.ticket_id && row.ticket_id.trim()) ? row.ticket_id.trim() : generateTicketId()
         };
       });
 
-      await bulkCreateMutation.mutateAsync(attendeesData);
+      console.log('Importing attendees data:', attendeesData);
       
-      toast.success(`${attendeesData.length} asistentes importados correctamente`, {
-        description: 'Se han generado códigos QR automáticamente para todos los asistentes'
+      const result = await bulkCreateMutation.mutateAsync(attendeesData);
+      
+      console.log('Import result:', result);
+      
+      toast.success(`${result.length} asistentes importados correctamente`, {
+        description: `Se han creado ${result.length} asistentes con códigos QR únicos. Total en sistema: ${result.length}`
       });
       
       onOpenChange(false);
@@ -144,8 +155,26 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         fileInputRef.current.value = '';
       }
     } catch (error: any) {
+      console.error('Import error:', error);
+      
+      let errorMessage = 'Error desconocido al importar asistentes';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.details) {
+        errorMessage = error.details;
+      } else if (error.hint) {
+        errorMessage = error.hint;
+      }
+      
+      // Check for specific permission errors
+      if (errorMessage.includes('permission') || errorMessage.includes('policy') || errorMessage.includes('RLS')) {
+        errorMessage = 'Error de permisos: No tienes autorización para crear asistentes. Contacta al administrador.';
+      }
+      
       toast.error('Error al importar asistentes', {
-        description: error.message
+        description: errorMessage,
+        duration: 10000
       });
     }
   };
