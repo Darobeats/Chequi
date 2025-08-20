@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -407,30 +407,30 @@ export type Database = {
       find_attendee_by_ticket: {
         Args: { ticket_id: string }
         Returns: {
-          id: string
-          ticket_id: string
-          name: string
-          email: string
-          company: string
           category_id: string
-          status: string
-          qr_code: string
+          company: string
           created_at: string
+          email: string
+          id: string
+          name: string
+          qr_code: string
+          status: string
+          ticket_id: string
           updated_at: string
         }[]
       }
       find_attendee_by_ticket_public: {
         Args: { ticket_id: string }
         Returns: {
-          id: string
-          ticket_id: string
-          name: string
-          email: string
-          company: string
           category_id: string
-          status: string
-          qr_code: string
+          company: string
           created_at: string
+          email: string
+          id: string
+          name: string
+          qr_code: string
+          status: string
+          ticket_id: string
           updated_at: string
         }[]
       }
@@ -441,14 +441,14 @@ export type Database = {
       get_active_event_config: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
+          accent_color: string
+          event_image_url: string
           event_name: string
+          font_family: string
+          id: string
+          logo_url: string
           primary_color: string
           secondary_color: string
-          accent_color: string
-          logo_url: string
-          event_image_url: string
-          font_family: string
         }[]
       }
       get_current_user_role: {
@@ -468,29 +468,29 @@ export type Database = {
         Returns: boolean
       }
       validar_ticket: {
-        Args: { qr: string; punto?: string }
+        Args: { punto?: string; qr: string }
         Returns: string
       }
       validate_control_access: {
-        Args: { p_ticket_id: string; p_control_type_id: string }
+        Args: { p_control_type_id: string; p_ticket_id: string }
         Returns: {
-          can_access: boolean
           attendee_id: string
+          can_access: boolean
           category_id: string
-          max_uses: number
           current_uses: number
           error_message: string
+          max_uses: number
         }[]
       }
       validate_control_access_public: {
-        Args: { p_ticket_id: string; p_control_type_id: string }
+        Args: { p_control_type_id: string; p_ticket_id: string }
         Returns: {
-          can_access: boolean
           attendee_id: string
+          can_access: boolean
           category_id: string
-          max_uses: number
           current_uses: number
           error_message: string
+          max_uses: number
         }[]
       }
     }
