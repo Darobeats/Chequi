@@ -408,7 +408,6 @@ export type Database = {
         Args: { ticket_id: string }
         Returns: {
           category_id: string
-          company: string
           created_at: string
           email: string
           id: string
@@ -423,7 +422,6 @@ export type Database = {
         Args: { ticket_id: string }
         Returns: {
           category_id: string
-          company: string
           created_at: string
           email: string
           id: string
