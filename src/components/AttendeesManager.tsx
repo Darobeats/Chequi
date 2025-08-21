@@ -12,6 +12,7 @@ import { toast } from '@/components/ui/sonner';
 import { Plus, Upload, Edit, Trash2, QrCode, RotateCcw } from 'lucide-react';
 import AttendeeForm from './AttendeeForm';
 import BulkImportDialog from './BulkImportDialog';
+import QRCodeDisplay from './QRCodeDisplay';
 
 const AttendeesManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -176,7 +177,6 @@ const AttendeesManager: React.FC = () => {
               <TableHead className="text-hueso">Nombre</TableHead>
               <TableHead className="text-hueso">Email</TableHead>
               <TableHead className="text-hueso">Categoría</TableHead>
-              <TableHead className="text-hueso">Ticket ID</TableHead>
               <TableHead className="text-hueso">Código QR</TableHead>
               <TableHead className="text-hueso">Estado</TableHead>
               <TableHead className="text-hueso">Acciones</TableHead>
@@ -194,9 +194,12 @@ const AttendeesManager: React.FC = () => {
                     {attendee.ticket_category?.name || 'N/A'}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-mono text-sm text-gray-300">{attendee.ticket_id}</TableCell>
-                <TableCell className="font-mono text-xs text-gray-300">
-                  {attendee.qr_code || 'No generado'}
+                <TableCell className="py-2">
+                  <QRCodeDisplay 
+                    value={attendee.qr_code || ''} 
+                    size={48}
+                    className="mx-auto"
+                  />
                 </TableCell>
                 <TableCell>
                   <Badge 
@@ -254,7 +257,7 @@ const AttendeesManager: React.FC = () => {
             ))}
             {filteredAttendees.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={6} className="text-center py-8 text-gray-400">
                   {searchTerm ? 'No se encontraron asistentes que coincidan con la búsqueda' : 'No hay asistentes registrados'}
                 </TableCell>
               </TableRow>

@@ -443,11 +443,11 @@ const EventConfig = () => {
           <Card className="bg-gray-900/50 border border-gray-800">
             <CardHeader>
               <CardTitle className="text-dorado flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
-                Gestión de Asistentes y QR
+                <QrCode className="h-5 w-5" />
+                Gestión de QR
               </CardTitle>
               <CardDescription>
-                Administra asistentes, genera QR codes y gestiona el acceso al evento
+                Visualiza y gestiona los códigos QR de todos los asistentes
               </CardDescription>
             </CardHeader>
             <CardContent>
