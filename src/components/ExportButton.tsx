@@ -33,17 +33,18 @@ const ExportButton: React.FC = () => {
               })
             : 'Sin registros';
 
-          // Generate QR code as base64 image
+          // Generate QR code as base64 image with larger size for better scanning
           let qrImage = '';
           if (attendee.qr_code) {
             try {
               qrImage = await QRCode.toDataURL(attendee.qr_code, {
-                width: 128,
-                margin: 1,
+                width: 256, // Increased from 128 to 256 for better scanning
+                margin: 2,  // Increased margin for better scanning
                 color: {
                   dark: '#000000',
                   light: '#FFFFFF'
-                }
+                },
+                errorCorrectionLevel: 'M' // Added error correction for better scanning
               });
             } catch (error) {
               console.error('Error generating QR code:', error);
@@ -51,13 +52,10 @@ const ExportButton: React.FC = () => {
           }
 
           return {
-            'Ticket ID': attendee.ticket_id,
             'Nombre': attendee.name,
-            
             'Email': attendee.email || 'N/A',
             'Categoría': attendee.ticket_category?.name || 'N/A',
-            'Código QR': attendee.qr_code || 'No generado',
-            'QR Visual': qrImage,
+            'Código QR': qrImage || 'No generado', // Now contains the QR image instead of text
             'Último Uso': formattedLastUsage,
             'Total Usos': attendeeUsage.length,
             'Estado': attendee.status === 'valid' ? 'Válido' : 
@@ -69,22 +67,15 @@ const ExportButton: React.FC = () => {
       // Create workbook
       const wb = XLSX.utils.book_new();
       
-      // Convert data to worksheet format
-      const wsData = processedData.map(row => {
-        // Exclude QR Visual from regular data for now
-        const { 'QR Visual': qrImage, ...regularData } = row;
-        return regularData;
-      });
-
-      const ws = XLSX.utils.json_to_sheet(wsData);
+      // Convert data to worksheet format - QR images are now included directly
+      const ws = XLSX.utils.json_to_sheet(processedData);
 
       // Set column widths
       const columnWidths = [
-        { wch: 15 }, // Ticket ID
         { wch: 25 }, // Nombre
         { wch: 25 }, // Email
         { wch: 12 }, // Categoría
-        { wch: 20 }, // Código QR
+        { wch: 30 }, // Código QR (increased for better QR image display)
         { wch: 18 }, // Último Uso
         { wch: 10 }, // Total Usos
         { wch: 10 }, // Estado

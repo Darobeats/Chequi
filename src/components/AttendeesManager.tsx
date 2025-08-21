@@ -197,7 +197,7 @@ const AttendeesManager: React.FC = () => {
                 <TableCell className="py-2">
                   <QRCodeDisplay 
                     value={attendee.qr_code || ''} 
-                    size={48}
+                    size={80}
                     className="mx-auto"
                   />
                 </TableCell>
