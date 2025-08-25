@@ -22,9 +22,9 @@ const ExportButton: React.FC = () => {
       for (const attendee of attendees) {
         const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
         
-        // Create Google Charts QR URL for easy sharing
+        // Create QR Server API URL for easy sharing
         const qrUrl = attendee.qr_code 
-          ? `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(attendee.qr_code)}`
+          ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(attendee.qr_code)}`
           : 'No generado';
 
         if (attendeeUsage.length === 0) {
