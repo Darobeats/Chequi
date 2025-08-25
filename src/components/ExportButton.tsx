@@ -23,10 +23,24 @@ const ExportButton: React.FC = () => {
       for (const attendee of attendees) {
         const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
         
-        // Create QR sharing URL (much shorter than base64)
-        const qrShareUrl = attendee.qr_code 
-          ? `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(attendee.qr_code)}`
-          : 'No generado';
+        // Generate QR code as optimized base64 image
+        let qrImage = 'No generado';
+        if (attendee.qr_code) {
+          try {
+            qrImage = await QRCode.toDataURL(attendee.qr_code, {
+              width: 200,
+              margin: 2,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              },
+              errorCorrectionLevel: 'M'
+            });
+          } catch (error) {
+            console.error('Error generating QR code:', error);
+            qrImage = 'Error al generar';
+          }
+        }
 
         if (attendeeUsage.length === 0) {
           // Attendee with no usage records
@@ -34,7 +48,7 @@ const ExportButton: React.FC = () => {
             'Nombre': attendee.name,
             'Email': attendee.email || 'N/A',
             'Categoría': attendee.ticket_category?.name || 'N/A',
-            'Código QR': qrShareUrl,
+            'Código QR': qrImage,
             'Estado': attendee.status === 'valid' ? 'Válido' : 
                      attendee.status === 'used' ? 'Usado' : 'Bloqueado',
             'Fecha de Uso': 'Sin registros',
@@ -51,7 +65,7 @@ const ExportButton: React.FC = () => {
               'Nombre': attendee.name,
               'Email': attendee.email || 'N/A',
               'Categoría': attendee.ticket_category?.name || 'N/A',
-              'Código QR': qrShareUrl,
+              'Código QR': qrImage,
               'Estado': attendee.status === 'valid' ? 'Válido' : 
                        attendee.status === 'used' ? 'Usado' : 'Bloqueado',
               'Fecha de Uso': usedDate.toLocaleDateString('es-ES'),
