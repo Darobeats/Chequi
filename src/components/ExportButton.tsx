@@ -17,52 +17,56 @@ const ExportButton: React.FC = () => {
     }
 
     try {
-      // Process attendees data with usage information
-      const processedData = await Promise.all(
-        attendees.map(async (attendee) => {
-          const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
-          const lastUsage = attendeeUsage.length > 0 ? attendeeUsage[0] : null;
-          
-          const formattedLastUsage = lastUsage 
-            ? new Date(lastUsage.used_at).toLocaleString('es-ES', {
-                hour: '2-digit',
-                minute: '2-digit',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-              })
-            : 'Sin registros';
+      // Process attendees data with detailed usage information
+      const processedData: any[] = [];
+      
+      for (const attendee of attendees) {
+        const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
+        
+        // Create QR sharing URL (much shorter than base64)
+        const qrShareUrl = attendee.qr_code 
+          ? `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(attendee.qr_code)}`
+          : 'No generado';
 
-          // Generate QR code as base64 image with larger size for better scanning
-          let qrImage = '';
-          if (attendee.qr_code) {
-            try {
-              qrImage = await QRCode.toDataURL(attendee.qr_code, {
-                width: 256, // Increased from 128 to 256 for better scanning
-                margin: 2,  // Increased margin for better scanning
-                color: {
-                  dark: '#000000',
-                  light: '#FFFFFF'
-                },
-                errorCorrectionLevel: 'M' // Added error correction for better scanning
-              });
-            } catch (error) {
-              console.error('Error generating QR code:', error);
-            }
-          }
-
-          return {
+        if (attendeeUsage.length === 0) {
+          // Attendee with no usage records
+          processedData.push({
             'Nombre': attendee.name,
             'Email': attendee.email || 'N/A',
             'Categoría': attendee.ticket_category?.name || 'N/A',
-            'Código QR': qrImage || 'No generado', // Now contains the QR image instead of text
-            'Último Uso': formattedLastUsage,
-            'Total Usos': attendeeUsage.length,
+            'Código QR': qrShareUrl,
             'Estado': attendee.status === 'valid' ? 'Válido' : 
                      attendee.status === 'used' ? 'Usado' : 'Bloqueado',
-          };
-        })
-      );
+            'Fecha de Uso': 'Sin registros',
+            'Hora de Uso': 'Sin registros',
+            'Tipo de Acceso': 'Sin registros',
+            'Dispositivo': 'Sin registros',
+            'Notas': 'Sin registros'
+          });
+        } else {
+          // Create one row per usage record
+          attendeeUsage.forEach((usage) => {
+            const usedDate = new Date(usage.used_at);
+            processedData.push({
+              'Nombre': attendee.name,
+              'Email': attendee.email || 'N/A',
+              'Categoría': attendee.ticket_category?.name || 'N/A',
+              'Código QR': qrShareUrl,
+              'Estado': attendee.status === 'valid' ? 'Válido' : 
+                       attendee.status === 'used' ? 'Usado' : 'Bloqueado',
+              'Fecha de Uso': usedDate.toLocaleDateString('es-ES'),
+              'Hora de Uso': usedDate.toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              }),
+              'Tipo de Acceso': usage.control_type?.name || 'N/A',
+              'Dispositivo': usage.device || 'N/A',
+              'Notas': usage.notes || 'Sin notas'
+            });
+          });
+        }
+      }
 
       // Create workbook
       const wb = XLSX.utils.book_new();
@@ -75,10 +79,13 @@ const ExportButton: React.FC = () => {
         { wch: 25 }, // Nombre
         { wch: 25 }, // Email
         { wch: 12 }, // Categoría
-        { wch: 30 }, // Código QR (increased for better QR image display)
-        { wch: 18 }, // Último Uso
-        { wch: 10 }, // Total Usos
+        { wch: 45 }, // Código QR (URL más largo)
         { wch: 10 }, // Estado
+        { wch: 12 }, // Fecha de Uso
+        { wch: 12 }, // Hora de Uso
+        { wch: 15 }, // Tipo de Acceso
+        { wch: 15 }, // Dispositivo
+        { wch: 20 }, // Notas
       ];
       ws['!cols'] = columnWidths;
 
