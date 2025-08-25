@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
 import * as XLSX from 'xlsx';
-import QRCode from 'qrcode';
 
 const ExportButton: React.FC = () => {
   const { data: attendees = [], isLoading } = useAttendees();
@@ -23,24 +22,10 @@ const ExportButton: React.FC = () => {
       for (const attendee of attendees) {
         const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
         
-        // Generate QR code as optimized base64 image
-        let qrImage = 'No generado';
-        if (attendee.qr_code) {
-          try {
-            qrImage = await QRCode.toDataURL(attendee.qr_code, {
-              width: 200,
-              margin: 2,
-              color: {
-                dark: '#000000',
-                light: '#FFFFFF'
-              },
-              errorCorrectionLevel: 'M'
-            });
-          } catch (error) {
-            console.error('Error generating QR code:', error);
-            qrImage = 'Error al generar';
-          }
-        }
+        // Create public QR URL for easy sharing
+        const qrUrl = attendee.id 
+          ? `${window.location.origin}/qr/${attendee.id}`
+          : 'No generado';
 
         if (attendeeUsage.length === 0) {
           // Attendee with no usage records
@@ -48,7 +33,7 @@ const ExportButton: React.FC = () => {
             'Nombre': attendee.name,
             'Email': attendee.email || 'N/A',
             'Categoría': attendee.ticket_category?.name || 'N/A',
-            'Código QR': qrImage,
+            'Código QR': qrUrl,
             'Estado': attendee.status === 'valid' ? 'Válido' : 
                      attendee.status === 'used' ? 'Usado' : 'Bloqueado',
             'Fecha de Uso': 'Sin registros',
@@ -65,7 +50,7 @@ const ExportButton: React.FC = () => {
               'Nombre': attendee.name,
               'Email': attendee.email || 'N/A',
               'Categoría': attendee.ticket_category?.name || 'N/A',
-              'Código QR': qrImage,
+              'Código QR': qrUrl,
               'Estado': attendee.status === 'valid' ? 'Válido' : 
                        attendee.status === 'used' ? 'Usado' : 'Bloqueado',
               'Fecha de Uso': usedDate.toLocaleDateString('es-ES'),
@@ -93,7 +78,7 @@ const ExportButton: React.FC = () => {
         { wch: 25 }, // Nombre
         { wch: 25 }, // Email
         { wch: 12 }, // Categoría
-        { wch: 45 }, // Código QR (URL más largo)
+        { wch: 35 }, // Código QR (URL corto)
         { wch: 10 }, // Estado
         { wch: 12 }, // Fecha de Uso
         { wch: 12 }, // Hora de Uso
