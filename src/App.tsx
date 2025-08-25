@@ -13,7 +13,7 @@ import Scanner from "./pages/Scanner";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-import PublicQR from "./pages/PublicQR";
+
 
 const queryClient = new QueryClient();
 
@@ -27,7 +27,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/qr/:attendeeId" element={<PublicQR />} />
+            
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/scanner" element={<Scanner />} />
             <Route 
