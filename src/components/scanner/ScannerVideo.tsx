@@ -3,8 +3,6 @@ import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Camera, CameraOff } from 'lucide-react';
 import QrScanner from 'qr-scanner';
-import QrScannerWorkerPath from 'qr-scanner/qr-scanner-worker.min?url';
-
 interface ScannerVideoProps {
   scanning: boolean;
   selectedControlType: string;
@@ -16,9 +14,6 @@ interface ScannerVideoProps {
   onQRDetected: (data: string) => void;
   isProcessing: boolean;
 }
-
-// Ensure the worker path is set for Vite bundling
-QrScanner.WORKER_PATH = QrScannerWorkerPath;
 
 const ScannerVideo: React.FC<ScannerVideoProps> = ({
   scanning,
@@ -75,7 +70,7 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
     return () => {
       if (!scanning && qrScannerRef.current) {
         console.log('[ScannerVideo] Stopping QR Scanner...');
-        qrScannerRef.current.stop().catch(() => {});
+        qrScannerRef.current.stop();
         qrScannerRef.current.destroy();
         qrScannerRef.current = null;
       }
@@ -85,7 +80,7 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
   // Safety: stop scanner if scanning becomes false while instance exists
   useEffect(() => {
     if (!scanning && qrScannerRef.current) {
-      qrScannerRef.current.stop().catch(() => {});
+      qrScannerRef.current.stop();
       qrScannerRef.current.destroy();
       qrScannerRef.current = null;
     }
