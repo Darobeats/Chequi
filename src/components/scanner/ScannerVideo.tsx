@@ -3,6 +3,9 @@ import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Camera, CameraOff } from 'lucide-react';
 import QrScanner from 'qr-scanner';
+
+// Configure worker path for Vite
+QrScanner.WORKER_PATH = '/node_modules/qr-scanner/qr-scanner-worker.min.js';
 interface ScannerVideoProps {
   scanning: boolean;
   selectedControlType: string;
@@ -34,34 +37,47 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
     const canInit = hasCamera && permissionStatus === 'granted' && scanning && videoRef.current && !qrScannerRef.current;
 
     if (canInit) {
-      console.log('[ScannerVideo] Initializing QR Scanner...');
+      console.log('[ScannerVideo] 🟢 Initializing QR Scanner...');
+      console.log('[ScannerVideo] 📹 Video element:', videoRef.current);
+      console.log('[ScannerVideo] 🔍 Scanner config: highlightScanRegion=true, maxScansPerSecond=5');
+      
       qrScannerRef.current = new QrScanner(
         videoRef.current as HTMLVideoElement,
         (result) => {
           const data = (result?.data || '').trim();
-          console.log('[ScannerVideo] QR detected:', data);
-          if (data) {
+          console.log('[ScannerVideo] 🎯 QR DETECTED RAW:', result);
+          console.log('[ScannerVideo] 📄 QR Data cleaned:', data);
+          console.log('[ScannerVideo] 📏 Data length:', data.length);
+          
+          if (data && data.length > 0) {
+            console.log('[ScannerVideo] ✅ Calling onQRDetected with data:', data);
             onQRDetected(data);
+          } else {
+            console.log('[ScannerVideo] ⚠️ Empty or invalid QR data, skipping');
           }
         },
         {
           highlightScanRegion: true,
           highlightCodeOutline: true,
           preferredCamera: 'environment',
-          maxScansPerSecond: 12,
+          maxScansPerSecond: 5, // Reduced for stability
           returnDetailedScanResult: true,
         }
       );
 
+      console.log('[ScannerVideo] 🔄 Setting inversion mode to both...');
       // Helps with inverted codes or low contrast
       qrScannerRef.current.setInversionMode('both');
 
+      console.log('[ScannerVideo] 🚀 Starting scanner...');
       // Start immediately after creation
       qrScannerRef.current
         .start()
-        .then(() => console.log('[ScannerVideo] QR Scanner started'))
+        .then(() => {
+          console.log('[ScannerVideo] ✅ QR Scanner started successfully');
+        })
         .catch((error) => {
-          console.error('[ScannerVideo] Error starting camera:', error);
+          console.error('[ScannerVideo] ❌ Error starting camera:', error);
           onStopScanning();
         });
     }
@@ -69,7 +85,7 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
     // Cleanup when leaving scanning mode or unmounting
     return () => {
       if (!scanning && qrScannerRef.current) {
-        console.log('[ScannerVideo] Stopping QR Scanner...');
+        console.log('[ScannerVideo] 🛑 Stopping QR Scanner...');
         qrScannerRef.current.stop();
         qrScannerRef.current.destroy();
         qrScannerRef.current = null;
