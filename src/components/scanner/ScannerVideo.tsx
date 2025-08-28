@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Camera, CameraOff } from 'lucide-react';
 import QrScanner from 'qr-scanner';
 
-// Configure worker path for Vite
+// Configure worker path for Vite - CRITICAL FOR FUNCTIONALITY
 QrScanner.WORKER_PATH = '/node_modules/qr-scanner/qr-scanner-worker.min.js';
+
+console.log('[ScannerVideo] 🔧 QR Scanner worker path set to:', QrScanner.WORKER_PATH);
 interface ScannerVideoProps {
   scanning: boolean;
   selectedControlType: string;
@@ -34,12 +36,22 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
 
   // Initialize QR Scanner ONLY when the video element exists (i.e., when scanning is true)
   useEffect(() => {
+    console.log('[ScannerVideo] 🔍 useEffect triggered:', { 
+      hasCamera, 
+      permissionStatus, 
+      scanning, 
+      videoElementExists: !!videoRef.current,
+      scannerExists: !!qrScannerRef.current 
+    });
+    
     const canInit = hasCamera && permissionStatus === 'granted' && scanning && videoRef.current && !qrScannerRef.current;
+    console.log('[ScannerVideo] 🤔 Can initialize scanner?', canInit);
 
     if (canInit) {
       console.log('[ScannerVideo] 🟢 Initializing QR Scanner...');
       console.log('[ScannerVideo] 📹 Video element:', videoRef.current);
       console.log('[ScannerVideo] 🔍 Scanner config: highlightScanRegion=true, maxScansPerSecond=5');
+      console.log('[ScannerVideo] 🛠️ Worker path configured:', QrScanner.WORKER_PATH);
       
       qrScannerRef.current = new QrScanner(
         videoRef.current as HTMLVideoElement,
@@ -70,14 +82,27 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
       qrScannerRef.current.setInversionMode('both');
 
       console.log('[ScannerVideo] 🚀 Starting scanner...');
-      // Start immediately after creation
-      qrScannerRef.current
-        .start()
+      
+      // Test if QrScanner can access camera first
+      QrScanner.hasCamera()
+        .then(hasCamera => {
+          console.log('[ScannerVideo] 📱 QrScanner.hasCamera():', hasCamera);
+          if (!hasCamera) {
+            console.error('[ScannerVideo] ❌ QrScanner reports no camera available');
+            onStopScanning();
+            return;
+          }
+          
+          // Start the scanner
+          return qrScannerRef.current?.start();
+        })
         .then(() => {
-          console.log('[ScannerVideo] ✅ QR Scanner started successfully');
+          console.log('[ScannerVideo] ✅ QR Scanner started successfully and is ready to scan');
+          console.log('[ScannerVideo] 📸 Scanner instance:', qrScannerRef.current);
         })
         .catch((error) => {
-          console.error('[ScannerVideo] ❌ Error starting camera:', error);
+          console.error('[ScannerVideo] ❌ Error starting camera or scanner:', error);
+          console.error('[ScannerVideo] 📋 Error details:', error.name, error.message);
           onStopScanning();
         });
     }
