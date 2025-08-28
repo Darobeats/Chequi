@@ -8,10 +8,6 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    fs: {
-      // Allow serving files from node_modules (needed for QR scanner worker)
-      allow: ['..']
-    }
   },
   plugins: [
     react(),
@@ -23,10 +19,4 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Optimize deps to handle QR scanner worker
-  optimizeDeps: {
-    exclude: ['qr-scanner']
-  },
-  // Ensure assets are properly handled
-  assetsInclude: ['**/*.wasm', '**/*.js']
 }));

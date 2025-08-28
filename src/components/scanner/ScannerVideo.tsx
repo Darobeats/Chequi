@@ -4,10 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Camera, CameraOff } from 'lucide-react';
 import QrScanner from 'qr-scanner';
 
-// Configure worker path for Vite - CRITICAL FOR FUNCTIONALITY
-QrScanner.WORKER_PATH = '/node_modules/qr-scanner/qr-scanner-worker.min.js';
-
-console.log('[ScannerVideo] 🔧 QR Scanner worker path set to:', QrScanner.WORKER_PATH);
+console.log('[ScannerVideo] 🔧 QR Scanner imported successfully');
 interface ScannerVideoProps {
   scanning: boolean;
   selectedControlType: string;
@@ -51,7 +48,16 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
       console.log('[ScannerVideo] 🟢 Initializing QR Scanner...');
       console.log('[ScannerVideo] 📹 Video element:', videoRef.current);
       console.log('[ScannerVideo] 🔍 Scanner config: highlightScanRegion=true, maxScansPerSecond=5');
-      console.log('[ScannerVideo] 🛠️ Worker path configured:', QrScanner.WORKER_PATH);
+      
+      // Configure worker path for this instance
+      if (typeof QrScanner.WORKER_PATH === 'undefined') {
+        try {
+          QrScanner.WORKER_PATH = '/node_modules/qr-scanner/qr-scanner-worker.min.js';
+          console.log('[ScannerVideo] 🛠️ Worker path set to:', QrScanner.WORKER_PATH);
+        } catch (error) {
+          console.log('[ScannerVideo] ⚠️ Could not set worker path, using default');
+        }
+      }
       
       qrScannerRef.current = new QrScanner(
         videoRef.current as HTMLVideoElement,
