@@ -10,6 +10,8 @@ interface ScanResultProps {
     usageCount?: number;
     maxUses?: number;
     controlType?: string;
+    message?: string;
+    lastUsage?: { used_at?: string; device?: string; control_type?: string } | null;
   };
   onClose: () => void;
 }
@@ -41,6 +43,9 @@ const ScanResult: React.FC<ScanResultProps> = ({ result, onClose }) => {
         <h3 className="text-xl font-bold mb-3">
           {result.success ? 'Acceso Permitido' : 'Acceso Denegado'}
         </h3>
+        {result.message && !result.success && (
+          <p className="text-sm text-red-200 mb-3">{result.message}</p>
+        )}
         
         {result.attendee && (
           <div className="space-y-2 text-left bg-black/20 rounded-lg p-4">
@@ -57,14 +62,16 @@ const ScanResult: React.FC<ScanResultProps> = ({ result, onClose }) => {
               )}
               <div>
                 <span className="text-gray-400">Categoría:</span>
-                <p className="font-medium text-white">{result.attendee.ticket_category?.name || 'N/A'}</p>
+                <p className="font-medium text-white">{result.attendee.ticket_category?.name || result.attendee.category || 'N/A'}</p>
               </div>
-              <div>
-                <span className="text-gray-400">Estado:</span>
-                <p className={`font-medium ${getStatusText(result.attendee.status).color}`}>
-                  {getStatusText(result.attendee.status).text}
-                </p>
-              </div>
+              {result.attendee.status && (
+                <div>
+                  <span className="text-gray-400">Estado:</span>
+                  <p className={`font-medium ${getStatusText(result.attendee.status).color}`}>
+                    {getStatusText(result.attendee.status).text}
+                  </p>
+                </div>
+              )}
               <div>
                 <span className="text-gray-400">Control:</span>
                 <p className="font-medium text-white">{result.controlType}</p>
@@ -76,6 +83,13 @@ const ScanResult: React.FC<ScanResultProps> = ({ result, onClose }) => {
                 </p>
               </div>
             </div>
+            {!result.success && result.lastUsage && (
+              <div className="mt-3 text-sm text-red-200">
+                <p>
+                  Este QR fue usado el {new Date(result.lastUsage.used_at || '').toLocaleString()} en «{result.lastUsage.device || 'dispositivo desconocido'}»{result.lastUsage.control_type ? ` (control: ${result.lastUsage.control_type})` : ''}.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

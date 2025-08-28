@@ -133,7 +133,6 @@ export const useProcessQRCode = () => {
       console.log('ProcessQRCode - Ticket ID:', cleanTicketId);
       console.log('ProcessQRCode - Control type:', controlType);
       
-      // Usar Edge Function segura para procesar el escaneado
       const { data, error } = await supabase.functions.invoke('process-qr-scan', {
         body: {
           ticketId: cleanTicketId,
@@ -147,24 +146,23 @@ export const useProcessQRCode = () => {
         throw new Error('Error al procesar el escaneado: ' + error.message);
       }
 
-      if (data.error) {
-        console.error('❌ Scanner error:', data.error);
-        throw new Error(data.error);
-      }
-
-      if (!data.success) {
-        console.error('❌ Scanner failed:', data);
-        throw new Error(data.error || 'Error desconocido al procesar escaneado');
-      }
-
-      console.log('✅ Scanner success:', data);
-      
-      return {
-        attendee: data.attendee,
-        usage: data.usage,
-        message: data.message,
-        canAccess: data.canAccess
+      // Normalizar respuesta tanto para permitido como denegado
+      const normalized = {
+        attendee: data?.attendee,
+        usage: data?.usage,
+        message: data?.message || data?.error,
+        canAccess: Boolean(data?.canAccess ?? data?.success),
+        lastUsage: data?.lastUsage || null,
+      } as {
+        attendee: any;
+        usage: any;
+        message?: string;
+        canAccess: boolean;
+        lastUsage?: { used_at?: string; device?: string; control_type?: string } | null;
       };
+
+      console.log('🔎 Respuesta normalizada del scanner:', normalized);
+      return normalized;
     },
     onSuccess: () => {
       // Invalidar queries relacionadas

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from "@/components/ui/sonner";
 import { useControlTypes, useProcessQRCode } from '@/hooks/useSupabaseData';
 import { useCameraPermissions } from '@/hooks/useCameraPermissions';
@@ -18,7 +18,11 @@ const QRScanner: React.FC = () => {
     usageCount?: number;
     maxUses?: number;
     controlType?: string;
+    message?: string;
+    lastUsage?: { used_at?: string; device?: string; control_type?: string } | null;
   }>(null);
+
+  const processingRef = useRef(false);
 
   const { data: controlTypes, isLoading: loadingControlTypes } = useControlTypes();
   const processQRMutation = useProcessQRCode();
@@ -69,54 +73,81 @@ const QRScanner: React.FC = () => {
 
   const processQRCode = async (ticketId: string) => {
     const cleanedData = ticketId.trim();
-    
-    // Evitar procesamiento duplicado del mismo código
+
+    // Bloqueo sincronizado para evitar múltiples procesamientos simultáneos
+    if (processingRef.current) {
+      console.log('⏳ Procesamiento en curso, ignorando detección');
+      return;
+    }
+
+    // Evitar procesamiento duplicado del mismo código (ráfagas de frames)
     if (cleanedData === lastScannedCode) {
       console.log('🚫 Código QR ya procesado, ignorando...');
       return;
     }
-    
+
+    processingRef.current = true;
     setLastScannedCode(cleanedData);
+    setScanning(false); // detener cámara inmediatamente para evitar re-escaneos
+
     console.log('🚨 QRScanner - Processing QR:', cleanedData);
-    
+
     try {
       const result = await processQRMutation.mutateAsync({
         ticketId: cleanedData,
-        controlType: selectedControlType
+        controlType: selectedControlType,
       });
 
-      const selectedControl = controlTypes?.find(ct => ct.id === selectedControlType);
-      
-      setLastResult({ 
-        success: true, 
-        attendee: result.attendee,
+      const selectedControl = controlTypes?.find((ct) => ct.id === selectedControlType);
+
+      if (result.canAccess) {
+        setLastResult({
+          success: true,
+          attendee: result.attendee,
           usageCount: result.usage?.currentUses || 0,
           maxUses: result.usage?.maxUses || 0,
-        controlType: selectedControl?.name 
-      });
-      
-      toast.success('Control registrado exitosamente', {
-        description: `${selectedControl?.description} - ${result.attendee.name}`
-      });
+          controlType: selectedControl?.name,
+        });
+
+        toast.success('Control registrado exitosamente', {
+          description: `${selectedControl?.description || selectedControl?.name} - ${result.attendee?.name || ''}`,
+        });
+      } else {
+        setLastResult({
+          success: false,
+          attendee: result.attendee,
+          usageCount: result.usage?.currentUses || 0,
+          maxUses: result.usage?.maxUses || 0,
+          controlType: selectedControl?.name,
+          message: result.message,
+          lastUsage: result.lastUsage || null,
+        });
+
+        toast.error('QR no válido para este control', {
+          description: result.message || 'El QR ya fue utilizado o no tiene acceso',
+        });
+      }
     } catch (error: any) {
-      setLastResult({ success: false });
+      console.error('❌ Error procesando QR:', error);
+      setLastResult({ success: false, message: error?.message || 'Error desconocido' });
       toast.error('Error al procesar el código QR', {
-        description: error.message
+        description: error?.message,
       });
+    } finally {
+      processingRef.current = false;
     }
-    
-    stopScanning();
   };
 
-  // Reset the scanner after showing the result
+  // Reset de resultado después de mostrarlo por más tiempo
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
     if (lastResult) {
+      const duration = lastResult.success ? 8000 : 7000; // éxito más tiempo
       timer = setTimeout(() => {
         setLastResult(null);
-        setLastScannedCode(''); // Reset para permitir re-escaneo del mismo código
-      }, 5000);
+        setLastScannedCode(''); // permitir re-escaneo del mismo código
+      }, duration);
     }
     
     return () => {

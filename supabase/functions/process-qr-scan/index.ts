@@ -65,12 +65,48 @@ serve(async (req) => {
     console.log('Validation result:', validationResult)
 
     if (!validationResult.can_access) {
+      // Obtener asistente para mostrar detalles aunque no tenga acceso
+      const { data: attendeeData, error: attendeeError } = await supabase
+        .rpc('find_attendee_by_ticket_public', { ticket_id: ticketId })
+
+      let attendee = attendeeData && attendeeData.length > 0 ? attendeeData[0] : null
+
+      if (attendeeError) {
+        console.warn('Attendee not found for denied access:', attendeeError)
+      }
+
+      // Buscar último uso para este asistente y tipo de control
+      let lastUsage: { used_at?: string; device?: string } | null = null
+      if (validationResult.attendee_id) {
+        const { data: lastUsageData, error: lastUsageError } = await supabase
+          .from('control_usage')
+          .select('used_at, device')
+          .eq('attendee_id', validationResult.attendee_id)
+          .eq('control_type_id', controlTypeId)
+          .order('used_at', { ascending: false })
+          .limit(1)
+
+        if (!lastUsageError && lastUsageData && lastUsageData.length > 0) {
+          lastUsage = lastUsageData[0]
+        } else if (lastUsageError) {
+          console.warn('Could not fetch last usage for denied access:', lastUsageError)
+        }
+      }
+
       return new Response(
         JSON.stringify({ 
           error: validationResult.error_message,
           canAccess: false,
           currentUses: validationResult.current_uses,
-          maxUses: validationResult.max_uses
+          maxUses: validationResult.max_uses,
+          attendee: attendee ? {
+            id: attendee.id,
+            name: attendee.name,
+            email: attendee.email,
+            ticket_id: attendee.ticket_id,
+            category: attendee.category_id || null
+          } : null,
+          lastUsage
         }),
         { 
           status: 403, 
