@@ -3,6 +3,7 @@ import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Camera, CameraOff } from 'lucide-react';
 import QrScanner from 'qr-scanner';
+import QrScannerWorkerPath from 'qr-scanner/qr-scanner-worker.min?url';
 
 interface ScannerVideoProps {
   scanning: boolean;
@@ -15,6 +16,9 @@ interface ScannerVideoProps {
   onQRDetected: (data: string) => void;
   isProcessing: boolean;
 }
+
+// Ensure the worker path is set for Vite bundling
+QrScanner.WORKER_PATH = QrScannerWorkerPath;
 
 const ScannerVideo: React.FC<ScannerVideoProps> = ({
   scanning,
@@ -30,50 +34,62 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
 
-  // Initialize QR Scanner
+  // Initialize QR Scanner ONLY when the video element exists (i.e., when scanning is true)
   useEffect(() => {
-    if (videoRef.current && hasCamera && permissionStatus === 'granted') {
-      console.log('Initializing QR Scanner...');
+    const canInit = hasCamera && permissionStatus === 'granted' && scanning && videoRef.current && !qrScannerRef.current;
+
+    if (canInit) {
+      console.log('[ScannerVideo] Initializing QR Scanner...');
       qrScannerRef.current = new QrScanner(
-        videoRef.current,
+        videoRef.current as HTMLVideoElement,
         (result) => {
-          console.log('=== QR Scanner Debug ===');
-          console.log('Raw QR data detected:', result.data);
-          console.log('QR data length:', result.data.length);
-          console.log('QR data type:', typeof result.data);
-          console.log('QR data trimmed:', result.data.trim());
-          console.log('========================');
-          onQRDetected(result.data.trim());
+          const data = (result?.data || '').trim();
+          console.log('[ScannerVideo] QR detected:', data);
+          if (data) {
+            onQRDetected(data);
+          }
         },
         {
           highlightScanRegion: true,
           highlightCodeOutline: true,
           preferredCamera: 'environment',
+          maxScansPerSecond: 12,
+          returnDetailedScanResult: true,
         }
       );
 
+      // Helps with inverted codes or low contrast
       qrScannerRef.current.setInversionMode('both');
+
+      // Start immediately after creation
+      qrScannerRef.current
+        .start()
+        .then(() => console.log('[ScannerVideo] QR Scanner started'))
+        .catch((error) => {
+          console.error('[ScannerVideo] Error starting camera:', error);
+          onStopScanning();
+        });
     }
 
+    // Cleanup when leaving scanning mode or unmounting
     return () => {
-      if (qrScannerRef.current) {
+      if (!scanning && qrScannerRef.current) {
+        console.log('[ScannerVideo] Stopping QR Scanner...');
+        qrScannerRef.current.stop().catch(() => {});
         qrScannerRef.current.destroy();
+        qrScannerRef.current = null;
       }
     };
-  }, [hasCamera, permissionStatus, onQRDetected]);
+  }, [hasCamera, permissionStatus, scanning, onStopScanning, onQRDetected]);
 
-  // Start/stop scanner based on scanning state
+  // Safety: stop scanner if scanning becomes false while instance exists
   useEffect(() => {
-    if (scanning && qrScannerRef.current) {
-      console.log('Starting QR Scanner...');
-      qrScannerRef.current.start().catch((error) => {
-        console.error('Error starting camera:', error);
-        onStopScanning();
-      });
-    } else if (!scanning && qrScannerRef.current) {
-      qrScannerRef.current.stop();
+    if (!scanning && qrScannerRef.current) {
+      qrScannerRef.current.stop().catch(() => {});
+      qrScannerRef.current.destroy();
+      qrScannerRef.current = null;
     }
-  }, [scanning, onStopScanning]);
+  }, [scanning]);
 
   const canStartScanning = hasCamera && permissionStatus === 'granted' && !scanning;
 
