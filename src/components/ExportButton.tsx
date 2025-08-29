@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import QRCode from 'qrcode';
 
 const ExportButton: React.FC = () => {
@@ -17,9 +17,27 @@ const ExportButton: React.FC = () => {
     }
 
     try {
-      // Process attendees data with detailed usage information
-      const processedData: any[] = [];
-      
+      // Create a new workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Asistentes');
+
+      // Define columns
+      worksheet.columns = [
+        { header: 'Nombre', key: 'nombre', width: 25 },
+        { header: 'Email', key: 'email', width: 25 },
+        { header: 'Categoría', key: 'categoria', width: 15 },
+        { header: 'Código QR URL', key: 'qrUrl', width: 35 },
+        { header: 'Imagen QR', key: 'qrImage', width: 20 },
+        { header: 'Estado', key: 'estado', width: 12 },
+        { header: 'Fecha de Uso', key: 'fechaUso', width: 15 },
+        { header: 'Hora de Uso', key: 'horaUso', width: 15 },
+        { header: 'Tipo de Acceso', key: 'tipoAcceso', width: 18 },
+        { header: 'Dispositivo', key: 'dispositivo', width: 15 },
+        { header: 'Notas', key: 'notas', width: 20 }
+      ];
+
+      let currentRow = 2; // Starting from row 2 (after headers)
+
       for (const attendee of attendees) {
         const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
         
@@ -28,13 +46,13 @@ const ExportButton: React.FC = () => {
           ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(attendee.qr_code)}`
           : 'No generado';
 
-        // Generate QR code image as base64
-        let qrImageBase64 = 'No generado';
+        // Generate QR code image as buffer
+        let qrImageBuffer: Buffer | null = null;
         if (attendee.qr_code) {
           try {
-            qrImageBase64 = await QRCode.toDataURL(attendee.qr_code, {
-              width: 200,
-              margin: 1,
+            qrImageBuffer = await QRCode.toBuffer(attendee.qr_code, {
+              width: 150,
+              margin: 2,
               color: {
                 dark: '#000000',
                 light: '#FFFFFF'
@@ -42,80 +60,89 @@ const ExportButton: React.FC = () => {
             });
           } catch (error) {
             console.error('Error generating QR image:', error);
-            qrImageBase64 = 'Error al generar';
           }
         }
 
         if (attendeeUsage.length === 0) {
           // Attendee with no usage records
-          processedData.push({
-            'Nombre': attendee.name,
-            'Email': attendee.email || 'N/A',
-            'Categoría': attendee.ticket_category?.name || 'N/A',
-            'Código QR URL': qrUrl,
-            'Imagen QR': qrImageBase64,
-            'Estado': attendee.status === 'valid' ? 'Válido' : 
-                     attendee.status === 'used' ? 'Usado' : 'Bloqueado',
-            'Fecha de Uso': 'Sin registros',
-            'Hora de Uso': 'Sin registros',
-            'Tipo de Acceso': 'Sin registros',
-            'Dispositivo': 'Sin registros',
-            'Notas': 'Sin registros'
+          const row = worksheet.addRow({
+            nombre: attendee.name,
+            email: attendee.email || 'N/A',
+            categoria: attendee.ticket_category?.name || 'N/A',
+            qrUrl: qrUrl,
+            qrImage: '', // Will add image separately
+            estado: attendee.status === 'valid' ? 'Válido' : 
+                   attendee.status === 'used' ? 'Usado' : 'Bloqueado',
+            fechaUso: 'Sin registros',
+            horaUso: 'Sin registros',
+            tipoAcceso: 'Sin registros',
+            dispositivo: 'Sin registros',
+            notas: 'Sin registros'
           });
+
+          // Add QR image if available
+          if (qrImageBuffer) {
+            const imageId = workbook.addImage({
+              buffer: qrImageBuffer,
+              extension: 'png'
+            });
+
+            worksheet.addImage(imageId, {
+              tl: { col: 4, row: currentRow - 1 }, // Column E (0-indexed), current row
+              ext: { width: 100, height: 100 }
+            });
+          }
+          
+          currentRow++;
         } else {
           // Create one row per usage record
           attendeeUsage.forEach((usage) => {
             const usedDate = new Date(usage.used_at);
-            processedData.push({
-              'Nombre': attendee.name,
-              'Email': attendee.email || 'N/A',
-              'Categoría': attendee.ticket_category?.name || 'N/A',
-              'Código QR URL': qrUrl,
-              'Imagen QR': qrImageBase64,
-              'Estado': attendee.status === 'valid' ? 'Válido' : 
-                       attendee.status === 'used' ? 'Usado' : 'Bloqueado',
-              'Fecha de Uso': usedDate.toLocaleDateString('es-ES'),
-              'Hora de Uso': usedDate.toLocaleTimeString('es-ES', {
+            const row = worksheet.addRow({
+              nombre: attendee.name,
+              email: attendee.email || 'N/A',
+              categoria: attendee.ticket_category?.name || 'N/A',
+              qrUrl: qrUrl,
+              qrImage: '', // Will add image separately
+              estado: attendee.status === 'valid' ? 'Válido' : 
+                     attendee.status === 'used' ? 'Usado' : 'Bloqueado',
+              fechaUso: usedDate.toLocaleDateString('es-ES'),
+              horaUso: usedDate.toLocaleTimeString('es-ES', {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit'
               }),
-              'Tipo de Acceso': usage.control_type?.name || 'N/A',
-              'Dispositivo': usage.device || 'N/A',
-              'Notas': usage.notes || 'Sin notas'
+              tipoAcceso: usage.control_type?.name || 'N/A',
+              dispositivo: usage.device || 'N/A',
+              notas: usage.notes || 'Sin notas'
             });
+
+            // Add QR image if available
+            if (qrImageBuffer) {
+              const imageId = workbook.addImage({
+                buffer: qrImageBuffer,
+                extension: 'png'
+              });
+
+              worksheet.addImage(imageId, {
+                tl: { col: 4, row: currentRow - 1 }, // Column E (0-indexed), current row
+                ext: { width: 100, height: 100 }
+              });
+            }
+            
+            currentRow++;
           });
         }
       }
 
-      // Create workbook
-      const wb = XLSX.utils.book_new();
-      
-      // Convert data to worksheet format - QR images are now included directly
-      const ws = XLSX.utils.json_to_sheet(processedData);
+      // Set row heights for better image display
+      for (let i = 2; i <= currentRow; i++) {
+        worksheet.getRow(i).height = 75; // Set row height to accommodate images
+      }
 
-      // Set column widths
-      const columnWidths = [
-        { wch: 25 }, // Nombre
-        { wch: 25 }, // Email
-        { wch: 12 }, // Categoría
-        { wch: 35 }, // Código QR URL
-        { wch: 20 }, // Imagen QR
-        { wch: 10 }, // Estado
-        { wch: 12 }, // Fecha de Uso
-        { wch: 12 }, // Hora de Uso
-        { wch: 15 }, // Tipo de Acceso
-        { wch: 15 }, // Dispositivo
-        { wch: 20 }, // Notas
-      ];
-      ws['!cols'] = columnWidths;
-
-      // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, 'Asistentes');
-
-      // Generate Excel file
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([excelBuffer], { 
+      // Generate Excel buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
 
