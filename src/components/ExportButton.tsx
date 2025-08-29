@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
 import * as XLSX from 'xlsx';
+import QRCode from 'qrcode';
 
 const ExportButton: React.FC = () => {
   const { data: attendees = [], isLoading } = useAttendees();
@@ -27,13 +28,32 @@ const ExportButton: React.FC = () => {
           ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(attendee.qr_code)}`
           : 'No generado';
 
+        // Generate QR code image as base64
+        let qrImageBase64 = 'No generado';
+        if (attendee.qr_code) {
+          try {
+            qrImageBase64 = await QRCode.toDataURL(attendee.qr_code, {
+              width: 200,
+              margin: 1,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              }
+            });
+          } catch (error) {
+            console.error('Error generating QR image:', error);
+            qrImageBase64 = 'Error al generar';
+          }
+        }
+
         if (attendeeUsage.length === 0) {
           // Attendee with no usage records
           processedData.push({
             'Nombre': attendee.name,
             'Email': attendee.email || 'N/A',
             'Categoría': attendee.ticket_category?.name || 'N/A',
-            'Código QR': qrUrl,
+            'Código QR URL': qrUrl,
+            'Imagen QR': qrImageBase64,
             'Estado': attendee.status === 'valid' ? 'Válido' : 
                      attendee.status === 'used' ? 'Usado' : 'Bloqueado',
             'Fecha de Uso': 'Sin registros',
@@ -50,7 +70,8 @@ const ExportButton: React.FC = () => {
               'Nombre': attendee.name,
               'Email': attendee.email || 'N/A',
               'Categoría': attendee.ticket_category?.name || 'N/A',
-              'Código QR': qrUrl,
+              'Código QR URL': qrUrl,
+              'Imagen QR': qrImageBase64,
               'Estado': attendee.status === 'valid' ? 'Válido' : 
                        attendee.status === 'used' ? 'Usado' : 'Bloqueado',
               'Fecha de Uso': usedDate.toLocaleDateString('es-ES'),
@@ -78,7 +99,8 @@ const ExportButton: React.FC = () => {
         { wch: 25 }, // Nombre
         { wch: 25 }, // Email
         { wch: 12 }, // Categoría
-        { wch: 35 }, // Código QR (URL corto)
+        { wch: 35 }, // Código QR URL
+        { wch: 20 }, // Imagen QR
         { wch: 10 }, // Estado
         { wch: 12 }, // Fecha de Uso
         { wch: 12 }, // Hora de Uso
