@@ -23,18 +23,18 @@ const ControlAnalytics = () => {
   const [timeRange, setTimeRange] = useState<string>('today');
   const [activeTab, setActiveTab] = useState<string>('overview');
 
-  // Use the advanced analytics hook
   const {
+    filteredData,
     enhancedMetrics,
     timeSeriesData,
     hourlyDistribution,
     coverageAnalysis,
     recentActivity,
-    filteredData
+    intradayInsights
   } = useAdvancedAnalytics({
     controlType: selectedControlType,
     category: selectedCategory,
-    timeRange: timeRange
+    timeRange
   });
 
 
@@ -137,17 +137,19 @@ const ControlAnalytics = () => {
 
         <TabsContent value="overview" className="space-y-6">
           <TrendAnalysis 
-            timeSeriesData={timeSeriesData} 
-            hourlyDistribution={hourlyDistribution} 
+            timeSeriesData={timeSeriesData}
+            hourlyDistribution={hourlyDistribution}
+            intradayInsights={intradayInsights}
           />
         </TabsContent>
 
-        <TabsContent value="trends" className="space-y-6">
-          <TrendAnalysis 
-            timeSeriesData={timeSeriesData} 
-            hourlyDistribution={hourlyDistribution} 
-          />
-        </TabsContent>
+          <TabsContent value="trends" className="space-y-6">
+            <TrendAnalysis 
+              timeSeriesData={timeSeriesData}
+              hourlyDistribution={hourlyDistribution}
+              intradayInsights={intradayInsights}
+            />
+          </TabsContent>
 
         <TabsContent value="coverage" className="space-y-6">
           <CoverageMetrics coverageAnalysis={coverageAnalysis} />

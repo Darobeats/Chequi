@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useControlUsage, useAttendees, useControlTypes, useTicketCategories, useCategoryControls } from './useSupabaseData';
-import { startOfHour, startOfDay, parseISO, format, isToday, isYesterday, subDays } from 'date-fns';
+import { startOfHour, startOfDay, parseISO, format, isToday, isYesterday, subDays, startOfMinute, addMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export const useAdvancedAnalytics = (filters: {
@@ -168,6 +168,153 @@ export const useAdvancedAnalytics = (filters: {
     return { controlCoverage, categoryCoverage };
   }, [filteredData, attendees, controlTypes, ticketCategories]);
 
+  // Intraday insights for single-day events
+  const intradayInsights = useMemo(() => {
+    const isSingleDay = filters.timeRange === 'today' || filters.timeRange === 'yesterday';
+    
+    if (!isSingleDay || filteredData.length === 0) {
+      return {
+        isSingleDay: false,
+        minuteIntervals: [],
+        cumulativeProgress: [],
+        movingAverage: [],
+        controlTypeByHour: [],
+        categoryHeatmap: [],
+        peakDetection: { peaks: [], troughs: [] },
+        dailyRhythm: { current: 0, predicted: 0, eta: null }
+      };
+    }
+
+    // 5-minute intervals
+    const minuteIntervals = Array.from({ length: 288 }, (_, i) => {
+      const startTime = new Date();
+      startTime.setHours(0, i * 5, 0, 0);
+      const endTime = addMinutes(startTime, 5);
+      const timeKey = format(startTime, 'HH:mm');
+      
+      const usagesInInterval = filteredData.filter(usage => {
+        const usageTime = parseISO(usage.used_at);
+        return usageTime >= startTime && usageTime < endTime;
+      }).length;
+
+      return { time: timeKey, count: usagesInInterval, minute: i * 5 };
+    }).filter(interval => interval.count > 0);
+
+    // Cumulative progress
+    const cumulativeProgress = hourlyDistribution.reduce((acc, curr, index) => {
+      const previousTotal = index > 0 ? acc[index - 1].cumulative : 0;
+      acc.push({
+        hour: curr.hour,
+        hourly: curr.count,
+        cumulative: previousTotal + curr.count
+      });
+      return acc;
+    }, [] as Array<{ hour: string; hourly: number; cumulative: number }>);
+
+    // Moving average (3-hour window)
+    const movingAverage = hourlyDistribution.map((curr, index) => {
+      const windowStart = Math.max(0, index - 1);
+      const windowEnd = Math.min(hourlyDistribution.length - 1, index + 1);
+      const windowData = hourlyDistribution.slice(windowStart, windowEnd + 1);
+      const average = windowData.reduce((sum, item) => sum + item.count, 0) / windowData.length;
+      
+      return {
+        hour: curr.hour,
+        actual: curr.count,
+        average: Math.round(average * 10) / 10
+      };
+    });
+
+    // Control types stacked by hour
+    const controlTypeByHour = hourlyDistribution.map(hourData => {
+      const hourUsages = filteredData.filter(usage => {
+        const usageHour = format(parseISO(usage.used_at), 'HH:mm');
+        return usageHour === hourData.hour;
+      });
+
+      const byControlType = controlTypes.reduce((acc, ct) => {
+        const count = hourUsages.filter(u => u.control_type_id === ct.id).length;
+        if (count > 0) acc[ct.name] = count;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return { hour: hourData.hour, ...byControlType };
+    });
+
+    // Category heatmap by hour
+    const categoryHeatmap = ticketCategories.map(category => {
+      const hourlyData = hourlyDistribution.map(hourData => {
+        const hourUsages = filteredData.filter(usage => {
+          const usageHour = format(parseISO(usage.used_at), 'HH:mm');
+          return usageHour === hourData.hour && usage.attendee?.category_id === category.id;
+        });
+        
+        return {
+          hour: hourData.hour,
+          count: hourUsages.length,
+          intensity: hourlyDistribution.length > 0 ? (hourUsages.length / Math.max(...hourlyDistribution.map(h => h.count))) : 0
+        };
+      });
+
+      return {
+        category: category.name,
+        color: category.color,
+        data: hourlyData
+      };
+    });
+
+    // Peak and trough detection
+    const peaks: Array<{ hour: string; count: number }> = [];
+    const troughs: Array<{ hour: string; count: number }> = [];
+    
+    hourlyDistribution.forEach((curr, index) => {
+      const prev = hourlyDistribution[index - 1];
+      const next = hourlyDistribution[index + 1];
+      
+      if (prev && next) {
+        if (curr.count > prev.count && curr.count > next.count) {
+          peaks.push({ hour: curr.hour, count: curr.count });
+        }
+        if (curr.count < prev.count && curr.count < next.count && curr.count > 0) {
+          troughs.push({ hour: curr.hour, count: curr.count });
+        }
+      }
+    });
+
+    // Daily rhythm and ETA calculation
+    const totalUsages = filteredData.length;
+    const currentHour = new Date().getHours();
+    const currentProgress = cumulativeProgress.find(p => parseInt(p.hour.split(':')[0]) === currentHour);
+    const currentCount = currentProgress?.cumulative || 0;
+    
+    // Simple linear prediction based on current pace
+    const hoursElapsed = currentHour > 0 ? currentHour : 1;
+    const currentPace = currentCount / hoursElapsed;
+    const predictedTotal = Math.round(currentPace * 24);
+    
+    // ETA for significant milestones
+    const milestones = [100, 500, 1000, 2000];
+    const nextMilestone = milestones.find(m => m > currentCount);
+    const eta = nextMilestone && currentPace > 0 
+      ? new Date(Date.now() + ((nextMilestone - currentCount) / currentPace) * 60 * 60 * 1000)
+      : null;
+
+    return {
+      isSingleDay: true,
+      minuteIntervals,
+      cumulativeProgress,
+      movingAverage,
+      controlTypeByHour,
+      categoryHeatmap,
+      peakDetection: { peaks, troughs },
+      dailyRhythm: { 
+        current: currentCount, 
+        predicted: predictedTotal, 
+        eta: eta ? format(eta, 'HH:mm') : null 
+      }
+    };
+  }, [filteredData, hourlyDistribution, controlTypes, ticketCategories, filters.timeRange]);
+
   // Recent activity (last 20 records)
   const recentActivity = useMemo(() => {
     return filteredData
@@ -187,6 +334,7 @@ export const useAdvancedAnalytics = (filters: {
     timeSeriesData,
     hourlyDistribution,
     coverageAnalysis,
-    recentActivity
+    recentActivity,
+    intradayInsights
   };
 };
