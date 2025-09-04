@@ -6,7 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 const Dashboard = () => {
   const { user, loading } = useSupabaseAuth();
-  const { role, isAdmin, isControl, isAttendee, loading: roleLoading } = useUserRole();
+  const { role, isAdmin, isControl, isAttendee, isViewer, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,7 +17,8 @@ const Dashboard = () => {
       role,
       isAdmin,
       isControl,
-      isAttendee 
+      isAttendee,
+      isViewer 
     });
 
     // Esperar a que termine la carga de autenticación y rol
@@ -42,6 +43,9 @@ const Dashboard = () => {
       } else if (isControl) {
         console.log('Redirecting to scanner');
         navigate('/scanner');
+      } else if (isViewer) {
+        console.log('Redirecting viewer to admin (read-only)');
+        navigate('/admin');
       } else if (isAttendee) {
         console.log('Redirecting to profile');
         navigate('/profile');
@@ -49,7 +53,7 @@ const Dashboard = () => {
         console.log('Unknown role, staying on dashboard');
       }
     }
-  }, [user, role, loading, roleLoading, isAdmin, isControl, isAttendee, navigate]);
+  }, [user, role, loading, roleLoading, isAdmin, isControl, isAttendee, isViewer, navigate]);
 
   // Mostrar estado de carga mientras se resuelve la autenticación
   if (loading || roleLoading) {
