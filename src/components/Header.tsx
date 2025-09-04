@@ -29,6 +29,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
       case 'admin': return 'Admin';
       case 'control': return 'Control';
       case 'attendee': return 'Asistente';
+      case 'viewer': return 'Observador';
       default: return '';
     }
   };
@@ -38,6 +39,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
       case 'admin': return 'bg-red-800/30 text-red-400';
       case 'control': return 'bg-blue-800/30 text-blue-400';
       case 'attendee': return 'bg-green-800/30 text-green-400';
+      case 'viewer': return 'bg-orange-800/30 text-orange-400';
       default: return 'bg-gray-800/30 text-gray-400';
     }
   };

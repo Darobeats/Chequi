@@ -14,12 +14,14 @@ export const useUserRole = () => {
   const isAdmin = role === 'admin';
   const isControl = role === 'control';
   const isAttendee = role === 'attendee';
+  const isViewer = role === 'viewer';
   
   const hasRole = (requiredRole: UserRole) => role === requiredRole;
   
-  const canAccessAdmin = isAdmin || isControl;
-  const canAccessScanner = isAdmin || isControl;
+  const canAccessAdmin = isAdmin || isControl || isViewer;
+  const canAccessScanner = isAdmin || isControl || isViewer;
   const canAccessProfile = isAdmin || isAttendee;
+  const canAccessConfig = isAdmin; // Solo admins pueden ver configuración
   
   return {
     role,
@@ -27,9 +29,11 @@ export const useUserRole = () => {
     isAdmin,
     isControl,
     isAttendee,
+    isViewer,
     hasRole,
     canAccessAdmin,
     canAccessScanner,
     canAccessProfile,
+    canAccessConfig,
   };
 };

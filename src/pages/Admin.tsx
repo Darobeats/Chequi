@@ -14,7 +14,7 @@ import { BarChart3, Users, FileText, Settings, UserPlus } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading } = useSupabaseAuth();
-  const { isAdmin, isControl, canAccessAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isControl, isViewer, canAccessAdmin, canAccessConfig, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   
   const { data: attendees = [] } = useAttendees();
@@ -107,7 +107,7 @@ const Admin = () => {
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800`}>
+          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800`}>
             <TabsTrigger 
               value="analytics" 
               className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -129,7 +129,7 @@ const Admin = () => {
               <FileText className="h-4 w-4" />
               Resumen
             </TabsTrigger>
-            {isAdmin && (
+            {canAccessConfig && (
               <TabsTrigger 
                 value="config" 
                 className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -193,7 +193,7 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          {isAdmin && (
+          {canAccessConfig && (
             <TabsContent value="config" className="space-y-6">
               <EventConfig />
             </TabsContent>
