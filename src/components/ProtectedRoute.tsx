@@ -19,7 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo = '/auth'
 }) => {
   const { user, loading } = useSupabaseAuth();
-  const { hasRole, loading: roleLoading } = useUserRole();
+  const { hasRole, isViewer, loading: roleLoading } = useUserRole();
 
   if (loading || roleLoading) {
     return (
@@ -33,9 +33,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={redirectTo} replace />;
   }
 
-  if (requiredRole && !hasRole(requiredRole)) {
-    // Redirect based on user role
-    return <Navigate to="/dashboard" replace />;
+  if (requiredRole) {
+    const allowed = hasRole(requiredRole) || (requiredRole === 'admin' && isViewer);
+    if (!allowed) {
+      // Redirect based on user role
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;
