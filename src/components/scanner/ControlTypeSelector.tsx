@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Ticket, Utensils, Wine, Crown } from 'lucide-react';
 
@@ -23,6 +23,15 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
   onControlTypeChange,
   isLoading,
 }) => {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.classList.toggle('select-open', open);
+    return () => {
+      document.body.classList.remove('select-open');
+    };
+  }, [open]);
+
   const getControlIcon = (iconName: string | null) => {
     switch (iconName) {
       case 'ticket': return <Ticket className="w-6 h-6" />;
@@ -36,30 +45,35 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
   if (isLoading) {
     return (
       <div className="w-full mb-6">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-muted-foreground mb-2">
           Tipo de Control
         </label>
-        <div className="bg-gray-800 border border-gray-700 rounded-md h-10 animate-pulse"></div>
+        <div className="bg-input border border-border rounded-md h-10 animate-pulse"></div>
       </div>
     );
   }
 
   return (
     <div className="w-full mb-6">
-      <label className="block text-sm font-medium text-gray-300 mb-2">
+      <label className="block text-sm font-medium text-muted-foreground mb-2">
         Tipo de Control
       </label>
-      <Select value={selectedControlType} onValueChange={onControlTypeChange}>
-        <SelectTrigger className="bg-gray-800 border-gray-700 text-hueso">
+      <Select 
+        value={selectedControlType} 
+        onValueChange={(v) => { onControlTypeChange(v); setOpen(false); }}
+        open={open}
+        onOpenChange={setOpen}
+      >
+        <SelectTrigger className="bg-input border-border text-foreground">
           <SelectValue placeholder="Selecciona el tipo de control" />
         </SelectTrigger>
-        <SelectContent className="bg-gray-800 border-gray-700">
+        <SelectContent className="bg-popover border-border z-[9999]">
           {controlTypes?.map((controlType) => (
-            <SelectItem key={controlType.id} value={controlType.id} className="text-hueso">
+            <SelectItem key={controlType.id} value={controlType.id} className="text-foreground">
               <div className="flex items-center gap-2">
                 {getControlIcon(controlType.icon)}
                 <span className="capitalize">{controlType.name}</span>
-                <span className="text-xs text-gray-400">- {controlType.description}</span>
+                <span className="text-xs text-muted-foreground">- {controlType.description}</span>
               </div>
             </SelectItem>
           ))}

@@ -137,7 +137,7 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
 
   return (
     <div className="flex flex-col items-center">
-      <div className="w-80 h-80 scan-border rounded-md mb-6 relative overflow-hidden">
+      <div className="w-80 h-80 scan-border rounded-md mb-6 relative overflow-hidden scanner-video">
         {canStartScanning && (
           <div className="flex flex-col items-center justify-center h-full">
             <Camera className="w-16 h-16 text-gray-400 mb-4" />
@@ -157,7 +157,7 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
           <>
             <video
               ref={videoRef}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover transform-gpu will-change-transform"
               playsInline
               muted
             />
