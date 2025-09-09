@@ -3,6 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAuthorizeUserManagement } from '@/hooks/useAuthorizeUserManagement';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -13,6 +14,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
   const { user, profile, signOut } = useSupabaseAuth();
   const { canAccessAdmin, canAccessScanner } = useUserRole();
+  const { canManageUsers } = useAuthorizeUserManagement();
   const navigate = useNavigate();
 
   const handleNavigation = (path: string) => {
@@ -75,6 +77,15 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
                   onClick={() => handleNavigation('/admin')}
                 >
                   Admin
+                </Button>
+              )}
+              {canManageUsers && (
+                <Button
+                  variant="ghost"
+                  className="text-hueso hover:text-dorado hover:bg-empresarial"
+                  onClick={() => handleNavigation('/users')}
+                >
+                  Usuarios
                 </Button>
               )}
               {profile.role === 'attendee' && (
