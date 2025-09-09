@@ -41,36 +41,40 @@ const ExportButton: React.FC = () => {
       for (const attendee of attendees) {
         const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
         
-        // Create QR Server API URL for easy sharing
-        const qrUrl = attendee.qr_code 
-          ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(attendee.qr_code)}`
-          : 'No generado';
-
-        // Generate QR code image as buffer - SAME config as QRCodeDisplay component
+        // Generate QR code image buffer - SAME config as QRCodeDisplay component
         let qrImageBuffer: Buffer | null = null;
+        let imageId: number | null = null;
         if (attendee.qr_code) {
           try {
             qrImageBuffer = await QRCode.toBuffer(attendee.qr_code, {
-              width: 200, // Larger size for printing
+              width: 200, // Larger size for better quality in print
               margin: 1,  // Same as QRCodeDisplay
               color: {
                 dark: '#000000',
                 light: '#FFFFFF'
               }
             });
+
+            // Add image to workbook once per attendee
+            if (qrImageBuffer) {
+              imageId = workbook.addImage({
+                buffer: qrImageBuffer,
+                extension: 'png'
+              });
+            }
           } catch (error) {
-            console.error('Error generating QR image:', error);
+            console.error('Error generating QR image for attendee:', attendee.name, error);
           }
         }
 
         if (attendeeUsage.length === 0) {
           // Attendee with no usage records
-          const row = worksheet.addRow({
+          worksheet.addRow({
             nombre: attendee.name,
             email: attendee.email || 'N/A',
             categoria: attendee.ticket_category?.name || 'N/A',
-            qrUrl: qrUrl,
-            qrImage: '', // Will add image separately
+            qrUrl: attendee.qr_code || 'No generado',
+            qrImage: 'Ver imagen →', // Placeholder text
             estado: attendee.status === 'valid' ? 'Válido' : 
                    attendee.status === 'used' ? 'Usado' : 'Bloqueado',
             fechaUso: 'Sin registros',
@@ -80,30 +84,25 @@ const ExportButton: React.FC = () => {
             notas: 'Sin registros'
           });
 
-          // Add QR image if available
-          if (qrImageBuffer) {
-            const imageId = workbook.addImage({
-              buffer: qrImageBuffer,
-              extension: 'png'
-            });
-
+          // Add QR image if available - positioned correctly in column E
+          if (imageId) {
             worksheet.addImage(imageId, {
               tl: { col: 4, row: currentRow - 1 }, // Column E (0-indexed), current row
-              ext: { width: 100, height: 100 }
+              ext: { width: 120, height: 120 } // Size of the image
             });
           }
           
           currentRow++;
         } else {
           // Create one row per usage record
-          attendeeUsage.forEach((usage) => {
+          attendeeUsage.forEach((usage, index) => {
             const usedDate = new Date(usage.used_at);
-            const row = worksheet.addRow({
+            worksheet.addRow({
               nombre: attendee.name,
               email: attendee.email || 'N/A',
               categoria: attendee.ticket_category?.name || 'N/A',
-              qrUrl: qrUrl,
-              qrImage: '', // Will add image separately
+              qrUrl: attendee.qr_code || 'No generado',
+              qrImage: index === 0 ? 'Ver imagen →' : '', // Only show on first row per attendee
               estado: attendee.status === 'valid' ? 'Válido' : 
                      attendee.status === 'used' ? 'Usado' : 'Bloqueado',
               fechaUso: usedDate.toLocaleDateString('es-ES'),
@@ -117,16 +116,11 @@ const ExportButton: React.FC = () => {
               notas: usage.notes || 'Sin notas'
             });
 
-            // Add QR image if available
-            if (qrImageBuffer) {
-              const imageId = workbook.addImage({
-                buffer: qrImageBuffer,
-                extension: 'png'
-              });
-
+            // Add QR image only on first usage row per attendee
+            if (imageId && index === 0) {
               worksheet.addImage(imageId, {
                 tl: { col: 4, row: currentRow - 1 }, // Column E (0-indexed), current row
-                ext: { width: 100, height: 100 }
+                ext: { width: 120, height: 120 } // Size of the image
               });
             }
             
