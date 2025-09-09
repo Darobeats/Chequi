@@ -86,7 +86,12 @@ const ExportButton: React.FC = () => {
           if (attendee.qr_code) {
             const qrLink = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendee.qr_code)}`;
             const cell = row.getCell('qrUrl');
-            cell.value = { text: 'Ver QR →', hyperlink: qrLink, tooltip: 'Abrir QR en el navegador' } as any;
+            cell.value = {
+              text: 'Ver QR →',
+              hyperlink: qrLink,
+              tooltip: 'Abrir QR en el navegador'
+            };
+            cell.font = { color: { argb: 'FF0066CC' }, underline: true };
           }
 
           // Add QR image if available - positioned correctly in column E
@@ -125,7 +130,12 @@ const ExportButton: React.FC = () => {
             if (attendee.qr_code && index === 0) {
               const qrLink = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendee.qr_code)}`;
               const cell = row.getCell('qrUrl');
-              cell.value = { text: 'Ver QR →', hyperlink: qrLink, tooltip: 'Abrir QR en el navegador' } as any;
+              cell.value = {
+                text: 'Ver QR →',
+                hyperlink: qrLink,
+                tooltip: 'Abrir QR en el navegador'
+              };
+              cell.font = { color: { argb: 'FF0066CC' }, underline: true };
             }
 
             // Add QR image only on first usage row per attendee
