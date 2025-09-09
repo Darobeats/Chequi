@@ -55,13 +55,9 @@ const ExportButton: React.FC = () => {
               }
             });
 
-            // Convert base64 to buffer for ExcelJS
-            const base64Data = qrDataURL.split(',')[1];
-            const qrImageBuffer = Buffer.from(base64Data, 'base64');
-
-            // Add image to workbook once per attendee
+            // Add image to workbook once per attendee using base64 data URL (browser-safe)
             imageId = workbook.addImage({
-              buffer: qrImageBuffer,
+              base64: qrDataURL,
               extension: 'png'
             });
           } catch (error) {
@@ -71,11 +67,11 @@ const ExportButton: React.FC = () => {
 
         if (attendeeUsage.length === 0) {
           // Attendee with no usage records
-          worksheet.addRow({
+          const row = worksheet.addRow({
             nombre: attendee.name,
             email: attendee.email || 'N/A',
             categoria: attendee.ticket_category?.name || 'N/A',
-            qrUrl: attendee.qr_code || 'No generado',
+            qrUrl: attendee.qr_code ? 'Ver QR →' : 'No generado',
             qrImage: 'Ver imagen →', // Placeholder text
             estado: attendee.status === 'valid' ? 'Válido' : 
                    attendee.status === 'used' ? 'Usado' : 'Bloqueado',
@@ -85,6 +81,13 @@ const ExportButton: React.FC = () => {
             dispositivo: 'Sin registros',
             notas: 'Sin registros'
           });
+
+          // Set clickable hyperlink for QR URL (uses external API to render QR image)
+          if (attendee.qr_code) {
+            const qrLink = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendee.qr_code)}`;
+            const cell = row.getCell('qrUrl');
+            cell.value = { text: 'Ver QR →', hyperlink: qrLink, tooltip: 'Abrir QR en el navegador' } as any;
+          }
 
           // Add QR image if available - positioned correctly in column E
           if (imageId) {
@@ -99,11 +102,11 @@ const ExportButton: React.FC = () => {
           // Create one row per usage record
           attendeeUsage.forEach((usage, index) => {
             const usedDate = new Date(usage.used_at);
-            worksheet.addRow({
+            const row = worksheet.addRow({
               nombre: attendee.name,
               email: attendee.email || 'N/A',
               categoria: attendee.ticket_category?.name || 'N/A',
-              qrUrl: attendee.qr_code || 'No generado',
+              qrUrl: attendee.qr_code ? (index === 0 ? 'Ver QR →' : '') : 'No generado',
               qrImage: index === 0 ? 'Ver imagen →' : '', // Only show on first row per attendee
               estado: attendee.status === 'valid' ? 'Válido' : 
                      attendee.status === 'used' ? 'Usado' : 'Bloqueado',
@@ -117,6 +120,13 @@ const ExportButton: React.FC = () => {
               dispositivo: usage.device || 'N/A',
               notas: usage.notes || 'Sin notas'
             });
+
+            // Set QR URL hyperlink only on first row per attendee
+            if (attendee.qr_code && index === 0) {
+              const qrLink = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(attendee.qr_code)}`;
+              const cell = row.getCell('qrUrl');
+              cell.value = { text: 'Ver QR →', hyperlink: qrLink, tooltip: 'Abrir QR en el navegador' } as any;
+            }
 
             // Add QR image only on first usage row per attendee
             if (imageId && index === 0) {
