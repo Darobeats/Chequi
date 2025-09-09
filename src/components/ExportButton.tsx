@@ -21,13 +21,13 @@ const ExportButton: React.FC = () => {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Asistentes');
 
-      // Define columns
+      // Define columns with better width for QR images
       worksheet.columns = [
         { header: 'Nombre', key: 'nombre', width: 25 },
         { header: 'Email', key: 'email', width: 25 },
         { header: 'Categoría', key: 'categoria', width: 15 },
         { header: 'Código QR URL', key: 'qrUrl', width: 35 },
-        { header: 'Imagen QR', key: 'qrImage', width: 20 },
+        { header: 'Imagen QR', key: 'qrImage', width: 25 }, // Increased width for images
         { header: 'Estado', key: 'estado', width: 12 },
         { header: 'Fecha de Uso', key: 'fechaUso', width: 15 },
         { header: 'Hora de Uso', key: 'horaUso', width: 15 },
@@ -41,13 +41,13 @@ const ExportButton: React.FC = () => {
       for (const attendee of attendees) {
         const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
         
-        // Generate QR code image buffer - SAME config as QRCodeDisplay component
-        let qrImageBuffer: Buffer | null = null;
+        // Generate QR code image using browser-compatible method
         let imageId: number | null = null;
         if (attendee.qr_code) {
           try {
-            qrImageBuffer = await QRCode.toBuffer(attendee.qr_code, {
-              width: 200, // Larger size for better quality in print
+            // Generate QR as base64 dataURL - browser compatible
+            const qrDataURL = await QRCode.toDataURL(attendee.qr_code, {
+              width: 300, // Higher resolution for better print quality
               margin: 1,  // Same as QRCodeDisplay
               color: {
                 dark: '#000000',
@@ -55,13 +55,15 @@ const ExportButton: React.FC = () => {
               }
             });
 
+            // Convert base64 to buffer for ExcelJS
+            const base64Data = qrDataURL.split(',')[1];
+            const qrImageBuffer = Buffer.from(base64Data, 'base64');
+
             // Add image to workbook once per attendee
-            if (qrImageBuffer) {
-              imageId = workbook.addImage({
-                buffer: qrImageBuffer,
-                extension: 'png'
-              });
-            }
+            imageId = workbook.addImage({
+              buffer: qrImageBuffer,
+              extension: 'png'
+            });
           } catch (error) {
             console.error('Error generating QR image for attendee:', attendee.name, error);
           }
@@ -129,9 +131,9 @@ const ExportButton: React.FC = () => {
         }
       }
 
-      // Set row heights for better image display
+      // Set row heights for better QR image display
       for (let i = 2; i <= currentRow; i++) {
-        worksheet.getRow(i).height = 75; // Set row height to accommodate images
+        worksheet.getRow(i).height = 110; // Increased height for proper QR image display
       }
 
       // Generate Excel buffer
