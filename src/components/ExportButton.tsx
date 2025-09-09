@@ -46,13 +46,13 @@ const ExportButton: React.FC = () => {
           ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(attendee.qr_code)}`
           : 'No generado';
 
-        // Generate QR code image as buffer
+        // Generate QR code image as buffer - SAME config as QRCodeDisplay component
         let qrImageBuffer: Buffer | null = null;
         if (attendee.qr_code) {
           try {
             qrImageBuffer = await QRCode.toBuffer(attendee.qr_code, {
-              width: 150,
-              margin: 2,
+              width: 200, // Larger size for printing
+              margin: 1,  // Same as QRCodeDisplay
               color: {
                 dark: '#000000',
                 light: '#FFFFFF'
