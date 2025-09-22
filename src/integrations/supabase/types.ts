@@ -367,6 +367,39 @@ export type Database = {
           },
         ]
       }
+      security_audit_log: {
+        Row: {
+          accessed_at: string
+          created_at: string
+          details: Json | null
+          id: string
+          operation_type: string
+          table_name: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accessed_at?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          operation_type: string
+          table_name: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accessed_at?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          operation_type?: string
+          table_name?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       super_admins: {
         Row: {
           created_at: string
@@ -483,6 +516,17 @@ export type Database = {
           logo_url: string
           primary_color: string
           secondary_color: string
+        }[]
+      }
+      get_asistentes_security_report: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          access_count_24h: number
+          last_access: string
+          recommendations: string[]
+          security_status: string
+          total_records: number
+          unique_users_accessed_24h: number
         }[]
       }
       get_current_user_role: {
