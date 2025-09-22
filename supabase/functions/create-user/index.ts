@@ -23,14 +23,28 @@ serve(async (req) => {
       }
     )
 
-    // Check if the requesting user is authorized
+    // Check if the requesting user is authorized via super_admins table
     const authHeader = req.headers.get('Authorization')!
     const token = authHeader.replace('Bearer ', '')
     const { data: authUser } = await supabaseClient.auth.getUser(token)
     
-    if (!authUser.user || authUser.user.email !== 'iacristiandigital@gmail.com') {
+    if (!authUser.user) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized - No user found' }),
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
+    // Check if user is super admin via database function
+    const { data: isSuperAdmin, error: authError } = await supabaseClient
+      .rpc('is_super_admin', { check_user_id: authUser.user.id })
+    
+    if (authError || !isSuperAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Insufficient privileges' }),
         { 
           status: 403, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

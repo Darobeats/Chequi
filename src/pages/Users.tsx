@@ -7,19 +7,21 @@ import UserManagement from '@/components/UserManagement';
 
 const Users = () => {
   const { user, loading } = useSupabaseAuth();
-  const { isAuthorized } = useAuthorizeUserManagement();
+  const { isAuthorized, isLoading: authLoading } = useAuthorizeUserManagement();
   const navigate = useNavigate();
 
+  const isPageLoading = loading || authLoading;
+
   useEffect(() => {
-    if (!user && !loading) {
+    if (!user && !isPageLoading) {
       navigate('/auth');
-    } else if (user && !loading && !isAuthorized) {
+    } else if (user && !isPageLoading && !isAuthorized) {
       // Si no está autorizado, redirigir al dashboard
       navigate('/dashboard');
     }
-  }, [user, loading, isAuthorized, navigate]);
+  }, [user, isPageLoading, isAuthorized, navigate]);
 
-  if (loading) {
+  if (isPageLoading) {
     return (
       <div className="min-h-screen bg-empresarial flex flex-col">
         <Header title="GESTIÓN DE USUARIOS" />
