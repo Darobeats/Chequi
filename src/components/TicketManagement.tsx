@@ -12,6 +12,7 @@ import { Plus, Edit, Trash2, Tag, Settings, Shield, Palette } from 'lucide-react
 import { useToast } from '@/hooks/use-toast';
 import { TicketCategory, ControlType } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
+import IconPicker from '@/components/IconPicker';
 
 const TicketManagement = () => {
   const { data: categories = [], refetch: refetchCategories } = useTicketCategories();
@@ -272,16 +273,11 @@ const TicketManagement = () => {
                     placeholder="Descripción del tipo de acceso..."
                   />
                 </div>
-                <div>
-                  <Label htmlFor="control_icon" className="text-hueso">Icono (opcional)</Label>
-                  <Input
-                    id="control_icon"
-                    value={newControlType.icon}
-                    onChange={(e) => setNewControlType({ ...newControlType, icon: e.target.value })}
-                    className="bg-gray-800 border-gray-700 text-hueso"
-                    placeholder="shield, user, star..."
-                  />
-                </div>
+                <IconPicker
+                  value={newControlType.icon || ''}
+                  onChange={(iconName) => setNewControlType({ ...newControlType, icon: iconName })}
+                  label="Icono del tipo de acceso"
+                />
                 <div>
                   <Label htmlFor="control_color" className="text-hueso">Color</Label>
                   <div className="flex items-center gap-2">
@@ -372,15 +368,11 @@ const TicketManagement = () => {
                             className="bg-gray-800 border-gray-700 text-hueso"
                           />
                         </div>
-                        <div>
-                          <Label className="text-hueso">Icono</Label>
-                          <Input
-                            value={editingControlType.icon || ''}
-                            onChange={(e) => setEditingControlType({ ...editingControlType, icon: e.target.value })}
-                            className="bg-gray-800 border-gray-700 text-hueso"
-                            placeholder="shield, user, star..."
-                          />
-                        </div>
+                        <IconPicker
+                          value={editingControlType.icon || ''}
+                          onChange={(iconName) => setEditingControlType({ ...editingControlType, icon: iconName })}
+                          label="Icono del tipo de acceso"
+                        />
                         <div>
                           <Label className="text-hueso">Color</Label>
                           <div className="flex items-center gap-2">
