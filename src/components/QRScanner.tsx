@@ -63,6 +63,9 @@ const QRScanner: React.FC = () => {
       }
     }
 
+    // Resetear el último código escaneado al reactivar la cámara
+    setLastScannedCode('');
+    setLastResult(null);
     setScanning(true);
   };
 
@@ -138,12 +141,12 @@ const QRScanner: React.FC = () => {
     }
   };
 
-  // Reset de resultado después de mostrarlo por más tiempo
+  // Reset de resultado después de mostrarlo
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
     if (lastResult) {
-      const duration = lastResult.success ? 8000 : 7000; // éxito más tiempo
+      const duration = lastResult.success ? 3500 : 4000; // Reducido para escaneos consecutivos más rápidos
       timer = setTimeout(() => {
         setLastResult(null);
         setLastScannedCode(''); // permitir re-escaneo del mismo código
@@ -154,6 +157,12 @@ const QRScanner: React.FC = () => {
       if (timer) clearTimeout(timer);
     };
   }, [lastResult]);
+
+  // Función para cerrar el resultado y permitir nuevo escaneo inmediatamente
+  const handleCloseResult = () => {
+    setLastResult(null);
+    setLastScannedCode(''); // Permitir escanear el mismo QR de nuevo
+  };
 
   if (loadingControlTypes) {
     return (
@@ -177,7 +186,7 @@ const QRScanner: React.FC = () => {
 
 
       {lastResult ? (
-        <ScanResult result={lastResult} onClose={() => setLastResult(null)} />
+        <ScanResult result={lastResult} onClose={handleCloseResult} />
       ) : needsPermission ? (
         <CameraPermissions
           hasCamera={hasCamera}
