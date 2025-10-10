@@ -9,8 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { EventConfig as EventConfigType } from '@/types/database';
-import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users } from 'lucide-react';
+import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import AttendeesManager from '@/components/AttendeesManager';
 import TicketManagement from '@/components/TicketManagement';
 import AttendeeManagement from '@/components/AttendeeManagement';
@@ -34,6 +35,8 @@ const EventConfig = () => {
   const createEventConfig = useCreateEventConfig();
   const activateEventConfig = useActivateEventConfig();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [activeTab, setActiveTab] = useState('configuration');
   const [editingConfig, setEditingConfig] = useState<EventConfigType | null>(null);
@@ -133,6 +136,32 @@ const EventConfig = () => {
     }
   };
 
+  const handleApplyChanges = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['eventConfigs'] });
+      await queryClient.invalidateQueries({ queryKey: ['activeEventConfig'] });
+      await queryClient.invalidateQueries({ queryKey: ['attendees'] });
+      await queryClient.invalidateQueries({ queryKey: ['ticketCategories'] });
+      await queryClient.invalidateQueries({ queryKey: ['controlTypes'] });
+      await queryClient.invalidateQueries({ queryKey: ['categoryControls'] });
+      await queryClient.invalidateQueries({ queryKey: ['controlUsage'] });
+      
+      toast({
+        title: "Cambios aplicados",
+        description: "Todos los datos se han sincronizado correctamente con la base de datos.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudieron aplicar los cambios.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -143,9 +172,28 @@ const EventConfig = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Settings className="h-6 w-6 text-dorado" />
-        <h2 className="text-2xl font-bold text-dorado">Configuración de Eventos</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Settings className="h-6 w-6 text-dorado" />
+          <h2 className="text-2xl font-bold text-dorado">Configuración de Eventos</h2>
+        </div>
+        <Button
+          onClick={handleApplyChanges}
+          disabled={isRefreshing}
+          className="bg-dorado text-empresarial hover:bg-dorado/90 font-semibold"
+        >
+          {isRefreshing ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Actualizando...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Aplicar Cambios
+            </>
+          )}
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
