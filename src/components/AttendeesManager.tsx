@@ -12,6 +12,8 @@ import { toast } from '@/components/ui/sonner';
 import { Plus, Upload, Edit, Trash2, QrCode, RotateCcw } from 'lucide-react';
 import AttendeeForm from './AttendeeForm';
 import BulkImportDialog from './BulkImportDialog';
+import ExportButton from './ExportButton';
+import ExportQRDistribution from './ExportQRDistribution';
 import QRCodeDisplay from './QRCodeDisplay';
 
 const AttendeesManager: React.FC = () => {
@@ -130,7 +132,7 @@ const AttendeesManager: React.FC = () => {
             Total: {attendees.length} asistentes | Filtrados: {filteredAttendees.length}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             onClick={() => setShowBulkImport(true)}
             variant="outline"
@@ -147,6 +149,11 @@ const AttendeesManager: React.FC = () => {
             <RotateCcw className="w-4 h-4" />
             Resetear Todas las Entradas
           </Button>
+          
+          <ExportQRDistribution />
+          
+          <ExportButton />
+          
           <Button
             onClick={() => {
               setSelectedAttendee(null);
