@@ -5,10 +5,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTicketCategories, useCreateTicketCategory, useUpdateTicketCategory, useDeleteTicketCategory, useCategoryControls, useCreateCategoryControl, useUpdateCategoryControl, useDeleteCategoryControl } from '@/hooks/useTicketCategories';
 import { useControlTypes } from '@/hooks/useSupabaseData';
 import { useCreateControlType, useUpdateControlType, useDeleteControlType } from '@/hooks/useControlTypeManagement';
-import { Plus, Edit, Trash2, Tag, Settings, Shield, Palette } from 'lucide-react';
+import { Plus, Edit, Trash2, Tag, Settings, Shield, Palette, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { TicketCategory, ControlType } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,7 +46,8 @@ const TicketManagement = () => {
     name: '',
     description: '',
     color: '#D4AF37',
-    icon: ''
+    icon: '',
+    requires_control_id: null as string | null
   });
   const [editingControlType, setEditingControlType] = useState<ControlType | null>(null);
   const [showNewControlTypeDialog, setShowNewControlTypeDialog] = useState(false);
@@ -170,7 +173,7 @@ const TicketManagement = () => {
   const handleCreateControlType = async () => {
     try {
       await createControlType.mutateAsync(newControlType);
-      setNewControlType({ name: '', description: '', color: '#D4AF37', icon: '' });
+      setNewControlType({ name: '', description: '', color: '#D4AF37', icon: '', requires_control_id: null });
       setShowNewControlTypeDialog(false);
       toast({
         title: "Tipo de control creado",
@@ -279,6 +282,28 @@ const TicketManagement = () => {
                   label="Icono del tipo de acceso"
                 />
                 <div>
+                  <Label htmlFor="requires_control" className="text-hueso">Requiere Control Previo (Opcional)</Label>
+                  <Select
+                    value={newControlType.requires_control_id || 'none'}
+                    onValueChange={(value) => setNewControlType({ ...newControlType, requires_control_id: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-hueso">
+                      <SelectValue placeholder="Ninguno" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="none" className="text-hueso">Ninguno (Sin prerrequisito)</SelectItem>
+                      {controlTypes.filter(ct => ct.id !== editingControlType?.id).map((ct) => (
+                        <SelectItem key={ct.id} value={ct.id} className="text-hueso">
+                          {ct.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Si se selecciona, este control solo podrá redimirse después del control previo
+                  </p>
+                </div>
+                <div>
                   <Label htmlFor="control_color" className="text-hueso">Color</Label>
                   <div className="flex items-center gap-2">
                     <Input
@@ -313,27 +338,47 @@ const TicketManagement = () => {
         </div>
         
         <div className="grid gap-3">
-          {controlTypes.map((controlType) => (
-            <div key={controlType.id} className="flex items-center justify-between p-4 bg-gray-800/30 rounded-lg border border-gray-700">
-              <div className="flex items-center gap-3">
-                <div 
-                  className="w-4 h-4 rounded"
-                  style={{ backgroundColor: controlType.color || '#D4AF37' }}
-                />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-hueso font-medium">{controlType.name}</span>
-                    {controlType.icon && (
-                      <Badge variant="outline" className="text-xs">
-                        {controlType.icon}
-                      </Badge>
+          {controlTypes.map((controlType) => {
+            const requiredControl = controlType.requires_control_id 
+              ? controlTypes.find(ct => ct.id === controlType.requires_control_id)
+              : null;
+            
+            return (
+              <div key={controlType.id} className="flex items-center justify-between p-4 bg-gray-800/30 rounded-lg border border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-4 h-4 rounded"
+                    style={{ backgroundColor: controlType.color || '#D4AF37' }}
+                  />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-hueso font-medium">{controlType.name}</span>
+                      {controlType.icon && (
+                        <Badge variant="outline" className="text-xs">
+                          {controlType.icon}
+                        </Badge>
+                      )}
+                      {requiredControl && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-500">
+                                <Lock className="h-3 w-3 mr-1" />
+                                Requiere: {requiredControl.name}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="bg-gray-800 border-gray-700 text-hueso">
+                              <p>Este control solo puede redimirse después de "{requiredControl.name}"</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    {controlType.description && (
+                      <span className="text-sm text-gray-400">{controlType.description}</span>
                     )}
                   </div>
-                  {controlType.description && (
-                    <span className="text-sm text-gray-400">{controlType.description}</span>
-                  )}
                 </div>
-              </div>
               <div className="flex gap-2">
                 <Dialog open={showEditControlTypeDialog} onOpenChange={setShowEditControlTypeDialog}>
                   <DialogTrigger asChild>
@@ -374,6 +419,28 @@ const TicketManagement = () => {
                           label="Icono del tipo de acceso"
                         />
                         <div>
+                          <Label className="text-hueso">Requiere Control Previo (Opcional)</Label>
+                          <Select
+                            value={editingControlType.requires_control_id || 'none'}
+                            onValueChange={(value) => setEditingControlType({ ...editingControlType, requires_control_id: value === 'none' ? null : value })}
+                          >
+                            <SelectTrigger className="bg-gray-800 border-gray-700 text-hueso">
+                              <SelectValue placeholder="Ninguno" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-gray-800 border-gray-700">
+                              <SelectItem value="none" className="text-hueso">Ninguno (Sin prerrequisito)</SelectItem>
+                              {controlTypes.filter(ct => ct.id !== editingControlType.id).map((ct) => (
+                                <SelectItem key={ct.id} value={ct.id} className="text-hueso">
+                                  {ct.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Si se selecciona, este control solo podrá redimirse después del control previo
+                          </p>
+                        </div>
+                        <div>
                           <Label className="text-hueso">Color</Label>
                           <div className="flex items-center gap-2">
                             <Input
@@ -412,9 +479,10 @@ const TicketManagement = () => {
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

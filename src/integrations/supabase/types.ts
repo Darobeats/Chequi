@@ -165,6 +165,7 @@ export type Database = {
           icon: string | null
           id: string
           name: string
+          requires_control_id: string | null
         }
         Insert: {
           color?: string | null
@@ -173,6 +174,7 @@ export type Database = {
           icon?: string | null
           id?: string
           name: string
+          requires_control_id?: string | null
         }
         Update: {
           color?: string | null
@@ -181,8 +183,17 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
+          requires_control_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "control_types_requires_control_id_fkey"
+            columns: ["requires_control_id"]
+            isOneToOne: false
+            referencedRelation: "control_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       control_usage: {
         Row: {

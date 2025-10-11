@@ -6,6 +6,8 @@ export interface ControlType {
   icon: string | null;
   color: string | null;
   created_at: string;
+  requires_control_id: string | null;
+  required_control?: ControlType;
 }
 
 export interface TicketCategory {

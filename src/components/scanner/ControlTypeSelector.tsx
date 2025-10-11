@@ -1,13 +1,16 @@
 
 import React, { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Ticket, Utensils, Wine, Crown } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
+import { Ticket, Utensils, Wine, Crown, Lock } from 'lucide-react';
 
 interface ControlType {
   id: string;
   name: string;
   description: string;
   icon: string | null;
+  requires_control_id?: string | null;
 }
 
 interface ControlTypeSelectorProps {
@@ -68,15 +71,36 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
           <SelectValue placeholder="Selecciona el tipo de control" />
         </SelectTrigger>
         <SelectContent className="bg-popover border-border z-[9999]">
-          {controlTypes?.map((controlType) => (
-            <SelectItem key={controlType.id} value={controlType.id} className="text-foreground">
-              <div className="flex items-center gap-2">
-                {getControlIcon(controlType.icon)}
-                <span className="capitalize">{controlType.name}</span>
-                <span className="text-xs text-muted-foreground">- {controlType.description}</span>
-              </div>
-            </SelectItem>
-          ))}
+          {controlTypes?.map((controlType) => {
+            const hasPrerequisite = controlType.requires_control_id;
+            const requiredControl = hasPrerequisite 
+              ? controlTypes.find(ct => ct.id === controlType.requires_control_id)
+              : null;
+            
+            return (
+              <SelectItem key={controlType.id} value={controlType.id} className="text-foreground">
+                <div className="flex items-center gap-2">
+                  {getControlIcon(controlType.icon)}
+                  <span className="capitalize">{controlType.name}</span>
+                  <span className="text-xs text-muted-foreground">- {controlType.description}</span>
+                  {requiredControl && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-500 ml-1">
+                            <Lock className="h-2 w-2" />
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Requiere: {requiredControl.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>

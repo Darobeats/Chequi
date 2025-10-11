@@ -44,7 +44,15 @@ const ScanResult: React.FC<ScanResultProps> = ({ result, onClose }) => {
           {result.success ? 'Acceso Permitido' : 'Acceso Denegado'}
         </h3>
         {result.message && !result.success && (
-          <p className="text-sm text-red-200 mb-3">{result.message}</p>
+          <div className="mb-3">
+            <p className="text-sm text-red-200">{result.message}</p>
+            {result.message.includes('Debe registrar primero el control de') && (
+              <p className="text-xs text-yellow-200 mt-2 flex items-center gap-1 justify-center">
+                <span>🔒</span>
+                <span>Se requiere validación previa para redimir este acceso</span>
+              </p>
+            )}
+          </div>
         )}
         
         {result.attendee && (
