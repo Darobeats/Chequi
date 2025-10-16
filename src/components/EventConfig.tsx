@@ -9,13 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { EventConfig as EventConfigType } from '@/types/database';
-import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users, RefreshCw } from 'lucide-react';
+import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users, RefreshCw, Ticket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import AttendeesManager from '@/components/AttendeesManager';
 import TicketManagement from '@/components/TicketManagement';
 import AttendeeManagement from '@/components/AttendeeManagement';
 import BulkTicketAssignment from '@/components/BulkTicketAssignment';
+import TicketTemplateEditor from '@/components/TicketTemplateEditor';
+import { useTicketTemplates, useDeleteTicketTemplate, TicketTemplate } from '@/hooks/useTicketTemplates';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Edit, Trash2 } from 'lucide-react';
 
 const FONT_OPTIONS = [
   { name: 'Inter', value: 'Inter, sans-serif' },
@@ -40,6 +44,10 @@ const EventConfig = () => {
 
   const [activeTab, setActiveTab] = useState('configuration');
   const [editingConfig, setEditingConfig] = useState<EventConfigType | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<TicketTemplate | null>(null);
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false);
+  const { data: ticketTemplates = [] } = useTicketTemplates();
+  const deleteTemplateMutation = useDeleteTicketTemplate();
   const [newConfig, setNewConfig] = useState({
     event_name: '',
     primary_color: '#D4AF37',
@@ -197,7 +205,7 @@ const EventConfig = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 bg-gray-900/50 border border-gray-800">
+        <TabsList className="grid w-full grid-cols-6 bg-gray-900/50 border border-gray-800">
           <TabsTrigger value="configuration" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
             <Settings className="h-4 w-4" />
             Configuración de Evento
@@ -213,6 +221,10 @@ const EventConfig = () => {
           <TabsTrigger value="ticket-assignment" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
             <UserPlus className="h-4 w-4" />
             Asignación de Tickets
+          </TabsTrigger>
+          <TabsTrigger value="ticket-templates" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
+            <Ticket className="h-4 w-4" />
+            Plantillas de Tickets
           </TabsTrigger>
           <TabsTrigger value="qr-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex items-center gap-2">
             <QrCode className="h-4 w-4" />
@@ -485,6 +497,148 @@ const EventConfig = () => {
 
         <TabsContent value="ticket-assignment" className="space-y-6">
           <BulkTicketAssignment />
+        </TabsContent>
+
+        <TabsContent value="ticket-templates" className="space-y-6">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold text-dorado">Plantillas de Tickets</h3>
+                <p className="text-sm text-gray-400">Gestiona las plantillas para imprimir tickets de asistentes</p>
+              </div>
+              <Button
+                onClick={() => {
+                  setEditingTemplate(null);
+                  setShowTemplateEditor(true);
+                }}
+                className="bg-dorado text-empresarial hover:bg-dorado/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva Plantilla
+              </Button>
+            </div>
+
+            {showTemplateEditor ? (
+              <Card className="bg-gray-900/50 border border-gray-800">
+                <CardHeader>
+                  <CardTitle className="text-dorado">
+                    {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TicketTemplateEditor
+                    template={editingTemplate}
+                    onSuccess={() => {
+                      setShowTemplateEditor(false);
+                      setEditingTemplate(null);
+                    }}
+                    onCancel={() => {
+                      setShowTemplateEditor(false);
+                      setEditingTemplate(null);
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {ticketTemplates.length === 0 ? (
+                  <Card className="bg-gray-900/50 border border-gray-800">
+                    <CardContent className="flex flex-col items-center justify-center py-12">
+                      <Ticket className="h-12 w-12 text-gray-600 mb-4" />
+                      <p className="text-gray-400 text-center">
+                        No hay plantillas de tickets creadas.
+                        <br />
+                        Crea una plantilla para comenzar a imprimir tickets personalizados.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  ticketTemplates.map((template) => (
+                    <Card key={template.id} className="bg-gray-900/50 border border-gray-800">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-dorado">{template.name}</CardTitle>
+                            <CardDescription>
+                              {template.layout} - {template.tickets_per_page} tickets por página
+                            </CardDescription>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingTemplate(template);
+                                setShowTemplateEditor(true);
+                              }}
+                              className="border-dorado text-dorado hover:bg-dorado hover:text-empresarial"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Editar
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Eliminar
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Eliminar plantilla?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta acción no se puede deshacer. La plantilla "{template.name}" será eliminada permanentemente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteTemplateMutation.mutate(template.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Eliminar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <Label className="text-gray-400">Campos visibles:</Label>
+                            <div className="mt-1 space-y-1">
+                              {template.show_qr && <Badge variant="outline">QR</Badge>}
+                              {template.show_name && <Badge variant="outline">Nombre</Badge>}
+                              {template.show_email && <Badge variant="outline">Email</Badge>}
+                              {template.show_category && <Badge variant="outline">Categoría</Badge>}
+                              {template.show_ticket_id && <Badge variant="outline">Ticket ID</Badge>}
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-gray-400">Tamaño QR:</Label>
+                            <p className="text-hueso mt-1">{template.qr_size}px</p>
+                          </div>
+                          <div>
+                            <Label className="text-gray-400">Fuente Nombre:</Label>
+                            <p className="text-hueso mt-1">{template.font_size_name}pt</p>
+                          </div>
+                          <div>
+                            <Label className="text-gray-400">Fuente Info:</Label>
+                            <p className="text-hueso mt-1">{template.font_size_info}pt</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="qr-management" className="space-y-6">

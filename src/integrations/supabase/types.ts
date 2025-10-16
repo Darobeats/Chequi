@@ -471,6 +471,83 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_templates: {
+        Row: {
+          created_at: string
+          custom_fields: Json | null
+          event_config_id: string | null
+          font_size_info: number
+          font_size_name: number
+          id: string
+          layout: string
+          margin_bottom: number
+          margin_left: number
+          margin_right: number
+          margin_top: number
+          name: string
+          qr_size: number
+          show_category: boolean
+          show_email: boolean
+          show_name: boolean
+          show_qr: boolean
+          show_ticket_id: boolean
+          tickets_per_page: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_fields?: Json | null
+          event_config_id?: string | null
+          font_size_info?: number
+          font_size_name?: number
+          id?: string
+          layout?: string
+          margin_bottom?: number
+          margin_left?: number
+          margin_right?: number
+          margin_top?: number
+          name: string
+          qr_size?: number
+          show_category?: boolean
+          show_email?: boolean
+          show_name?: boolean
+          show_qr?: boolean
+          show_ticket_id?: boolean
+          tickets_per_page?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_fields?: Json | null
+          event_config_id?: string | null
+          font_size_info?: number
+          font_size_name?: number
+          id?: string
+          layout?: string
+          margin_bottom?: number
+          margin_left?: number
+          margin_right?: number
+          margin_top?: number
+          name?: string
+          qr_size?: number
+          show_category?: boolean
+          show_email?: boolean
+          show_name?: boolean
+          show_qr?: boolean
+          show_ticket_id?: boolean
+          tickets_per_page?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_templates_event_config_id_fkey"
+            columns: ["event_config_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

@@ -66,6 +66,29 @@ export interface EventConfig {
   is_active: boolean;
 }
 
+export interface TicketTemplate {
+  id: string;
+  event_config_id: string | null;
+  name: string;
+  tickets_per_page: number;
+  layout: string;
+  show_qr: boolean;
+  show_name: boolean;
+  show_email: boolean;
+  show_category: boolean;
+  show_ticket_id: boolean;
+  custom_fields: any;
+  qr_size: number;
+  font_size_name: number;
+  font_size_info: number;
+  margin_top: number;
+  margin_bottom: number;
+  margin_left: number;
+  margin_right: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AdminUser {
   id: string;
   user_id: string;
