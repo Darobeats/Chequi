@@ -69,6 +69,73 @@ const ExportTicketsPrint: React.FC = () => {
         const cellWidth = 30;
         const cellHeight = 40;
 
+        // Apply background image if configured
+        if (template.background_image_url) {
+          try {
+            const imageResponse = await fetch(template.background_image_url);
+            const imageBlob = await imageResponse.blob();
+            
+            // Convert blob to base64
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                const result = reader.result as string;
+                resolve(result.split(',')[1]);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(imageBlob);
+            });
+
+            // Get image extension
+            const getExtension = (url: string): 'png' | 'jpeg' => {
+              const ext = url.split('.').pop()?.toLowerCase();
+              return ext === 'png' ? 'png' : 'jpeg';
+            };
+
+            const bgImageId = workbook.addImage({
+              base64,
+              extension: getExtension(template.background_image_url),
+            });
+
+            // Apply image based on mode
+            if (template.background_mode === 'tile') {
+              // Apply in tile mode - one image per ticket (4 times for 2x2)
+              for (let idx = 0; idx < Math.min(batch.length, ticketsPerPage); idx++) {
+                const row = Math.floor(idx / cols);
+                const col = idx % cols;
+                
+                const startCol = col * 10;
+                const startRow = row * 25;
+                
+                worksheet.addImage(bgImageId, {
+                  tl: { col: startCol, row: startRow },
+                  ext: { 
+                    width: cellWidth * 10 * 7.5,
+                    height: cellHeight * 25 * 1.33,
+                  },
+                } as any);
+              }
+            } else if (template.background_mode === 'cover') {
+              // Cover entire sheet
+              worksheet.addImage(bgImageId, {
+                tl: { col: 0, row: 0 },
+                br: { col: cols * 10, row: rows * 25 },
+              } as any);
+            } else if (template.background_mode === 'contain') {
+              // Contain in sheet
+              worksheet.addImage(bgImageId, {
+                tl: { col: 0, row: 0 },
+                ext: {
+                  width: cellWidth * cols * 10 * 7.5,
+                  height: cellHeight * rows * 25 * 1.33,
+                },
+              } as any);
+            }
+          } catch (error) {
+            console.error('Error applying background image:', error);
+          }
+        }
+
         // Set column widths
         for (let col = 0; col < cols; col++) {
           worksheet.getColumn(col + 1).width = cellWidth;

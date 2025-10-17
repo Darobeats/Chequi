@@ -85,6 +85,9 @@ export interface TicketTemplate {
   margin_bottom: number;
   margin_left: number;
   margin_right: number;
+  background_image_url: string | null;
+  background_opacity: number;
+  background_mode: 'tile' | 'cover' | 'contain';
   created_at: string;
   updated_at: string;
 }

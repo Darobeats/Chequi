@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { TicketTemplate, useCreateTicketTemplate, useUpdateTicketTemplate } from '@/hooks/useTicketTemplates';
+import { TicketBackgroundUploader } from './TicketBackgroundUploader';
 import { QrCode, Type, Mail, Tag, Hash } from 'lucide-react';
 
 interface TicketTemplateEditorProps {
@@ -33,7 +34,10 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
     margin_left: 20,
     margin_right: 20,
     event_config_id: null,
-    custom_fields: []
+    custom_fields: [],
+    background_image_url: null as string | null,
+    background_opacity: 0.15,
+    background_mode: 'tile' as 'tile' | 'cover' | 'contain'
   });
 
   const createMutation = useCreateTicketTemplate();
@@ -58,7 +62,10 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         margin_left: template.margin_left,
         margin_right: template.margin_right,
         event_config_id: template.event_config_id,
-        custom_fields: template.custom_fields || []
+        custom_fields: template.custom_fields || [],
+        background_image_url: template.background_image_url,
+        background_opacity: template.background_opacity,
+        background_mode: template.background_mode
       });
     }
   }, [template]);
@@ -306,6 +313,62 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
               min={0}
               max={50}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Imagen de Fondo (Arte del Ticket)</CardTitle>
+          <CardDescription>
+            Suba una imagen que se aplicará como marca de agua en mosaico sobre cada ticket.
+            La imagen se mostrará con baja opacidad para no interferir con la legibilidad del QR.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <TicketBackgroundUploader
+            currentImageUrl={formData.background_image_url}
+            onImageUpload={(url) => setFormData({ ...formData, background_image_url: url })}
+            onImageRemove={() => setFormData({ ...formData, background_image_url: null })}
+          />
+
+          <div className="space-y-2">
+            <Label>
+              Opacidad de Fondo: {(formData.background_opacity * 100).toFixed(0)}%
+            </Label>
+            <Slider
+              value={[formData.background_opacity]}
+              onValueChange={(value) => setFormData({ ...formData, background_opacity: value[0] })}
+              min={0.05}
+              max={0.5}
+              step={0.05}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              La opacidad baja asegura que el código QR sea escaneable
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="background_mode">Modo de Aplicación</Label>
+            <Select
+              value={formData.background_mode}
+              onValueChange={(value: 'tile' | 'cover' | 'contain') =>
+                setFormData({ ...formData, background_mode: value })
+              }
+            >
+              <SelectTrigger id="background_mode">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tile">Mosaico (Repetir x4 - Recomendado)</SelectItem>
+                <SelectItem value="cover">Cubrir Completo</SelectItem>
+                <SelectItem value="contain">Contener</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Mosaico: La imagen se repite una vez por cada ticket (4 veces en total)
+            </p>
           </div>
         </CardContent>
       </Card>

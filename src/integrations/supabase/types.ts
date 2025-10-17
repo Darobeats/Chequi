@@ -473,6 +473,9 @@ export type Database = {
       }
       ticket_templates: {
         Row: {
+          background_image_url: string | null
+          background_mode: string | null
+          background_opacity: number | null
           created_at: string
           custom_fields: Json | null
           event_config_id: string | null
@@ -495,6 +498,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          background_image_url?: string | null
+          background_mode?: string | null
+          background_opacity?: number | null
           created_at?: string
           custom_fields?: Json | null
           event_config_id?: string | null
@@ -517,6 +523,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          background_image_url?: string | null
+          background_mode?: string | null
+          background_opacity?: number | null
           created_at?: string
           custom_fields?: Json | null
           event_config_id?: string | null
