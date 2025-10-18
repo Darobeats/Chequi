@@ -104,15 +104,16 @@ const ExportTicketsPrint: React.FC = () => {
                 const row = Math.floor(idx / cols);
                 const col = idx % cols;
                 
-                const startCol = col * 10;
+                const startCol = col * 1;
                 const startRow = row * 25;
                 
                 worksheet.addImage(bgImageId, {
                   tl: { col: startCol, row: startRow },
                   ext: { 
-                    width: cellWidth * 10 * 7.5,
-                    height: cellHeight * 25 * 1.33,
+                    width: 200,
+                    height: 190,
                   },
+                  editAs: 'oneCell'
                 } as any);
               }
             } else if (template.background_mode === 'cover') {
@@ -138,7 +139,7 @@ const ExportTicketsPrint: React.FC = () => {
 
         // Set column widths
         for (let col = 0; col < cols; col++) {
-          worksheet.getColumn(col + 1).width = cellWidth;
+          worksheet.getColumn(col + 1).width = 40;
         }
 
         // Process each ticket in the batch
@@ -169,8 +170,8 @@ const ExportTicketsPrint: React.FC = () => {
 
               // Add QR to cell
               worksheet.addImage(imageId, {
-                tl: { col: startCol - 1, row: startRow - 1 },
-                ext: { width: template.qr_size * 0.6, height: template.qr_size * 0.6 }
+                tl: { col: (col * 1) + 0.2, row: startRow + 2 },
+                ext: { width: template.qr_size * 0.4, height: template.qr_size * 0.4 }
               });
             } catch (error) {
               console.error('Error generating QR for:', attendee.name, error);
