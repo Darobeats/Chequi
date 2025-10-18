@@ -16,6 +16,33 @@ const ExportTicketsPrint: React.FC = () => {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Helper: apply opacity to a base64-encoded image and return base64 (PNG)
+  const applyOpacityToBase64 = async (
+    base64: string,
+    ext: 'png' | 'jpeg',
+    opacity: number
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = Math.max(0, Math.min(1, opacity ?? 0.15));
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png').split(',')[1]);
+      };
+      img.onerror = (e) => reject(e);
+      img.src = `data:image/${ext};base64,${base64}`;
+    });
+  };
+ 
   const { data: attendees = [] } = useAttendees();
   const { data: templates = [] } = useTicketTemplates();
 
@@ -92,35 +119,35 @@ const ExportTicketsPrint: React.FC = () => {
               return ext === 'png' ? 'png' : 'jpeg';
             };
 
+            const ext = getExtension(template.background_image_url);
+            const opacity = (template as any).background_opacity ?? 0.15;
+            const fadedBase64 = await applyOpacityToBase64(base64, ext, opacity);
+
             const bgImageId = workbook.addImage({
-              base64,
-              extension: getExtension(template.background_image_url),
+              base64: fadedBase64,
+              extension: 'png',
             });
 
             // Apply image based on mode
             if (template.background_mode === 'tile') {
-              // Apply in tile mode - one image per ticket (4 times for 2x2)
               for (let idx = 0; idx < Math.min(batch.length, ticketsPerPage); idx++) {
                 const row = Math.floor(idx / cols);
                 const col = idx % cols;
-                
+
                 const startCol = col * 1;
                 const startRow = row * 25;
-                
+
+                // Stretch background image to exactly cover the ticket area (1 col x 25 rows)
                 worksheet.addImage(bgImageId, {
                   tl: { col: startCol, row: startRow },
-                  ext: { 
-                    width: 200,
-                    height: 190,
-                  },
-                  editAs: 'oneCell'
+                  br: { col: startCol + 1, row: startRow + 25 },
                 } as any);
               }
             } else if (template.background_mode === 'cover') {
               // Cover entire sheet
               worksheet.addImage(bgImageId, {
                 tl: { col: 0, row: 0 },
-                br: { col: cols * 10, row: rows * 25 },
+                br: { col: cols, row: rows * 25 },
               } as any);
             } else if (template.background_mode === 'contain') {
               // Contain in sheet
