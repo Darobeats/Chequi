@@ -42,6 +42,36 @@ const ExportTicketsPrint: React.FC = () => {
       img.src = `data:image/${ext};base64,${base64}`;
     });
   };
+
+  // Helper: resize image maintaining aspect ratio to fit within bounds
+  const getImageDimensions = (
+    imgWidth: number,
+    imgHeight: number,
+    maxWidth: number,
+    maxHeight: number
+  ): { width: number; height: number } => {
+    const aspectRatio = imgWidth / imgHeight;
+    let width = maxWidth;
+    let height = maxHeight;
+
+    if (aspectRatio > 1) {
+      // Landscape
+      height = width / aspectRatio;
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = height * aspectRatio;
+      }
+    } else {
+      // Portrait or square
+      width = height * aspectRatio;
+      if (width > maxWidth) {
+        width = maxWidth;
+        height = width / aspectRatio;
+      }
+    }
+
+    return { width, height };
+  };
  
   const { data: attendees = [] } = useAttendees();
   const { data: templates = [] } = useTicketTemplates();
@@ -92,9 +122,9 @@ const ExportTicketsPrint: React.FC = () => {
           }
         };
 
-        // Calculate cell dimensions
-        const cellWidth = 30;
-        const cellHeight = 40;
+        // Calculate cell dimensions (increased for better spacing)
+        const cellWidth = 50;
+        const cellHeight = 50;
 
         // Apply background image if configured
         if (template.background_image_url) {
@@ -128,7 +158,7 @@ const ExportTicketsPrint: React.FC = () => {
               extension: 'png',
             });
 
-            // Apply image based on mode
+            // Apply image based on mode maintaining aspect ratio
             if (template.background_mode === 'tile') {
               for (let idx = 0; idx < Math.min(batch.length, ticketsPerPage); idx++) {
                 const row = Math.floor(idx / cols);
@@ -137,26 +167,53 @@ const ExportTicketsPrint: React.FC = () => {
                 const startCol = col * 1;
                 const startRow = row * 25;
 
-                // Stretch background image to exactly cover the ticket area (1 col x 25 rows)
+                // Cover ticket area while maintaining aspect ratio
+                const img = new Image();
+                img.src = `data:image/png;base64,${fadedBase64}`;
+                await new Promise(resolve => { img.onload = resolve; });
+                
+                const ticketWidth = 400; // Approx width in pixels
+                const ticketHeight = 550; // Approx height in pixels (25 rows)
+                const dims = getImageDimensions(img.width, img.height, ticketWidth, ticketHeight);
+                
+                // Center the image in the ticket area
+                const offsetCol = (ticketWidth - dims.width) / (2 * ticketWidth);
+                const offsetRow = (ticketHeight - dims.height) / (2 * (ticketHeight / 25));
+
                 worksheet.addImage(bgImageId, {
-                  tl: { col: startCol, row: startRow },
-                  br: { col: startCol + 1, row: startRow + 25 },
+                  tl: { col: startCol + offsetCol, row: startRow + offsetRow },
+                  ext: { width: dims.width, height: dims.height }
                 } as any);
               }
             } else if (template.background_mode === 'cover') {
-              // Cover entire sheet
+              // Cover entire sheet maintaining aspect ratio
+              const sheetWidth = cellWidth * cols * 7.5;
+              const sheetHeight = cellHeight * rows * 25 * 1.33;
+              
+              const img = new Image();
+              img.src = `data:image/png;base64,${fadedBase64}`;
+              await new Promise(resolve => { img.onload = resolve; });
+              
+              const dims = getImageDimensions(img.width, img.height, sheetWidth, sheetHeight);
+              
               worksheet.addImage(bgImageId, {
                 tl: { col: 0, row: 0 },
-                br: { col: cols, row: rows * 25 },
+                ext: { width: Math.max(dims.width, sheetWidth), height: Math.max(dims.height, sheetHeight) }
               } as any);
             } else if (template.background_mode === 'contain') {
-              // Contain in sheet
+              // Contain in sheet maintaining aspect ratio
+              const sheetWidth = cellWidth * cols * 7.5;
+              const sheetHeight = cellHeight * rows * 25 * 1.33;
+              
+              const img = new Image();
+              img.src = `data:image/png;base64,${fadedBase64}`;
+              await new Promise(resolve => { img.onload = resolve; });
+              
+              const dims = getImageDimensions(img.width, img.height, sheetWidth, sheetHeight);
+              
               worksheet.addImage(bgImageId, {
                 tl: { col: 0, row: 0 },
-                ext: {
-                  width: cellWidth * cols * 10 * 7.5,
-                  height: cellHeight * rows * 25 * 1.33,
-                },
+                ext: { width: dims.width, height: dims.height }
               } as any);
             }
           } catch (error) {
@@ -164,9 +221,9 @@ const ExportTicketsPrint: React.FC = () => {
           }
         }
 
-        // Set column widths
+        // Set column widths (wider for better design)
         for (let col = 0; col < cols; col++) {
-          worksheet.getColumn(col + 1).width = 40;
+          worksheet.getColumn(col + 1).width = 50;
         }
 
         // Process each ticket in the batch
@@ -178,12 +235,13 @@ const ExportTicketsPrint: React.FC = () => {
           const startRow = row * 25 + 1; // Approx 25 rows per ticket
           const startCol = col + 1;
 
-          // Generate QR Code
+          // Generate QR Code (larger and centered)
           if (template.show_qr && attendee.qr_code) {
             try {
+              const qrSize = Math.max(template.qr_size * 1.2, 200); // Minimum 200px, 20% larger
               const qrDataURL = await QRCode.toDataURL(attendee.qr_code, {
-                width: template.qr_size,
-                margin: 1,
+                width: qrSize,
+                margin: 2,
                 color: {
                   dark: '#000000',
                   light: '#FFFFFF'
@@ -195,71 +253,81 @@ const ExportTicketsPrint: React.FC = () => {
                 extension: 'png'
               });
 
-              // Add QR to cell
+              // Center QR code horizontally in the ticket area
+              const qrDisplaySize = qrSize * 0.75; // 75% of generated size for display
               worksheet.addImage(imageId, {
-                tl: { col: (col * 1) + 0.2, row: startRow + 2 },
-                ext: { width: template.qr_size * 0.4, height: template.qr_size * 0.4 }
+                tl: { col: (col * 1) + 0.25, row: startRow + 1 },
+                ext: { width: qrDisplaySize, height: qrDisplaySize }
               });
             } catch (error) {
               console.error('Error generating QR for:', attendee.name, error);
             }
           }
 
-          // Add text information below QR
-          let currentTextRow = startRow + 8; // Start below QR
+          // Add text information below QR with professional spacing
+          let currentTextRow = startRow + 11; // Start below QR with more space
 
           if (template.show_name) {
             const nameCell = worksheet.getCell(currentTextRow, startCol);
-            nameCell.value = attendee.name;
+            nameCell.value = attendee.name.toUpperCase();
             nameCell.font = { 
-              size: template.font_size_name, 
+              size: Math.max(template.font_size_name + 2, 16), // Larger, minimum 16
               bold: true,
-              name: 'Arial'
+              name: 'Arial',
+              color: { argb: 'FF000000' }
             };
             nameCell.alignment = { 
               horizontal: 'center', 
               vertical: 'middle',
               wrapText: true
             };
-            currentTextRow += 2;
+            currentTextRow += 3; // More space after name
           }
 
           if (template.show_email && attendee.email) {
             const emailCell = worksheet.getCell(currentTextRow, startCol);
             emailCell.value = attendee.email;
             emailCell.font = { 
-              size: template.font_size_info,
-              name: 'Arial'
+              size: Math.max(template.font_size_info, 11),
+              name: 'Arial',
+              color: { argb: 'FF333333' }
             };
             emailCell.alignment = { 
               horizontal: 'center', 
               vertical: 'middle',
               wrapText: true
             };
-            currentTextRow += 2;
+            currentTextRow += 2.5; // Spacing after email
           }
 
           if (template.show_category && attendee.ticket_category) {
             const categoryCell = worksheet.getCell(currentTextRow, startCol);
-            categoryCell.value = attendee.ticket_category.name;
+            categoryCell.value = attendee.ticket_category.name.toUpperCase();
             categoryCell.font = { 
-              size: template.font_size_info,
+              size: Math.max(template.font_size_info + 1, 12),
               name: 'Arial',
-              italic: true
+              bold: true,
+              color: { argb: 'FF666666' }
             };
             categoryCell.alignment = { 
               horizontal: 'center', 
               vertical: 'middle'
             };
-            currentTextRow += 2;
+            categoryCell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: 'FFF5F5F5' }
+            };
+            currentTextRow += 2.5;
           }
 
           if (template.show_ticket_id) {
             const ticketIdCell = worksheet.getCell(currentTextRow, startCol);
-            ticketIdCell.value = `ID: ${attendee.ticket_id}`;
+            ticketIdCell.value = `TICKET ID: ${attendee.ticket_id}`;
             ticketIdCell.font = { 
-              size: template.font_size_info - 1,
-              name: 'Arial'
+              size: Math.max(template.font_size_info - 1, 9),
+              name: 'Arial',
+              color: { argb: 'FF999999' }
             };
             ticketIdCell.alignment = { 
               horizontal: 'center', 
@@ -281,9 +349,9 @@ const ExportTicketsPrint: React.FC = () => {
           }
         }
 
-        // Set row heights
+        // Set row heights (taller for better spacing)
         for (let r = 1; r <= worksheet.rowCount; r++) {
-          worksheet.getRow(r).height = 20;
+          worksheet.getRow(r).height = 22;
         }
       }
 
