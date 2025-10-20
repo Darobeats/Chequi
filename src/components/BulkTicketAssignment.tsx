@@ -169,7 +169,7 @@ const BulkTicketAssignment: React.FC = () => {
                   />
                 </TableHead>
                 <TableHead className="text-hueso">Nombre</TableHead>
-                <TableHead className="text-hueso">Email</TableHead>
+                <TableHead className="text-hueso">Cédula</TableHead>
                 <TableHead className="text-hueso">Categoría Actual</TableHead>
                 <TableHead className="text-hueso">Ticket ID</TableHead>
               </TableRow>
@@ -189,7 +189,7 @@ const BulkTicketAssignment: React.FC = () => {
                     {attendee.name}
                   </TableCell>
                   <TableCell className="text-gray-400">
-                    {attendee.email || 'Sin email'}
+                    {(attendee as any).cedula || 'Sin cédula'}
                   </TableCell>
                   <TableCell>
                     {attendee.category_id ? (

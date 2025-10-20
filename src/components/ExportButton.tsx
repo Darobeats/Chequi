@@ -24,7 +24,7 @@ const ExportButton: React.FC = () => {
       // Define columns with better width for QR images
       worksheet.columns = [
         { header: 'Nombre', key: 'nombre', width: 25 },
-        { header: 'Email', key: 'email', width: 25 },
+        { header: 'Cédula', key: 'cedula', width: 25 },
         { header: 'Categoría', key: 'categoria', width: 15 },
         { header: 'Código QR URL', key: 'qrUrl', width: 35 },
         { header: 'Imagen QR', key: 'qrImage', width: 25 }, // Increased width for images
@@ -69,7 +69,7 @@ const ExportButton: React.FC = () => {
           // Attendee with no usage records
           const row = worksheet.addRow({
             nombre: attendee.name,
-            email: attendee.email || 'N/A',
+            cedula: (attendee as any).cedula || 'N/A',
             categoria: attendee.ticket_category?.name || 'N/A',
             qrUrl: attendee.qr_code ? 'Ver QR →' : 'No generado',
             qrImage: 'Ver imagen →', // Placeholder text
@@ -109,7 +109,7 @@ const ExportButton: React.FC = () => {
             const usedDate = new Date(usage.used_at);
             const row = worksheet.addRow({
               nombre: attendee.name,
-              email: attendee.email || 'N/A',
+              cedula: (attendee as any).cedula || 'N/A',
               categoria: attendee.ticket_category?.name || 'N/A',
               qrUrl: attendee.qr_code ? (index === 0 ? 'Ver QR →' : '') : 'No generado',
               qrImage: index === 0 ? 'Ver imagen →' : '', // Only show on first row per attendee

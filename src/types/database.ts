@@ -32,7 +32,7 @@ export interface Attendee {
   id: string;
   ticket_id: string;
   name: string;
-  email: string | null;
+  cedula: string | null;
   category_id: string;
   status: 'valid' | 'used' | 'blocked';
   qr_code: string | null;

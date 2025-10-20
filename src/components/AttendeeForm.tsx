@@ -25,7 +25,7 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    cedula: '',
     category_id: '',
     ticket_id: ''
   });
@@ -38,14 +38,14 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
     if (attendee) {
       setFormData({
         name: attendee.name,
-        email: attendee.email || '',
+        cedula: (attendee as any).cedula || '',
         category_id: attendee.category_id,
         ticket_id: attendee.ticket_id
       });
     } else {
       setFormData({
         name: '',
-        email: '',
+        cedula: '',
         category_id: '',
         ticket_id: ''
       });
@@ -112,13 +112,19 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="cedula">Cédula</Label>
             <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              id="cedula"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={formData.cedula}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                setFormData({ ...formData, cedula: value });
+              }}
               className="bg-gray-800 border-gray-700"
+              placeholder="Solo números"
             />
           </div>
 

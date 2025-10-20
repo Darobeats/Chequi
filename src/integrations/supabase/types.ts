@@ -77,8 +77,8 @@ export type Database = {
       attendees: {
         Row: {
           category_id: string
+          cedula: string | null
           created_at: string
-          email: string | null
           id: string
           name: string
           qr_code: string | null
@@ -88,8 +88,8 @@ export type Database = {
         }
         Insert: {
           category_id: string
+          cedula?: string | null
           created_at?: string
-          email?: string | null
           id?: string
           name: string
           qr_code?: string | null
@@ -99,8 +99,8 @@ export type Database = {
         }
         Update: {
           category_id?: string
+          cedula?: string | null
           created_at?: string
-          email?: string | null
           id?: string
           name?: string
           qr_code?: string | null

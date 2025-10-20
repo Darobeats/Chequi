@@ -46,7 +46,7 @@ const ExportQRDistribution: React.FC = () => {
       // Configure columns with optimal widths
       worksheet.columns = [
         { header: 'Nombre', key: 'nombre', width: 30 },
-        { header: 'Email', key: 'email', width: 35 },
+        { header: 'Cédula', key: 'cedula', width: 35 },
         { header: 'Categoría', key: 'categoria', width: 20 },
         { header: 'Código QR', key: 'qrImage', width: 30 }
       ];
@@ -101,7 +101,7 @@ const ExportQRDistribution: React.FC = () => {
             // Add data row
             const row = worksheet.addRow({
               nombre: attendee.name,
-              email: attendee.email || 'N/A',
+              cedula: (attendee as any).cedula || 'N/A',
               categoria: attendee.ticket_category?.name || 'N/A',
               qrImage: '' // Placeholder for image
             });

@@ -284,20 +284,20 @@ const ExportTicketsPrint: React.FC = () => {
             currentTextRow += 3; // More space after name
           }
 
-          if (template.show_email && attendee.email) {
-            const emailCell = worksheet.getCell(currentTextRow, startCol);
-            emailCell.value = attendee.email;
-            emailCell.font = { 
+          if (template.show_email && (attendee as any).cedula) {
+            const cedulaCell = worksheet.getCell(currentTextRow, startCol);
+            cedulaCell.value = (attendee as any).cedula;
+            cedulaCell.font = { 
               size: Math.max(template.font_size_info, 11),
               name: 'Arial',
               color: { argb: 'FF333333' }
             };
-            emailCell.alignment = { 
+            cedulaCell.alignment = { 
               horizontal: 'center', 
               vertical: 'middle',
               wrapText: true
             };
-            currentTextRow += 2.5; // Spacing after email
+            currentTextRow += 2.5; // Spacing after cedula
           }
 
           if (template.show_category && attendee.ticket_category) {

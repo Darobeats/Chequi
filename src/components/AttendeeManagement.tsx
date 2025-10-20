@@ -35,7 +35,7 @@ const AttendeeManagement: React.FC = () => {
       attendee.name.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
       attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
-      attendee.email?.toLowerCase().includes(searchTermLower) ||
+      (attendee as any).cedula?.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
     );
   });
@@ -284,7 +284,7 @@ const AttendeeManagement: React.FC = () => {
       <div className="flex gap-4 items-center">
         <Input
           type="search"
-          placeholder="Buscar por nombre, email, ticket ID, QR code o categoría..."
+          placeholder="Buscar por nombre, cédula, ticket ID, QR code o categoría..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-md"
@@ -297,7 +297,7 @@ const AttendeeManagement: React.FC = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>Cédula</TableHead>
               <TableHead>Categoría</TableHead>
               <TableHead>Ticket ID</TableHead>
               <TableHead>Código QR</TableHead>
@@ -309,7 +309,7 @@ const AttendeeManagement: React.FC = () => {
             {filteredAttendees.map((attendee) => (
               <TableRow key={attendee.id}>
                 <TableCell className="font-medium">{attendee.name}</TableCell>
-                <TableCell>{attendee.email || 'N/A'}</TableCell>
+                <TableCell>{(attendee as any).cedula || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge 
                     className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}

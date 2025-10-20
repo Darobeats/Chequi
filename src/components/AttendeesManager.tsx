@@ -35,7 +35,7 @@ const AttendeesManager: React.FC = () => {
       attendee.name.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
       attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
-      
+      (attendee as any).cedula?.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
     );
   });
@@ -182,7 +182,7 @@ const AttendeesManager: React.FC = () => {
           <TableHeader className="bg-gray-900">
             <TableRow>
               <TableHead className="text-hueso">Nombre</TableHead>
-              <TableHead className="text-hueso">Email</TableHead>
+              <TableHead className="text-hueso">Cédula</TableHead>
               <TableHead className="text-hueso">Categoría</TableHead>
               <TableHead className="text-hueso">Código QR</TableHead>
               <TableHead className="text-hueso">Estado</TableHead>
@@ -193,7 +193,7 @@ const AttendeesManager: React.FC = () => {
             {filteredAttendees.map((attendee) => (
               <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
                 <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
-                <TableCell className="text-gray-300">{attendee.email || 'N/A'}</TableCell>
+                <TableCell className="text-gray-300">{(attendee as any).cedula || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge 
                     className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}

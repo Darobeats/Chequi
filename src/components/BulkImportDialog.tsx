@@ -29,10 +29,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   const bulkCreateMutation = useBulkCreateAttendees();
 
   const downloadTemplate = () => {
-    const csvContent = 'nombre,email,categoria,ticket_id\n' +
-                      'Juan Pérez,juan@ejemplo.com,basico,\n' +
-                      'María García,maria@ejemplo.com,premium,\n' +
-                      'Carlos López,carlos@ejemplo.com,vip,';
+    const csvContent = 'nombre,cedula,categoria,ticket_id\n' +
+                      'Juan Pérez,12345678,basico,\n' +
+                      'María García,87654321,premium,\n' +
+                      'Carlos López,11223344,vip,';
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -128,7 +128,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
         return {
           name: row.nombre.trim(),
-          email: row.email && row.email.trim() ? row.email.trim() : null,
+          cedula: row.cedula && row.cedula.trim() ? row.cedula.trim().replace(/\D/g, '') : null,
           category_id: categoryId,
           ticket_id: (row.ticket_id && row.ticket_id.trim()) ? row.ticket_id.trim() : generateTicketId()
         };
@@ -253,7 +253,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               <div className="max-h-32 overflow-y-auto text-xs text-gray-400">
                 {csvData.slice(0, 5).map((row, index) => (
                   <div key={index}>
-                    {row.nombre} - {row.email}
+                    {row.nombre} - {row.cedula}
                   </div>
                 ))}
                 {csvData.length > 5 && <div>... y {csvData.length - 5} más</div>}
@@ -263,7 +263,8 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
           <div className="text-sm text-gray-400 p-3 bg-gray-800/50 rounded">
             <strong>Formato CSV esperado:</strong>
-            <br />• Columnas: nombre, email, categoria, ticket_id
+            <br />• Columnas: nombre, cedula, categoria, ticket_id
+            <br />• La columna 'cedula' debe contener solo números
             <br />• La columna 'categoria' debe coincidir con los nombres de categorías existentes
             <br />• Si ticket_id está vacío, se generará automáticamente
             <br />• Se generará un código QR único para cada asistente
