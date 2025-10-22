@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Slider } from '@/components/ui/slider';
 import { TicketTemplate, useCreateTicketTemplate, useUpdateTicketTemplate } from '@/hooks/useTicketTemplates';
 import { TicketBackgroundUploader } from './TicketBackgroundUploader';
-import { QrCode, Type, Mail, Tag, Hash } from 'lucide-react';
+import { QrCode, Type, Tag, Hash } from 'lucide-react';
 
 interface TicketTemplateEditorProps {
   template?: TicketTemplate | null;
@@ -184,8 +184,8 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="show_email">Email</Label>
+              <Hash className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="show_email">Cédula</Label>
             </div>
             <Switch
               id="show_email"

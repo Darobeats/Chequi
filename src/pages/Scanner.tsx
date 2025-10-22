@@ -72,21 +72,8 @@ const Scanner = () => {
     }
   };
 
-  // Mostrar loading mientras carga
-  if (authLoading || roleLoading) {
-    return (
-      <div className="min-h-screen bg-empresarial flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-dorado border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-hueso">Verificando permisos...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // El scanner es de libre acceso, no requiere autenticación
-
-  // Mostrar scanner de libre acceso
+  // El scanner es de libre acceso, no requiere autenticación ni verificación de permisos
+  // Mostrar scanner directamente
   return (
     <div className="min-h-screen bg-empresarial flex flex-col">
       <Header title="SCANNER DE ACCESO" />
