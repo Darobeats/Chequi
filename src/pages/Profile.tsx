@@ -1,11 +1,10 @@
-
-import React from 'react';
-import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
-import Header from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { QrCode, User, Mail, Building, Calendar } from 'lucide-react';
+import React from "react";
+import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
+import Header from "@/components/Header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { QrCode, User, Mail, Building, Calendar } from "lucide-react";
 
 const Profile = () => {
   const { profile, user } = useSupabaseAuth();
@@ -21,10 +20,9 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-empresarial flex flex-col">
       <Header title="MI PERFIL" />
-      
+
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
           {/* Información Personal */}
           <Card className="bg-gray-900/50 border-gray-800">
             <CardHeader>
@@ -38,25 +36,26 @@ const Profile = () => {
                 <Mail className="w-4 h-4 text-gray-400" />
                 <span className="text-hueso">{profile.email}</span>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <User className="w-4 h-4 text-gray-400" />
-                <span className="text-hueso">{profile.full_name || 'No especificado'}</span>
+                <span className="text-hueso">{profile.full_name || "No especificado"}</span>
               </div>
-              
+
               <div className="flex items-center gap-3">
-                <Badge 
+                <Badge
                   className={`${
-                    profile.role === 'admin' ? 'bg-red-800/30 text-red-400' :
-                    profile.role === 'control' ? 'bg-blue-800/30 text-blue-400' :
-                    'bg-green-800/30 text-green-400'
+                    profile.role === "admin"
+                      ? "bg-red-800/30 text-red-400"
+                      : profile.role === "control"
+                        ? "bg-blue-800/30 text-blue-400"
+                        : "bg-green-800/30 text-green-400"
                   }`}
                 >
-                  {profile.role === 'admin' ? 'Administrador' :
-                   profile.role === 'control' ? 'Control' : 'Asistente'}
+                  {profile.role === "admin" ? "Administrador" : profile.role === "control" ? "Control" : "Asistente"}
                 </Badge>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <Calendar className="w-4 h-4 text-gray-400" />
                 <span className="text-gray-300 text-sm">
@@ -81,13 +80,8 @@ const Profile = () => {
                     <span className="text-gray-500">QR Code</span>
                   </div>
                 </div>
-                <p className="text-gray-400 text-sm">
-                  Presenta este código QR en el evento para el control de acceso
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="border-gray-700 text-hueso hover:bg-gray-800"
-                >
+                <p className="text-gray-400 text-sm">Presenta este código QR en el evento para el control de acceso</p>
+                <Button variant="outline" className="border-gray-700 text-hueso hover:bg-gray-800">
                   Descargar QR
                 </Button>
               </CardContent>
@@ -107,9 +101,9 @@ const Profile = () => {
           </Card>
         </div>
       </div>
-      
+
       <footer className="py-4 text-center text-gray-500 text-xs">
-        &copy; {new Date().getFullYear()} Chequi - Todos los derechos reservados - Hecho en Colombia con ❤️
+        &copy; {new Date().getFullYear()} Chequi - Todos los derechos reservados - Hecho en Colombia con ❤️ by Daro
       </footer>
     </div>
   );
