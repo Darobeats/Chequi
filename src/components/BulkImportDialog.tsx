@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useTicketCategories } from '@/hooks/useSupabaseData';
-import { useBulkCreateAttendees } from '@/hooks/useAttendeeManagement';
+import { useBulkCreateAttendees, useUpsertAttendees } from '@/hooks/useAttendeeManagement';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { toast } from '@/components/ui/sonner';
 import { Upload, Download, FileText } from 'lucide-react';
@@ -25,11 +26,14 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   const [defaultCategoryId, setDefaultCategoryId] = useState('');
   const [selectedEventId, setSelectedEventId] = useState('');
   const [csvData, setCsvData] = useState<any[]>([]);
+  const [updateExisting, setUpdateExisting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: categories = [] } = useTicketCategories();
   const { data: events = [] } = useAllEventConfigs();
   const bulkCreateMutation = useBulkCreateAttendees();
+  const upsertMutation = useUpsertAttendees();
+  const isPending = bulkCreateMutation.isPending || upsertMutation.isPending;
 
   const downloadTemplate = () => {
     const csvContent = 'nombre,cedula,categoria,ticket_id\n' +
@@ -53,17 +57,34 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   };
 
   const parseCSV = (text: string) => {
+    const normalize = (s: string) => s?.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    const headerMap: Record<string, string> = {
+      // nombre
+      nombre: 'nombre', name: 'nombre',
+      // cedula
+      cedula: 'cedula', 'cedula_ci': 'cedula', 'cedulaid': 'cedula', 'cedula_numero': 'cedula', 'cedula numero': 'cedula', 'cedula #': 'cedula', 'cedula n': 'cedula', 'cédula': 'cedula', dni: 'cedula', cc: 'cedula', documento: 'cedula', doc: 'cedula', identificacion: 'cedula', 'identificación': 'cedula', id: 'cedula',
+      // categoria
+      categoria: 'categoria', 'categoría': 'categoria', category: 'categoria',
+      // ticket id
+      ticket_id: 'ticket_id', ticket: 'ticket_id', boleto: 'ticket_id', entrada: 'ticket_id', codigo: 'ticket_id', 'codigo_ticket': 'ticket_id',
+      // email
+      email: 'email', correo: 'email', 'correo_electronico': 'email', 'correo electronico': 'email'
+    };
+
     const lines = text.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    
+    if (lines.length < 2) return [];
+
+    const rawHeaders = lines[0].split(',').map(h => h.trim());
+    const headers = rawHeaders.map(h => headerMap[normalize(h)] || normalize(h));
+
     return lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.trim());
+      const values = line.split(',').map(v => v.replace(/^\"|\"$/g, '').trim());
       const row: any = {};
-      
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
       });
-      
+      // Clean cedula (numbers only)
+      if (row.cedula) row.cedula = row.cedula.replace(/\D/g, '');
       return row;
     });
   };
@@ -145,7 +166,9 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
       console.log('Importing attendees data:', attendeesData);
       
-      const result = await bulkCreateMutation.mutateAsync(attendeesData);
+      const result = updateExisting
+        ? await upsertMutation.mutateAsync(attendeesData)
+        : await bulkCreateMutation.mutateAsync(attendeesData);
       
       console.log('Import result:', result);
       
@@ -247,6 +270,17 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           </div>
 
           <div className="space-y-2">
+            <Label>Modo de importación</Label>
+            <div className="flex items-center justify-between bg-gray-800/50 p-3 rounded">
+              <div>
+                <p className="text-sm text-hueso">Actualizar existentes (por Ticket ID)</p>
+                <p className="text-xs text-gray-400">Si el ticket_id ya existe, se actualizará el registro</p>
+              </div>
+              <Switch checked={updateExisting} onCheckedChange={setUpdateExisting} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label>Archivo CSV *</Label>
             <div className="flex items-center gap-4">
               <input
@@ -311,9 +345,9 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           <Button
             onClick={handleImport}
             className="bg-dorado text-empresarial hover:bg-dorado/90"
-            disabled={!csvData.length || !defaultCategoryId || !selectedEventId || bulkCreateMutation.isPending}
+            disabled={!csvData.length || !defaultCategoryId || !selectedEventId || isPending}
           >
-            {bulkCreateMutation.isPending ? 'Importando...' : `Importar ${csvData.length} Asistentes`}
+            {isPending ? 'Procesando...' : `${updateExisting ? 'Actualizar/Insertar' : 'Importar'} ${csvData.length} Asistentes`}
           </Button>
         </DialogFooter>
       </DialogContent>
