@@ -1,10 +1,8 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Camera, CameraOff } from 'lucide-react';
 import QrScanner from 'qr-scanner';
 
-console.log('[ScannerVideo] 🔧 QR Scanner imported successfully');
 interface ScannerVideoProps {
   scanning: boolean;
   selectedControlType: string;
@@ -31,90 +29,56 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const qrScannerRef = useRef<QrScanner | null>(null);
 
-  // Initialize QR Scanner ONLY when the video element exists (i.e., when scanning is true)
+  // Initialize and start QR Scanner
   useEffect(() => {
-    console.log('[ScannerVideo] 🔍 useEffect triggered:', { 
-      hasCamera, 
-      permissionStatus, 
-      scanning, 
-      videoElementExists: !!videoRef.current,
-      scannerExists: !!qrScannerRef.current 
-    });
-    
-    const canInit = hasCamera && permissionStatus === 'granted' && scanning && videoRef.current && !qrScannerRef.current;
-    console.log('[ScannerVideo] 🤔 Can initialize scanner?', canInit);
-
-    if (canInit) {
-      console.log('[ScannerVideo] 🟢 Initializing QR Scanner...');
-      console.log('[ScannerVideo] 📹 Video element:', videoRef.current);
-      console.log('[ScannerVideo] 🔍 Scanner config: highlightScanRegion=true, maxScansPerSecond=5');
-      
-      qrScannerRef.current = new QrScanner(
-        videoRef.current as HTMLVideoElement,
-        (result) => {
-          const data = (result?.data || '').trim();
-          console.log('[ScannerVideo] 🎯 QR DETECTED!');
-          console.log('[ScannerVideo] 📄 Raw result:', JSON.stringify(result));
-          console.log('[ScannerVideo] 📝 Data extracted:', data);
-          console.log('[ScannerVideo] 📏 Data length:', data.length);
-          
-          if (data && data.length > 0) {
-            console.log('[ScannerVideo] ✅ Valid QR detected, calling onQRDetected');
-            onQRDetected(data);
-          } else {
-            console.warn('[ScannerVideo] ⚠️ Empty QR data, ignoring');
-          }
-        },
-        {
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
-          preferredCamera: 'environment',
-          maxScansPerSecond: 3,
-          returnDetailedScanResult: true,
-        }
-      );
-
-      console.log('[ScannerVideo] 🔄 Setting inversion mode to both...');
-      qrScannerRef.current.setInversionMode('both');
-
-      console.log('[ScannerVideo] 🚀 Starting scanner...');
-      
-      // Test if QrScanner can access camera first
-      QrScanner.hasCamera()
-        .then(hasCamera => {
-          console.log('[ScannerVideo] 📱 QrScanner.hasCamera():', hasCamera);
-          if (!hasCamera) {
-            console.error('[ScannerVideo] ❌ QrScanner reports no camera available');
-            onStopScanning();
-            return;
-          }
-          
-          // Start the scanner
-          return qrScannerRef.current?.start();
-        })
-        .then(() => {
-          console.log('[ScannerVideo] ✅ QR Scanner started successfully and is ready to scan');
-          console.log('[ScannerVideo] 📸 Scanner instance:', qrScannerRef.current);
-        })
-        .catch((error) => {
-          console.error('[ScannerVideo] ❌ Error starting camera or scanner:', error);
-          console.error('[ScannerVideo] 📋 Error details:', error.name, error.message);
-          onStopScanning();
-        });
+    if (!scanning || !videoRef.current || qrScannerRef.current) {
+      return;
     }
 
-    // Cleanup when leaving scanning mode or unmounting
+    console.log('🚀 Initializing QR Scanner...');
+
+    const scanner = new QrScanner(
+      videoRef.current,
+      (result) => {
+        const qrData = result?.data?.trim();
+        console.log('✅ QR Detected:', qrData);
+        
+        if (qrData) {
+          onQRDetected(qrData);
+        }
+      },
+      {
+        returnDetailedScanResult: true,
+        highlightScanRegion: true,
+        highlightCodeOutline: true,
+        maxScansPerSecond: 2,
+        preferredCamera: 'environment',
+      }
+    );
+
+    qrScannerRef.current = scanner;
+    scanner.setInversionMode('both');
+
+    scanner.start()
+      .then(() => {
+        console.log('✅ Scanner started successfully');
+      })
+      .catch((error) => {
+        console.error('❌ Error starting scanner:', error);
+        onStopScanning();
+      });
+
     return () => {
-      if (!scanning && qrScannerRef.current) {
-        console.log('[ScannerVideo] 🛑 Stopping QR Scanner...');
+      if (qrScannerRef.current) {
+        console.log('🛑 Cleaning up scanner');
         qrScannerRef.current.stop();
         qrScannerRef.current.destroy();
         qrScannerRef.current = null;
       }
     };
-  }, [hasCamera, permissionStatus, scanning, onStopScanning, onQRDetected]);
+  }, [scanning, onQRDetected, onStopScanning]);
 
-  // Safety: stop scanner if scanning becomes false while instance exists
+  // Stop scanner when scanning becomes false
   useEffect(() => {
     if (!scanning && qrScannerRef.current) {
       qrScannerRef.current.stop();
