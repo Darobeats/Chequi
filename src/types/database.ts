@@ -7,6 +7,7 @@ export interface ControlType {
   color: string | null;
   created_at: string;
   requires_control_id: string | null;
+  event_id: string;
   required_control?: ControlType;
 }
 
@@ -16,6 +17,7 @@ export interface TicketCategory {
   description: string | null;
   color: string | null;
   created_at: string;
+  event_id: string;
 }
 
 export interface CategoryControl {
@@ -38,6 +40,7 @@ export interface Attendee {
   qr_code: string | null;
   created_at: string;
   updated_at: string;
+  event_id: string;
   ticket_category?: TicketCategory;
 }
 
@@ -64,6 +67,8 @@ export interface EventConfig {
   created_at: string;
   updated_at: string;
   is_active: boolean;
+  event_date: string | null;
+  event_status: 'draft' | 'active' | 'finished';
 }
 
 export interface TicketTemplate {
@@ -106,5 +111,6 @@ export interface QRTemplate {
   prefix: string;
   pattern: string;
   created_at: string;
+  event_id: string;
   ticket_category?: TicketCategory;
 }

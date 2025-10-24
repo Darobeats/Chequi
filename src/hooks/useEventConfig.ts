@@ -32,6 +32,9 @@ export const useEventConfigs = () => {
   });
 };
 
+// Alias for useEventConfigs
+export const useAllEventConfigs = useEventConfigs;
+
 export const useAdminUser = () => {
   return useQuery({
     queryKey: ['admin_user'],

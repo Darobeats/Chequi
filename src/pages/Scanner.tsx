@@ -1,76 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
-import { useUserRole } from "@/hooks/useUserRole";
+import React, { useState } from "react";
 import Header from "@/components/Header";
 import QRScanner from "@/components/QRScanner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 const Scanner = () => {
-  const { user, loading: authLoading } = useSupabaseAuth();
-  const { role, loading: roleLoading, canAccessScanner } = useUserRole();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-
-  // Auto-login para testing con usuario de control
-  const handleQuickLogin = async () => {
-    setIsLoggingIn(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: "control@chequi.com",
-        password: "control123",
-      });
-
-      if (error) {
-        toast.error("Error de autenticación", {
-          description: "Usuario de control no encontrado. Use sus credenciales.",
-        });
-      } else {
-        toast.success("Autenticado correctamente", {
-          description: "Scanner habilitado para control de acceso",
-        });
-      }
-    } catch (error) {
-      toast.error("Error de conexión");
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error("Complete todos los campos");
-      return;
-    }
-
-    setIsLoggingIn(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        toast.error("Error de autenticación", {
-          description: error.message,
-        });
-      } else {
-        toast.success("Autenticado correctamente");
-      }
-    } catch (error) {
-      toast.error("Error de conexión");
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
 
   // El scanner es de libre acceso, no requiere autenticación ni verificación de permisos
   // Mostrar scanner directamente
@@ -86,7 +19,10 @@ const Scanner = () => {
             <p className="text-sm text-gray-500 mt-2">Sistema de control de acceso</p>
           </div>
 
-          <QRScanner />
+          <QRScanner 
+            selectedEventId={selectedEventId}
+            onEventChange={setSelectedEventId}
+          />
         </div>
       </div>
 

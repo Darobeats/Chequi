@@ -3,14 +3,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { toast } from "@/components/ui/sonner";
 import { useControlTypes, useProcessQRCode } from '@/hooks/useSupabaseData';
 import { useCameraPermissions } from '@/hooks/useCameraPermissions';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
+import EventSelector from './scanner/EventSelector';
 import ControlTypeSelector from './scanner/ControlTypeSelector';
 import CameraPermissions from './scanner/CameraPermissions';
 import ScannerVideo from './scanner/ScannerVideo';
 import ScanResult from './scanner/ScanResult';
 
-const QRScanner: React.FC = () => {
+interface QRScannerProps {
+  selectedEventId?: string;
+  onEventChange?: (eventId: string) => void;
+}
+
+const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onEventChange }) => {
   const [scanning, setScanning] = useState(false);
   const [selectedControlType, setSelectedControlType] = useState<string>('');
+  const [selectedEventId, setSelectedEventId] = useState<string>(propEventId || '');
   const [lastScannedCode, setLastScannedCode] = useState<string>('');
   const [lastResult, setLastResult] = useState<null | { 
     success: boolean; 
@@ -24,6 +32,7 @@ const QRScanner: React.FC = () => {
 
   const processingRef = useRef(false);
 
+  const { data: allEvents, isLoading: loadingEvents } = useAllEventConfigs();
   const { data: controlTypes, isLoading: loadingControlTypes } = useControlTypes();
   const processQRMutation = useProcessQRCode();
   const {
@@ -33,6 +42,24 @@ const QRScanner: React.FC = () => {
     isRequestingPermission,
     requestCameraPermission,
   } = useCameraPermissions();
+
+  // Set default event to active event
+  useEffect(() => {
+    if (allEvents && allEvents.length > 0 && !selectedEventId) {
+      const activeEvent = allEvents.find(e => e.is_active);
+      if (activeEvent) {
+        setSelectedEventId(activeEvent.id);
+        if (onEventChange) onEventChange(activeEvent.id);
+      }
+    }
+  }, [allEvents, selectedEventId, onEventChange]);
+
+  // Sync prop changes
+  useEffect(() => {
+    if (propEventId && propEventId !== selectedEventId) {
+      setSelectedEventId(propEventId);
+    }
+  }, [propEventId]);
 
   // Set default control type to "ingreso"
   useEffect(() => {
@@ -44,7 +71,22 @@ const QRScanner: React.FC = () => {
     }
   }, [controlTypes, selectedControlType]);
 
+  const handleEventChange = (eventId: string) => {
+    setSelectedEventId(eventId);
+    if (onEventChange) onEventChange(eventId);
+    // Reset scanner state when changing events
+    setSelectedControlType('');
+    setLastScannedCode('');
+    setLastResult(null);
+    setScanning(false);
+  };
+
   const startScanning = async () => {
+    if (!selectedEventId) {
+      toast.error('Por favor selecciona un evento');
+      return;
+    }
+
     if (!selectedControlType) {
       toast.error('Por favor selecciona un tipo de control');
       return;
@@ -99,6 +141,7 @@ const QRScanner: React.FC = () => {
       const result = await processQRMutation.mutateAsync({
         ticketId: cleanedData,
         controlType: selectedControlType,
+        eventId: selectedEventId,
       });
 
       const selectedControl = controlTypes?.find((ct) => ct.id === selectedControlType);
@@ -164,10 +207,10 @@ const QRScanner: React.FC = () => {
     setLastScannedCode(''); // Permitir escanear el mismo QR de nuevo
   };
 
-  if (loadingControlTypes) {
+  if (loadingEvents || loadingControlTypes) {
     return (
       <div className="flex flex-col items-center justify-center">
-        <p className="text-hueso">Cargando tipos de control...</p>
+        <p className="text-hueso">Cargando...</p>
       </div>
     );
   }
@@ -177,6 +220,13 @@ const QRScanner: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center justify-center">
+      <EventSelector
+        events={allEvents}
+        selectedEventId={selectedEventId}
+        onEventChange={handleEventChange}
+        isLoading={loadingEvents}
+      />
+
       <ControlTypeSelector
         controlTypes={controlTypes}
         selectedControlType={selectedControlType}

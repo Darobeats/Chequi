@@ -127,16 +127,18 @@ export const useProcessQRCode = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ ticketId, controlType }: { ticketId: string; controlType: string }) => {
+    mutationFn: async ({ ticketId, controlType, eventId }: { ticketId: string; controlType: string; eventId?: string }) => {
       const cleanTicketId = ticketId.trim();
       console.log('=== PROCESANDO QR CODE MEDIANTE EDGE FUNCTION SEGURA ===');
       console.log('ProcessQRCode - Ticket ID:', cleanTicketId);
       console.log('ProcessQRCode - Control type:', controlType);
+      console.log('ProcessQRCode - Event ID:', eventId);
       
       const { data, error } = await supabase.functions.invoke('process-qr-scan', {
         body: {
           ticketId: cleanTicketId,
           controlTypeId: controlType,
+          eventId: eventId,
           device: `Scanner Web - ${navigator.userAgent?.split(' ')[0] || 'Unknown'}`
         }
       });

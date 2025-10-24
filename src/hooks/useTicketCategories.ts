@@ -21,10 +21,17 @@ export const useCreateTicketCategory = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (category: Omit<TicketCategory, 'id' | 'created_at'>) => {
+    mutationFn: async (category: Omit<TicketCategory, 'id' | 'created_at' | 'event_id'>) => {
+      // Get active event ID
+      const { data: eventId, error: eventError } = await supabase
+        .rpc('get_active_event_id');
+      
+      if (eventError) throw eventError;
+      if (!eventId) throw new Error('No hay evento activo');
+
       const { data, error } = await supabase
         .from('ticket_categories')
-        .insert(category)
+        .insert({ ...category, event_id: eventId })
         .select()
         .single();
       

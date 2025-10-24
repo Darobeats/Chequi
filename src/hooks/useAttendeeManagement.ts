@@ -13,9 +13,16 @@ export const useCreateAttendee = () => {
       category_id: string;
       ticket_id: string;
     }) => {
+      // Get active event ID
+      const { data: eventId, error: eventError } = await supabase
+        .rpc('get_active_event_id');
+      
+      if (eventError) throw eventError;
+      if (!eventId) throw new Error('No hay evento activo');
+
       const { data, error } = await supabase
         .from('attendees')
-        .insert(attendeeData)
+        .insert({ ...attendeeData, event_id: eventId })
         .select(`
           *,
           ticket_category:ticket_categories(*)
@@ -104,9 +111,22 @@ export const useBulkCreateAttendees = () => {
       category_id: string;
       ticket_id: string;
     }>) => {
+      // Get active event ID
+      const { data: eventId, error: eventError } = await supabase
+        .rpc('get_active_event_id');
+      
+      if (eventError) throw eventError;
+      if (!eventId) throw new Error('No hay evento activo');
+
+      // Add event_id to all attendees
+      const attendeesWithEvent = attendeesData.map(attendee => ({
+        ...attendee,
+        event_id: eventId
+      }));
+
       const { data, error } = await supabase
         .from('attendees')
-        .insert(attendeesData)
+        .insert(attendeesWithEvent)
         .select(`
           *,
           ticket_category:ticket_categories(*)

@@ -56,7 +56,9 @@ const EventConfig = () => {
     logo_url: '',
     event_image_url: '',
     font_family: 'Inter, sans-serif',
-    is_active: false
+    is_active: false,
+    event_date: null,
+    event_status: 'active' as const
   });
 
   if (roleLoading) {
@@ -116,7 +118,9 @@ const EventConfig = () => {
         logo_url: '',
         event_image_url: '',
         font_family: 'Inter, sans-serif',
-        is_active: false
+        is_active: false,
+        event_date: null,
+        event_status: 'active' as const
       });
       setActiveTab('configuration');
     } catch (error) {

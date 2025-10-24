@@ -19,7 +19,7 @@ serve(async (req) => {
     // Create admin client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const { ticketId, controlTypeId, device } = await req.json()
+    const { ticketId, controlTypeId, device, eventId } = await req.json()
 
     if (!ticketId || !controlTypeId) {
       return new Response(
@@ -31,9 +31,64 @@ serve(async (req) => {
       )
     }
 
-    console.log('Processing QR scan:', { ticketId, controlTypeId, device })
+    console.log('Processing QR scan:', { ticketId, controlTypeId, device, eventId })
 
-    // 1. Validate access using RPC function
+    // Get active event if not provided
+    let actualEventId = eventId
+    if (!actualEventId) {
+      const { data: activeEventId, error: eventError } = await supabase
+        .rpc('get_active_event_id')
+      
+      if (eventError) {
+        console.error('Error getting active event:', eventError)
+        return new Response(
+          JSON.stringify({ error: 'Error obteniendo evento activo' }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        )
+      }
+      
+      actualEventId = activeEventId
+    }
+
+    if (!actualEventId) {
+      console.error('No active event found')
+      return new Response(
+        JSON.stringify({ error: 'No hay evento activo' }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    console.log('Using event:', actualEventId)
+
+    // 1. Verify attendee belongs to the event
+    const { data: attendeeCheck, error: attendeeCheckError } = await supabase
+      .from('attendees')
+      .select('id, event_id')
+      .eq('event_id', actualEventId)
+      .or(`qr_code.eq.${ticketId},ticket_id.eq.${ticketId}`)
+      .single()
+
+    if (attendeeCheckError || !attendeeCheck) {
+      console.error('Attendee not found for this event:', attendeeCheckError)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Ticket no encontrado para este evento',
+          canAccess: false
+        }),
+        { 
+          status: 404, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // 2. Validate access using RPC function
     const { data: validation, error: validationError } = await supabase
       .rpc('validate_control_access_public', {
         p_ticket_id: ticketId,

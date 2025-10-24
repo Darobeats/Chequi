@@ -79,6 +79,7 @@ export type Database = {
           category_id: string
           cedula: string | null
           created_at: string
+          event_id: string
           id: string
           name: string
           qr_code: string | null
@@ -90,6 +91,7 @@ export type Database = {
           category_id: string
           cedula?: string | null
           created_at?: string
+          event_id: string
           id?: string
           name: string
           qr_code?: string | null
@@ -101,6 +103,7 @@ export type Database = {
           category_id?: string
           cedula?: string | null
           created_at?: string
+          event_id?: string
           id?: string
           name?: string
           qr_code?: string | null
@@ -114,6 +117,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "ticket_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendees_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
             referencedColumns: ["id"]
           },
         ]
@@ -162,6 +172,7 @@ export type Database = {
           color: string | null
           created_at: string
           description: string | null
+          event_id: string
           icon: string | null
           id: string
           name: string
@@ -171,6 +182,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           description?: string | null
+          event_id: string
           icon?: string | null
           id?: string
           name: string
@@ -180,12 +192,20 @@ export type Database = {
           color?: string | null
           created_at?: string
           description?: string | null
+          event_id?: string
           icon?: string | null
           id?: string
           name?: string
           requires_control_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "control_types_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "control_types_requires_control_id_fkey"
             columns: ["requires_control_id"]
@@ -241,8 +261,10 @@ export type Database = {
         Row: {
           accent_color: string | null
           created_at: string
+          event_date: string | null
           event_image_url: string | null
           event_name: string
+          event_status: string | null
           font_family: string | null
           id: string
           is_active: boolean | null
@@ -254,8 +276,10 @@ export type Database = {
         Insert: {
           accent_color?: string | null
           created_at?: string
+          event_date?: string | null
           event_image_url?: string | null
           event_name: string
+          event_status?: string | null
           font_family?: string | null
           id?: string
           is_active?: boolean | null
@@ -267,8 +291,10 @@ export type Database = {
         Update: {
           accent_color?: string | null
           created_at?: string
+          event_date?: string | null
           event_image_url?: string | null
           event_name?: string
+          event_status?: string | null
           font_family?: string | null
           id?: string
           is_active?: boolean | null
@@ -350,6 +376,7 @@ export type Database = {
         Row: {
           category_id: string
           created_at: string
+          event_id: string
           id: string
           pattern: string
           prefix: string
@@ -357,6 +384,7 @@ export type Database = {
         Insert: {
           category_id: string
           created_at?: string
+          event_id: string
           id?: string
           pattern?: string
           prefix?: string
@@ -364,6 +392,7 @@ export type Database = {
         Update: {
           category_id?: string
           created_at?: string
+          event_id?: string
           id?: string
           pattern?: string
           prefix?: string
@@ -374,6 +403,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "ticket_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_templates_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
             referencedColumns: ["id"]
           },
         ]
@@ -452,6 +488,7 @@ export type Database = {
           color: string | null
           created_at: string
           description: string | null
+          event_id: string
           id: string
           name: string
         }
@@ -459,6 +496,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           description?: string | null
+          event_id: string
           id?: string
           name: string
         }
@@ -466,10 +504,19 @@ export type Database = {
           color?: string | null
           created_at?: string
           description?: string | null
+          event_id?: string
           id?: string
           name?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ticket_categories_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ticket_templates: {
         Row: {
@@ -562,14 +609,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      auth_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      auth_uid: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      auth_role: { Args: never; Returns: string }
+      auth_uid: { Args: never; Returns: string }
       find_attendee_by_ticket: {
         Args: { ticket_id: string }
         Returns: {
@@ -598,12 +639,9 @@ export type Database = {
           updated_at: string
         }[]
       }
-      generate_qr_code: {
-        Args: { p_category_id: string }
-        Returns: string
-      }
+      generate_qr_code: { Args: { p_category_id: string }; Returns: string }
       get_active_event_config: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           accent_color: string
           event_image_url: string
@@ -615,8 +653,9 @@ export type Database = {
           secondary_color: string
         }[]
       }
+      get_active_event_id: { Args: never; Returns: string }
       get_asistentes_security_report: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           access_count_24h: number
           last_access: string
@@ -627,29 +666,20 @@ export type Database = {
         }[]
       }
       get_current_user_role: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
       get_user_role: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
       has_role: {
         Args: { required_role: Database["public"]["Enums"]["user_role"] }
         Returns: boolean
       }
-      is_authenticated: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_super_admin: {
-        Args: { check_user_id?: string }
-        Returns: boolean
-      }
-      validar_ticket: {
-        Args: { punto?: string; qr: string }
-        Returns: string
-      }
+      is_authenticated: { Args: never; Returns: boolean }
+      is_super_admin: { Args: { check_user_id?: string }; Returns: boolean }
+      validar_ticket: { Args: { punto?: string; qr: string }; Returns: string }
       validate_control_access: {
         Args: { p_control_type_id: string; p_ticket_id: string }
         Returns: {
