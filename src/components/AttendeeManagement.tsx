@@ -14,6 +14,7 @@ import AttendeeForm from './AttendeeForm';
 import BulkImportDialog from './BulkImportDialog';
 import ExportTicketsPrint from './ExportTicketsPrint';
 import { supabase } from '@/integrations/supabase/client';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
 
 const AttendeeManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +25,7 @@ const AttendeeManagement: React.FC = () => {
   const [attendeeToDelete, setAttendeeToDelete] = useState<Attendee | null>(null);
 
   const { data: attendees = [], isLoading } = useAttendees();
+  const { data: events = [] } = useAllEventConfigs();
   const deleteMutation = useDeleteAttendee();
   const regenerateQRMutation = useRegenerateQRCode();
   const resetControlUsage = useResetControlUsage();
@@ -299,7 +301,7 @@ const AttendeeManagement: React.FC = () => {
               <TableHead>Nombre</TableHead>
               <TableHead>Cédula</TableHead>
               <TableHead>Categoría</TableHead>
-              <TableHead>Ticket ID</TableHead>
+              <TableHead>Evento</TableHead>
               <TableHead>Código QR</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="w-[120px]">Acciones</TableHead>
@@ -317,7 +319,7 @@ const AttendeeManagement: React.FC = () => {
                     {attendee.ticket_category?.name || 'N/A'}
                   </Badge>
                 </TableCell>
-                <TableCell className="font-mono text-sm">{attendee.ticket_id}</TableCell>
+                <TableCell className="text-gray-300">{events.find(e => e.id === attendee.event_id)?.event_name || 'N/A'}</TableCell>
                 <TableCell className="font-mono text-xs">
                   {attendee.qr_code || 'No generado'}
                 </TableCell>

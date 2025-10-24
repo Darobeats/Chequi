@@ -284,7 +284,7 @@ const ExportTicketsPrint: React.FC = () => {
             currentTextRow += 3; // More space after name
           }
 
-          if (template.show_email && (attendee as any).cedula) {
+          if ((attendee as any).cedula) {
             const cedulaCell = worksheet.getCell(currentTextRow, startCol);
             cedulaCell.value = (attendee as any).cedula;
             cedulaCell.font = { 

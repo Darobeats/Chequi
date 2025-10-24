@@ -4,12 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 
 const AttendeeList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { data: attendees = [], isLoading: loadingAttendees } = useAttendees();
   const { data: controlUsage = [], isLoading: loadingUsage } = useControlUsage();
+  const { data: events = [] } = useAllEventConfigs();
 
   // Process attendees to add usage information
   const processedAttendees = useMemo(() => {
@@ -40,9 +42,9 @@ const AttendeeList: React.FC = () => {
       const searchTermLower = searchTerm.toLowerCase();
       return (
         attendee.name.toLowerCase().includes(searchTermLower) ||
+        (attendee as any).cedula?.toLowerCase().includes(searchTermLower) ||
         attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
         attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
-        
         attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
       );
     });
@@ -77,7 +79,7 @@ const AttendeeList: React.FC = () => {
         </div>
         <Input
           type="search"
-          placeholder="Buscar por nombre, ID, QR code o categoría..."
+          placeholder="Buscar por nombre, cédula, QR o categoría..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-xs bg-empresarial border-gray-800 text-hueso"
@@ -89,11 +91,12 @@ const AttendeeList: React.FC = () => {
           <TableHeader className="bg-gray-900">
             <TableRow>
               <TableHead className="text-hueso">Nombre</TableHead>
+              <TableHead className="text-hueso">Cédula</TableHead>
               <TableHead className="text-hueso">Categoría</TableHead>
               <TableHead className="text-hueso">Código QR</TableHead>
               <TableHead className="text-hueso">Último Uso</TableHead>
               <TableHead className="text-hueso">Total Usos</TableHead>
-              <TableHead className="text-hueso">Ticket ID</TableHead>
+              <TableHead className="text-hueso">Evento</TableHead>
               <TableHead className="text-hueso">Estado</TableHead>
             </TableRow>
           </TableHeader>
@@ -101,6 +104,7 @@ const AttendeeList: React.FC = () => {
             {filteredAttendees.map((attendee) => (
               <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
                 <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
+                <TableCell className="text-gray-300">{(attendee as any).cedula || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge 
                     className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}
@@ -127,7 +131,7 @@ const AttendeeList: React.FC = () => {
                 <TableCell className="text-gray-300">
                   {attendee.usage.length}
                 </TableCell>
-                <TableCell className="font-mono text-sm text-gray-300">{attendee.ticket_id}</TableCell>
+                <TableCell className="text-gray-300">{events.find(e => e.id === attendee.event_id)?.event_name || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge 
                     className={`${
@@ -144,7 +148,7 @@ const AttendeeList: React.FC = () => {
             ))}
             {filteredAttendees.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-400">
                   No se encontraron asistentes que coincidan con la búsqueda
                 </TableCell>
               </TableRow>
