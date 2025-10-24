@@ -26,6 +26,8 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   const [defaultCategoryId, setDefaultCategoryId] = useState('');
   const [selectedEventId, setSelectedEventId] = useState('');
   const [csvData, setCsvData] = useState<any[]>([]);
+  const [hasCedulaColumn, setHasCedulaColumn] = useState(false);
+  const [detectedCedulaHeader, setDetectedCedulaHeader] = useState<string | null>(null);
   const [updateExisting, setUpdateExisting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,23 +63,50 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     const headerMap: Record<string, string> = {
       // nombre
       nombre: 'nombre', name: 'nombre',
-      // cedula
-      cedula: 'cedula', 'cedula_ci': 'cedula', 'cedulaid': 'cedula', 'cedula_numero': 'cedula', 'cedula numero': 'cedula', 'cedula #': 'cedula', 'cedula n': 'cedula', 'cédula': 'cedula', dni: 'cedula', cc: 'cedula', documento: 'cedula', doc: 'cedula', identificacion: 'cedula', 'identificación': 'cedula', id: 'cedula',
+      // cedula - extended patterns
+      cedula: 'cedula', 'cedula_ci': 'cedula', 'cedulaid': 'cedula', 'cedula_numero': 'cedula', 
+      'cedula numero': 'cedula', 'cedula #': 'cedula', 'cedula n': 'cedula', 'cédula': 'cedula',
+      'no documento': 'cedula', 'no. documento': 'cedula', 'numero documento': 'cedula', 
+      'número de documento': 'cedula', 'nro documento': 'cedula', 'num documento': 'cedula',
+      'documento identidad': 'cedula', 'doc identidad': 'cedula', 'doc id': 'cedula',
+      identidad: 'cedula', identificacion: 'cedula', 'identificación': 'cedula',
+      ci: 'cedula', dni: 'cedula', cc: 'cedula', documento: 'cedula', doc: 'cedula', id: 'cedula',
       // categoria
       categoria: 'categoria', 'categoría': 'categoria', category: 'categoria',
       // ticket id
-      ticket_id: 'ticket_id', ticket: 'ticket_id', boleto: 'ticket_id', entrada: 'ticket_id', codigo: 'ticket_id', 'codigo_ticket': 'ticket_id',
-      // email
-      email: 'email', correo: 'email', 'correo_electronico': 'email', 'correo electronico': 'email'
+      ticket_id: 'ticket_id', ticket: 'ticket_id', boleto: 'ticket_id', entrada: 'ticket_id', 
+      codigo: 'ticket_id', 'codigo_ticket': 'ticket_id'
     };
 
     const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length < 2) return [];
+    if (lines.length < 2) return { data: [], hasCedulaColumn: false, detectedCedulaHeader: null };
 
     const rawHeaders = lines[0].split(',').map(h => h.trim());
-    const headers = rawHeaders.map(h => headerMap[normalize(h)] || normalize(h));
+    const normalizedHeaders = rawHeaders.map(h => normalize(h));
+    
+    // Detect cedula column with pattern matching
+    let hasCedulaColumn = false;
+    let detectedCedulaHeader: string | null = null;
+    
+    const headers = rawHeaders.map((h, idx) => {
+      const normalized = normalizedHeaders[idx];
+      const mapped = headerMap[normalized];
+      
+      // Check if this header maps to cedula or matches cedula patterns
+      if (mapped === 'cedula' || 
+          normalized.includes('cedul') || 
+          normalized.includes('identif') || 
+          normalized.includes('document') ||
+          ['dni', 'cc', 'ci'].includes(normalized)) {
+        hasCedulaColumn = true;
+        detectedCedulaHeader = h;
+        return 'cedula';
+      }
+      
+      return mapped || normalized;
+    });
 
-    return lines.slice(1).map(line => {
+    const parsedData = lines.slice(1).map(line => {
       const values = line.split(',').map(v => v.replace(/^\"|\"$/g, '').trim());
       const row: any = {};
       headers.forEach((header, index) => {
@@ -87,6 +116,8 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       if (row.cedula) row.cedula = row.cedula.replace(/\D/g, '');
       return row;
     });
+
+    return { data: parsedData, hasCedulaColumn, detectedCedulaHeader };
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,9 +135,21 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     reader.onload = (event) => {
       const text = event.target?.result as string;
       try {
-        const data = parseCSV(text);
+        const { data, hasCedulaColumn: hasCC, detectedCedulaHeader: detectedHeader } = parseCSV(text);
         setCsvData(data);
-        toast.success(`Archivo cargado: ${data.length} registros encontrados`);
+        setHasCedulaColumn(hasCC);
+        setDetectedCedulaHeader(detectedHeader);
+        
+        if (!hasCC) {
+          toast.warning('⚠️ Columna de Cédula no detectada', {
+            description: 'No se encontró una columna para cédulas. Asegúrate de incluir una columna con encabezado como: cedula, DNI, CC, documento, etc.',
+            duration: 8000
+          });
+        } else {
+          toast.success(`✓ Archivo cargado: ${data.length} registros`, {
+            description: `Columna de cédula detectada: "${detectedHeader}"`
+          });
+        }
       } catch (error) {
         toast.error('Error al procesar el archivo CSV');
       }
@@ -135,10 +178,20 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
     try {
       // Validate data before processing
-      const invalidRows = csvData.filter((row, index) => !row.nombre || row.nombre.trim() === '');
-      if (invalidRows.length > 0) {
-        toast.error(`Filas inválidas encontradas (sin nombre): ${invalidRows.length} filas`);
-        return;
+      if (!updateExisting) {
+        // For new records, name is required
+        const invalidRows = csvData.filter((row, index) => !row.nombre || row.nombre.trim() === '');
+        if (invalidRows.length > 0) {
+          toast.error(`Filas inválidas encontradas (sin nombre): ${invalidRows.length} filas`);
+          return;
+        }
+      } else {
+        // For updates, require at least ticket_id
+        const invalidRows = csvData.filter((row, index) => !row.ticket_id || row.ticket_id.trim() === '');
+        if (invalidRows.length > 0) {
+          toast.error(`Modo actualizar: Todas las filas deben tener ticket_id. ${invalidRows.length} filas inválidas`);
+          return;
+        }
       }
 
       const attendeesData = csvData.map((row, index) => {
@@ -155,20 +208,31 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           throw new Error(`Debe seleccionar una categoría por defecto o especificar categorías válidas en el CSV. Fila ${index + 1}: "${row.categoria}"`);
         }
 
-        return {
-          name: row.nombre.trim(),
-          cedula: row.cedula && row.cedula.trim() ? row.cedula.trim().replace(/\D/g, '') : null,
-          category_id: categoryId,
-          event_id: selectedEventId,
+        const attendeeData: any = {
           ticket_id: (row.ticket_id && row.ticket_id.trim()) ? row.ticket_id.trim() : generateTicketId()
         };
+        
+        // Only include fields that are provided
+        if (row.nombre && row.nombre.trim()) {
+          attendeeData.name = row.nombre.trim();
+        }
+        
+        if (row.cedula && row.cedula.trim()) {
+          attendeeData.cedula = row.cedula.trim().replace(/\D/g, '');
+        }
+        
+        if (categoryId) {
+          attendeeData.category_id = categoryId;
+        }
+        
+        return attendeeData;
       });
 
       console.log('Importing attendees data:', attendeesData);
       
       const result = updateExisting
-        ? await upsertMutation.mutateAsync(attendeesData)
-        : await bulkCreateMutation.mutateAsync(attendeesData);
+        ? await upsertMutation.mutateAsync({ attendees: attendeesData, eventId: selectedEventId })
+        : await bulkCreateMutation.mutateAsync({ attendees: attendeesData, eventId: selectedEventId });
       
       console.log('Import result:', result);
       
@@ -182,6 +246,8 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       // Reset form
       setSelectedFile(null);
       setCsvData([]);
+      setHasCedulaColumn(false);
+      setDetectedCedulaHeader(null);
       setDefaultCategoryId('');
       setSelectedEventId('');
       if (fileInputRef.current) {
@@ -313,10 +379,20 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               <p className="text-sm text-gray-300">
                 Se importarán {csvData.length} asistentes
               </p>
+              {hasCedulaColumn && detectedCedulaHeader && (
+                <p className="text-xs text-green-400">
+                  ✓ Columna de cédula detectada: "{detectedCedulaHeader}"
+                </p>
+              )}
+              {!hasCedulaColumn && (
+                <p className="text-xs text-orange-400">
+                  ⚠️ No se detectó columna de cédula. Los registros se importarán sin cédula.
+                </p>
+              )}
               <div className="max-h-32 overflow-y-auto text-xs text-gray-400">
                 {csvData.slice(0, 5).map((row, index) => (
                   <div key={index}>
-                    {row.nombre} - {row.cedula}
+                    {row.nombre || '[sin nombre]'} - {row.cedula || '[sin cédula]'} - {row.ticket_id || '[generará auto]'}
                   </div>
                 ))}
                 {csvData.length > 5 && <div>... y {csvData.length - 5} más</div>}
@@ -327,9 +403,11 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           <div className="text-sm text-gray-400 p-3 bg-gray-800/50 rounded">
             <strong>Formato CSV esperado:</strong>
             <br />• Columnas: nombre, cedula, categoria, ticket_id
-            <br />• La columna 'cedula' debe contener solo números
+            <br />• <strong>Cédula:</strong> Puede usar cualquiera de estos nombres: cedula, cédula, DNI, CC, CI, documento, identificación, no. documento, doc id, etc.
+            <br />• La columna de cédula debe contener solo números
             <br />• La columna 'categoria' debe coincidir con los nombres de categorías existentes
             <br />• Si ticket_id está vacío, se generará automáticamente
+            <br />• <strong>Modo Actualizar:</strong> Solo requiere ticket_id y los campos a actualizar (nombre y/o cédula)
             <br />• Se generará un código QR único para cada asistente
           </div>
         </div>

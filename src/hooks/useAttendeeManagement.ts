@@ -9,7 +9,6 @@ export const useCreateAttendee = () => {
   return useMutation({
     mutationFn: async (attendeeData: {
       name: string;
-      email?: string;
       cedula?: string | null;
       category_id: string;
       ticket_id: string;
@@ -106,24 +105,31 @@ export const useBulkCreateAttendees = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (attendeesData: Array<{
-      name: string;
-      email?: string;
-      cedula?: string | null;
-      category_id: string;
-      ticket_id: string;
-    }>) => {
-      // Get active event ID
-      const { data: eventId, error: eventError } = await supabase
-        .rpc('get_active_event_id');
-      
-      if (eventError) throw eventError;
-      if (!eventId) throw new Error('No hay evento activo');
+    mutationFn: async ({ attendees, eventId }: {
+      attendees: Array<{
+        name: string;
+        cedula?: string | null;
+        category_id: string;
+        ticket_id: string;
+        event_id?: string;
+      }>;
+      eventId?: string;
+    }) => {
+      // Use provided eventId or get active event ID
+      let targetEventId = eventId;
+      if (!targetEventId) {
+        const { data: activeEventId, error: eventError } = await supabase
+          .rpc('get_active_event_id');
+        
+        if (eventError) throw eventError;
+        if (!activeEventId) throw new Error('No hay evento activo');
+        targetEventId = activeEventId;
+      }
 
       // Add event_id to all attendees
-      const attendeesWithEvent = attendeesData.map(attendee => ({
+      const attendeesWithEvent = attendees.map(attendee => ({
         ...attendee,
-        event_id: eventId
+        event_id: targetEventId
       }));
 
       const { data, error } = await supabase
@@ -146,43 +152,74 @@ export const useBulkCreateAttendees = () => {
 export const useUpsertAttendees = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (attendeesData: Array<{
-      name: string;
-      email?: string;
-      cedula?: string | null;
-      category_id: string;
-      ticket_id: string;
-    }>) => {
-      const { data: eventId, error: eventError } = await supabase.rpc('get_active_event_id');
-      if (eventError) throw eventError;
-      if (!eventId) throw new Error('No hay evento activo');
-      const attendeesWithEvent = attendeesData.map((a) => ({ ...a, event_id: eventId }));
-      // Try upsert by ticket_id
-      const { data, error } = await supabase
-        .from('attendees')
-        .upsert(attendeesWithEvent, { onConflict: 'ticket_id' })
-        .select(`*, ticket_category:ticket_categories(*)`);
-      if (!error) return data as Attendee[];
-      // Fallback per-row update-then-insert
+    mutationFn: async ({ attendees, eventId }: {
+      attendees: Array<{
+        name?: string;
+        cedula?: string | null;
+        category_id?: string;
+        ticket_id: string;
+        event_id?: string;
+      }>;
+      eventId?: string;
+    }) => {
+      // Use provided eventId or get active event ID
+      let targetEventId = eventId;
+      if (!targetEventId) {
+        const { data: activeEventId, error: eventError } = await supabase.rpc('get_active_event_id');
+        if (eventError) throw eventError;
+        if (!activeEventId) throw new Error('No hay evento activo');
+        targetEventId = activeEventId;
+      }
+      
+      // Fallback per-row update-then-insert (upsert doesn't work well with optional fields)
       const results: Attendee[] = [];
-      for (const rec of attendeesWithEvent) {
+      for (const rec of attendees) {
+        const recWithEvent = { ...rec, event_id: targetEventId };
+        
+        // Build update payload with only provided fields
+        const updatePayload: any = {};
+        if (rec.name !== undefined && rec.name.trim()) updatePayload.name = rec.name.trim();
+        if (rec.cedula !== undefined) updatePayload.cedula = rec.cedula;
+        if (rec.category_id) updatePayload.category_id = rec.category_id;
+        
+        // Try to update existing record
         const { data: updated, error: updateErr } = await supabase
           .from('attendees')
-          .update({ name: rec.name, email: rec.email, cedula: rec.cedula, category_id: rec.category_id })
+          .update(updatePayload)
           .eq('ticket_id', rec.ticket_id)
-          .eq('event_id', eventId)
+          .eq('event_id', targetEventId)
           .select(`*, ticket_category:ticket_categories(*)`)
           .maybeSingle();
+        
         if (updateErr) throw updateErr;
+        
         if (updated) {
           results.push(updated as Attendee);
           continue;
         }
+        
+        // Insert new record - must have name and category_id
+        if (!rec.name || !rec.name.trim()) {
+          throw new Error(`No se puede crear un nuevo asistente sin nombre para ticket_id: ${rec.ticket_id}`);
+        }
+        if (!rec.category_id) {
+          throw new Error(`No se puede crear un nuevo asistente sin categoría para ticket_id: ${rec.ticket_id}`);
+        }
+        
+        const insertData = {
+          name: rec.name,
+          ticket_id: rec.ticket_id,
+          category_id: rec.category_id,
+          event_id: targetEventId,
+          cedula: rec.cedula || null
+        };
+        
         const { data: inserted, error: insertErr } = await supabase
           .from('attendees')
-          .insert(rec)
+          .insert(insertData)
           .select(`*, ticket_category:ticket_categories(*)`)
           .single();
+        
         if (insertErr) throw insertErr;
         results.push(inserted as Attendee);
       }
