@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { useTicketCategories } from '@/hooks/useSupabaseData';
 import { useBulkCreateAttendees } from '@/hooks/useAttendeeManagement';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { toast } from '@/components/ui/sonner';
 import { Upload, Download, FileText } from 'lucide-react';
 
@@ -22,10 +23,12 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [defaultCategoryId, setDefaultCategoryId] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState('');
   const [csvData, setCsvData] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: categories = [] } = useTicketCategories();
+  const { data: events = [] } = useAllEventConfigs();
   const bulkCreateMutation = useBulkCreateAttendees();
 
   const downloadTemplate = () => {
@@ -104,6 +107,11 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       return;
     }
 
+    if (!selectedEventId) {
+      toast.error('Debe seleccionar un evento');
+      return;
+    }
+
     try {
       // Validate data before processing
       const invalidRows = csvData.filter((row, index) => !row.nombre || row.nombre.trim() === '');
@@ -130,6 +138,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           name: row.nombre.trim(),
           cedula: row.cedula && row.cedula.trim() ? row.cedula.trim().replace(/\D/g, '') : null,
           category_id: categoryId,
+          event_id: selectedEventId,
           ticket_id: (row.ticket_id && row.ticket_id.trim()) ? row.ticket_id.trim() : generateTicketId()
         };
       });
@@ -151,6 +160,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       setSelectedFile(null);
       setCsvData([]);
       setDefaultCategoryId('');
+      setSelectedEventId('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -196,6 +206,25 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               <Download className="w-4 h-4" />
               Descargar Plantilla CSV
             </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Evento *</Label>
+            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+              <SelectTrigger className="bg-gray-800 border-gray-700">
+                <SelectValue placeholder="Selecciona el evento" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                {events.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.event_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-gray-400">
+              Los asistentes serán asignados a este evento
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -282,7 +311,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           <Button
             onClick={handleImport}
             className="bg-dorado text-empresarial hover:bg-dorado/90"
-            disabled={!csvData.length || !defaultCategoryId || bulkCreateMutation.isPending}
+            disabled={!csvData.length || !defaultCategoryId || !selectedEventId || bulkCreateMutation.isPending}
           >
             {bulkCreateMutation.isPending ? 'Importando...' : `Importar ${csvData.length} Asistentes`}
           </Button>

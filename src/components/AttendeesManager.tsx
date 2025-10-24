@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useAttendees, useResetControlUsage } from '@/hooks/useSupabaseData';
 import { useDeleteAttendee, useRegenerateQRCode } from '@/hooks/useAttendeeManagement';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { Attendee } from '@/types/database';
 import { toast } from '@/components/ui/sonner';
 import { Plus, Upload, Edit, Trash2, QrCode, RotateCcw } from 'lucide-react';
@@ -25,6 +26,7 @@ const AttendeesManager: React.FC = () => {
   const [attendeeToDelete, setAttendeeToDelete] = useState<Attendee | null>(null);
 
   const { data: attendees = [], isLoading } = useAttendees();
+  const { data: events = [] } = useAllEventConfigs();
   const deleteMutation = useDeleteAttendee();
   const regenerateQRMutation = useRegenerateQRCode();
   const resetControlUsage = useResetControlUsage();
@@ -183,6 +185,7 @@ const AttendeesManager: React.FC = () => {
             <TableRow>
               <TableHead className="text-hueso">Nombre</TableHead>
               <TableHead className="text-hueso">Cédula</TableHead>
+              <TableHead className="text-hueso">Evento</TableHead>
               <TableHead className="text-hueso">Categoría</TableHead>
               <TableHead className="text-hueso">Código QR</TableHead>
               <TableHead className="text-hueso">Estado</TableHead>
@@ -194,6 +197,9 @@ const AttendeesManager: React.FC = () => {
               <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
                 <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
                 <TableCell className="text-gray-300">{(attendee as any).cedula || 'N/A'}</TableCell>
+                <TableCell className="text-gray-300">
+                  {events.find(e => e.id === attendee.event_id)?.event_name || 'N/A'}
+                </TableCell>
                 <TableCell>
                   <Badge 
                     className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}
@@ -264,7 +270,7 @@ const AttendeesManager: React.FC = () => {
             ))}
             {filteredAttendees.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
                   {searchTerm ? 'No se encontraron asistentes que coincidan con la búsqueda' : 'No hay asistentes registrados'}
                 </TableCell>
               </TableRow>
