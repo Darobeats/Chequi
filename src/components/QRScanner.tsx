@@ -118,24 +118,28 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
 
   const processQRCode = async (ticketId: string) => {
     const cleanedData = ticketId.trim();
+    
+    console.log('🔍 [QRScanner] QR Code received:', cleanedData);
 
     // Bloqueo sincronizado para evitar múltiples procesamientos simultáneos
     if (processingRef.current) {
-      console.log('⏳ Procesamiento en curso, ignorando detección');
+      console.log('⏳ [QRScanner] Processing in progress, ignoring');
       return;
     }
 
-    // Evitar procesamiento duplicado del mismo código (ráfagas de frames)
+    // Evitar procesamiento duplicado del mismo código
     if (cleanedData === lastScannedCode) {
-      console.log('🚫 Código QR ya procesado, ignorando...');
+      console.log('🚫 [QRScanner] Duplicate QR, ignoring');
       return;
     }
 
     processingRef.current = true;
     setLastScannedCode(cleanedData);
-    setScanning(false); // detener cámara inmediatamente para evitar re-escaneos
+    setScanning(false);
 
-    console.log('🚨 QRScanner - Processing QR:', cleanedData);
+    console.log('✅ [QRScanner] Processing QR code:', cleanedData);
+    console.log('📋 [QRScanner] Event ID:', selectedEventId);
+    console.log('🎯 [QRScanner] Control Type:', selectedControlType);
 
     try {
       const result = await processQRMutation.mutateAsync({

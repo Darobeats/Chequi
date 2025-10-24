@@ -49,42 +49,32 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
       console.log('[ScannerVideo] 📹 Video element:', videoRef.current);
       console.log('[ScannerVideo] 🔍 Scanner config: highlightScanRegion=true, maxScansPerSecond=5');
       
-      // Configure worker path for this instance
-      if (typeof QrScanner.WORKER_PATH === 'undefined') {
-        try {
-          QrScanner.WORKER_PATH = '/node_modules/qr-scanner/qr-scanner-worker.min.js';
-          console.log('[ScannerVideo] 🛠️ Worker path set to:', QrScanner.WORKER_PATH);
-        } catch (error) {
-          console.log('[ScannerVideo] ⚠️ Could not set worker path, using default');
-        }
-      }
-      
       qrScannerRef.current = new QrScanner(
         videoRef.current as HTMLVideoElement,
         (result) => {
           const data = (result?.data || '').trim();
-          console.log('[ScannerVideo] 🎯 QR DETECTED RAW:', result);
-          console.log('[ScannerVideo] 📄 QR Data cleaned:', data);
+          console.log('[ScannerVideo] 🎯 QR DETECTED!');
+          console.log('[ScannerVideo] 📄 Raw result:', JSON.stringify(result));
+          console.log('[ScannerVideo] 📝 Data extracted:', data);
           console.log('[ScannerVideo] 📏 Data length:', data.length);
           
           if (data && data.length > 0) {
-            console.log('[ScannerVideo] ✅ Calling onQRDetected with data:', data);
+            console.log('[ScannerVideo] ✅ Valid QR detected, calling onQRDetected');
             onQRDetected(data);
           } else {
-            console.log('[ScannerVideo] ⚠️ Empty or invalid QR data, skipping');
+            console.warn('[ScannerVideo] ⚠️ Empty QR data, ignoring');
           }
         },
         {
           highlightScanRegion: true,
           highlightCodeOutline: true,
           preferredCamera: 'environment',
-          maxScansPerSecond: 5, // Reduced for stability
+          maxScansPerSecond: 3,
           returnDetailedScanResult: true,
         }
       );
 
       console.log('[ScannerVideo] 🔄 Setting inversion mode to both...');
-      // Helps with inverted codes or low contrast
       qrScannerRef.current.setInversionMode('both');
 
       console.log('[ScannerVideo] 🚀 Starting scanner...');
