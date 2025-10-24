@@ -157,7 +157,6 @@ serve(async (req) => {
           attendee: attendee ? {
             id: attendee.id,
             name: attendee.name,
-            email: attendee.email,
             ticket_id: attendee.ticket_id,
             category: attendee.category_id || null
           } : null,
@@ -227,7 +226,6 @@ serve(async (req) => {
         attendee: {
           id: attendee.id,
           name: attendee.name,
-          email: attendee.email,
           ticket_id: attendee.ticket_id,
           category: ticketCategory?.name || 'Unknown'
         },
