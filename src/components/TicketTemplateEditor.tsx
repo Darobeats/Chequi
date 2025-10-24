@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { TicketTemplate, useCreateTicketTemplate, useUpdateTicketTemplate } from '@/hooks/useTicketTemplates';
 import { TicketBackgroundUploader } from './TicketBackgroundUploader';
 import { QrCode, Type, Tag, Hash } from 'lucide-react';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
 
 interface TicketTemplateEditorProps {
   template?: TicketTemplate | null;
@@ -17,6 +18,7 @@ interface TicketTemplateEditorProps {
 }
 
 const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, onSuccess, onCancel }) => {
+  const { data: allEvents = [] } = useAllEventConfigs();
   const [formData, setFormData] = useState({
     name: '',
     tickets_per_page: 4,
@@ -104,6 +106,26 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
               placeholder="Ej: Plantilla Estándar 2x2"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="event_config_id">Evento</Label>
+            <Select
+              value={formData.event_config_id || 'none'}
+              onValueChange={(value) => setFormData({ ...formData, event_config_id: value === 'none' ? null : value })}
+            >
+              <SelectTrigger id="event_config_id">
+                <SelectValue placeholder="Selecciona un evento (opcional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin evento específico</SelectItem>
+                {allEvents.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.event_name} {event.is_active && '(Activo)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

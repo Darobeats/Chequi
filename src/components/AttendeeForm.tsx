@@ -9,6 +9,7 @@ import { useTicketCategories } from '@/hooks/useSupabaseData';
 import { useCreateAttendee, useUpdateAttendee } from '@/hooks/useAttendeeManagement';
 import { Attendee } from '@/types/database';
 import { toast } from '@/components/ui/sonner';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
 
 interface AttendeeFormProps {
   open: boolean;
@@ -27,10 +28,12 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
     name: '',
     cedula: '',
     category_id: '',
-    ticket_id: ''
+    ticket_id: '',
+    event_id: ''
   });
 
   const { data: categories = [] } = useTicketCategories();
+  const { data: allEvents = [] } = useAllEventConfigs();
   const createMutation = useCreateAttendee();
   const updateMutation = useUpdateAttendee();
 
@@ -40,17 +43,21 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
         name: attendee.name,
         cedula: (attendee as any).cedula || '',
         category_id: attendee.category_id,
-        ticket_id: attendee.ticket_id
+        ticket_id: attendee.ticket_id,
+        event_id: attendee.event_id
       });
     } else {
+      // Set default to active event
+      const activeEvent = allEvents.find(e => e.is_active);
       setFormData({
         name: '',
         cedula: '',
         category_id: '',
-        ticket_id: ''
+        ticket_id: '',
+        event_id: activeEvent?.id || ''
       });
     }
-  }, [attendee, open]);
+  }, [attendee, open, allEvents]);
 
   const generateTicketId = () => {
     const prefix = 'CLIENT';
@@ -128,6 +135,25 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>Evento *</Label>
+            <Select
+              value={formData.event_id}
+              onValueChange={(value) => setFormData({ ...formData, event_id: value })}
+              required
+            >
+              <SelectTrigger className="bg-gray-800 border-gray-700">
+                <SelectValue placeholder="Selecciona un evento" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700">
+                {allEvents.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.event_name} {event.is_active && '(Activo)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-2">
             <Label>Categoría de Ticket *</Label>

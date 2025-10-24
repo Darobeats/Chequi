@@ -15,11 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { TicketCategory, ControlType } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
 import IconPicker from '@/components/IconPicker';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
 
 const TicketManagement = () => {
   const { data: categories = [], refetch: refetchCategories } = useTicketCategories();
   const { data: controlTypes = [] } = useControlTypes();
   const { data: categoryControls = [], refetch: refetchCategoryControls } = useCategoryControls();
+  const { data: allEvents = [] } = useAllEventConfigs();
   const createCategory = useCreateTicketCategory();
   const updateCategory = useUpdateTicketCategory();
   const deleteCategory = useDeleteTicketCategory();
@@ -34,7 +36,8 @@ const TicketManagement = () => {
   const [newCategory, setNewCategory] = useState({
     name: '',
     description: '',
-    color: '#D4AF37'
+    color: '#D4AF37',
+    event_id: ''
   });
   const [editingCategory, setEditingCategory] = useState<TicketCategory | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -47,7 +50,8 @@ const TicketManagement = () => {
     description: '',
     color: '#D4AF37',
     icon: '',
-    requires_control_id: null as string | null
+    requires_control_id: null as string | null,
+    event_id: ''
   });
   const [editingControlType, setEditingControlType] = useState<ControlType | null>(null);
   const [showNewControlTypeDialog, setShowNewControlTypeDialog] = useState(false);
@@ -56,7 +60,8 @@ const TicketManagement = () => {
   const handleCreateCategory = async () => {
     try {
       await createCategory.mutateAsync(newCategory);
-      setNewCategory({ name: '', description: '', color: '#D4AF37' });
+      const activeEvent = allEvents.find(e => e.is_active);
+      setNewCategory({ name: '', description: '', color: '#D4AF37', event_id: activeEvent?.id || '' });
       setShowNewCategoryDialog(false);
       toast({
         title: "Categoría creada",
@@ -173,7 +178,8 @@ const TicketManagement = () => {
   const handleCreateControlType = async () => {
     try {
       await createControlType.mutateAsync(newControlType);
-      setNewControlType({ name: '', description: '', color: '#D4AF37', icon: '', requires_control_id: null });
+      const activeEvent = allEvents.find(e => e.is_active);
+      setNewControlType({ name: '', description: '', color: '#D4AF37', icon: '', requires_control_id: null, event_id: activeEvent?.id || '' });
       setShowNewControlTypeDialog(false);
       toast({
         title: "Tipo de control creado",
@@ -275,6 +281,24 @@ const TicketManagement = () => {
                     className="bg-gray-800 border-gray-700 text-hueso"
                     placeholder="Descripción del tipo de acceso..."
                   />
+                </div>
+                <div>
+                  <Label htmlFor="control_event" className="text-hueso">Evento</Label>
+                  <Select
+                    value={newControlType.event_id}
+                    onValueChange={(value) => setNewControlType({ ...newControlType, event_id: value })}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-700 text-hueso">
+                      <SelectValue placeholder="Selecciona un evento" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      {allEvents.map((event) => (
+                        <SelectItem key={event.id} value={event.id} className="text-hueso">
+                          {event.event_name} {event.is_active && '(Activo)'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <IconPicker
                   value={newControlType.icon || ''}
@@ -525,6 +549,24 @@ const TicketManagement = () => {
                   className="bg-gray-800 border-gray-700 text-hueso"
                   placeholder="Descripción de la categoría..."
                 />
+              </div>
+              <div>
+                <Label htmlFor="category_event" className="text-hueso">Evento</Label>
+                <Select
+                  value={newCategory.event_id}
+                  onValueChange={(value) => setNewCategory({ ...newCategory, event_id: value })}
+                >
+                  <SelectTrigger className="bg-gray-800 border-gray-700 text-hueso">
+                    <SelectValue placeholder="Selecciona un evento" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700">
+                    {allEvents.map((event) => (
+                      <SelectItem key={event.id} value={event.id} className="text-hueso">
+                        {event.event_name} {event.is_active && '(Activo)'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="category_color" className="text-hueso">Color</Label>
