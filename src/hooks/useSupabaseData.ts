@@ -13,7 +13,16 @@ export const useAttendees = () => {
       const { data, error } = await supabase
         .from('attendees')
         .select(`
-          *,
+          id,
+          name,
+          cedula,
+          ticket_id,
+          category_id,
+          event_id,
+          qr_code,
+          status,
+          created_at,
+          updated_at,
           ticket_category:ticket_categories(*)
         `);
       
