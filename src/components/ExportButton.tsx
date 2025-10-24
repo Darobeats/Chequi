@@ -69,7 +69,7 @@ const ExportButton: React.FC = () => {
           // Attendee with no usage records
           const row = worksheet.addRow({
             nombre: attendee.name,
-            cedula: (attendee as any).cedula || 'N/A',
+            cedula: attendee.cedula || 'N/A',
             categoria: attendee.ticket_category?.name || 'N/A',
             qrUrl: attendee.qr_code ? 'Ver QR →' : 'No generado',
             qrImage: 'Ver imagen →', // Placeholder text
@@ -109,7 +109,7 @@ const ExportButton: React.FC = () => {
             const usedDate = new Date(usage.used_at);
             const row = worksheet.addRow({
               nombre: attendee.name,
-              cedula: (attendee as any).cedula || 'N/A',
+              cedula: attendee.cedula || 'N/A',
               categoria: attendee.ticket_category?.name || 'N/A',
               qrUrl: attendee.qr_code ? (index === 0 ? 'Ver QR →' : '') : 'No generado',
               qrImage: index === 0 ? 'Ver imagen →' : '', // Only show on first row per attendee

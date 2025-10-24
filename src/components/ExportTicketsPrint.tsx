@@ -284,9 +284,9 @@ const ExportTicketsPrint: React.FC = () => {
             currentTextRow += 3; // More space after name
           }
 
-          if ((attendee as any).cedula) {
+          if (attendee.cedula) {
             const cedulaCell = worksheet.getCell(currentTextRow, startCol);
-            cedulaCell.value = (attendee as any).cedula;
+            cedulaCell.value = attendee.cedula;
             cedulaCell.font = { 
               size: Math.max(template.font_size_info, 11),
               name: 'Arial',

@@ -37,7 +37,7 @@ const AttendeesManager: React.FC = () => {
       attendee.name.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
       attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
-      (attendee as any).cedula?.toLowerCase().includes(searchTermLower) ||
+      attendee.cedula?.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
     );
   });
@@ -196,7 +196,7 @@ const AttendeesManager: React.FC = () => {
             {filteredAttendees.map((attendee) => (
               <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
                 <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
-                <TableCell className="text-gray-300">{(attendee as any).cedula || 'N/A'}</TableCell>
+                <TableCell className="text-gray-300">{attendee.cedula || 'N/A'}</TableCell>
                 <TableCell className="text-gray-300">
                   {events.find(e => e.id === attendee.event_id)?.event_name || 'N/A'}
                 </TableCell>
