@@ -3,13 +3,17 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Attendee, ControlType, TicketCategory, ControlUsage, CategoryControl } from '@/types/database';
+import { useActiveEventConfig } from './useEventConfig';
 
 export const useAttendees = () => {
   const queryClient = useQueryClient();
+  const { data: eventConfig } = useActiveEventConfig();
 
   const query = useQuery({
-    queryKey: ['attendees'],
+    queryKey: ['attendees', eventConfig?.id],
     queryFn: async () => {
+      if (!eventConfig?.id) return [];
+      
       const { data, error } = await supabase
         .from('attendees')
         .select(`
@@ -24,11 +28,13 @@ export const useAttendees = () => {
           created_at,
           updated_at,
           ticket_category:ticket_categories(*)
-        `);
+        `)
+        .eq('event_id', eventConfig.id);
       
       if (error) throw error;
       return data as (Attendee & { ticket_category: TicketCategory })[];
-    }
+    },
+    enabled: !!eventConfig?.id
   });
 
   // Set up real-time subscription
@@ -58,47 +64,64 @@ export const useAttendees = () => {
 };
 
 export const useControlTypes = () => {
+  const { data: eventConfig } = useActiveEventConfig();
+  
   return useQuery({
-    queryKey: ['control_types'],
+    queryKey: ['control_types', eventConfig?.id],
     queryFn: async () => {
+      if (!eventConfig?.id) return [];
+      
       const { data, error } = await supabase
         .from('control_types')
-        .select('*');
+        .select('*')
+        .eq('event_id', eventConfig.id);
       
       if (error) throw error;
       return data as ControlType[];
-    }
+    },
+    enabled: !!eventConfig?.id
   });
 };
 
 export const useTicketCategories = () => {
+  const { data: eventConfig } = useActiveEventConfig();
+  
   return useQuery({
-    queryKey: ['ticket_categories'],
+    queryKey: ['ticket_categories', eventConfig?.id],
     queryFn: async () => {
+      if (!eventConfig?.id) return [];
+      
       const { data, error } = await supabase
         .from('ticket_categories')
-        .select('*');
+        .select('*')
+        .eq('event_id', eventConfig.id);
       
       if (error) throw error;
       return data as TicketCategory[];
-    }
+    },
+    enabled: !!eventConfig?.id
   });
 };
 
 export const useControlUsage = () => {
+  const { data: eventConfig } = useActiveEventConfig();
+  
   return useQuery({
-    queryKey: ['control_usage'],
+    queryKey: ['control_usage', eventConfig?.id],
     queryFn: async () => {
+      if (!eventConfig?.id) return [];
+      
       const { data, error } = await supabase
         .from('control_usage')
         .select(`
           *,
           control_type:control_types(*),
-          attendee:attendees(
+          attendee:attendees!inner(
             *,
             ticket_category:ticket_categories(*)
           )
         `)
+        .eq('attendee.event_id', eventConfig.id)
         .order('used_at', { ascending: false });
       
       if (error) throw error;
@@ -108,27 +131,35 @@ export const useControlUsage = () => {
       })[];
     },
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    enabled: !!eventConfig?.id
   });
 };
 
 export const useCategoryControls = () => {
+  const { data: eventConfig } = useActiveEventConfig();
+  
   return useQuery({
-    queryKey: ['category_controls'],
+    queryKey: ['category_controls', eventConfig?.id],
     queryFn: async () => {
+      if (!eventConfig?.id) return [];
+      
       const { data, error } = await supabase
         .from('category_controls')
         .select(`
           *,
-          control_type:control_types(*),
-          ticket_category:ticket_categories(*)
-        `);
+          control_type:control_types!inner(*),
+          ticket_category:ticket_categories!inner(*)
+        `)
+        .eq('control_type.event_id', eventConfig.id)
+        .eq('ticket_category.event_id', eventConfig.id);
       
       if (error) throw error;
       return data as (CategoryControl & {
         control_type: ControlType;
         ticket_category: TicketCategory;
       })[];
-    }
+    },
+    enabled: !!eventConfig?.id
   });
 };
 
