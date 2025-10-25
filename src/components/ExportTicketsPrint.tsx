@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAttendees } from '@/hooks/useSupabaseData';
 import { useTicketTemplates, TicketTemplate } from '@/hooks/useTicketTemplates';
+import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { Printer, FileDown } from 'lucide-react';
 import * as ExcelJS from 'exceljs';
 import QRCode from 'qrcode';
@@ -14,6 +15,7 @@ import { Attendee } from '@/types/database';
 const ExportTicketsPrint: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Helper: apply opacity to a base64-encoded image and return base64 (PNG)
@@ -73,17 +75,38 @@ const ExportTicketsPrint: React.FC = () => {
     return { width, height };
   };
  
-  const { data: attendees = [] } = useAttendees();
+  const { data: allAttendees = [] } = useAttendees();
   const { data: templates = [] } = useTicketTemplates();
+  const { data: events = [] } = useAllEventConfigs();
+
+  // Filter attendees by selected event
+  const attendees = selectedEventId 
+    ? allAttendees.filter(a => a.event_id === selectedEventId)
+    : [];
+
+  // Auto-select active event when dialog opens
+  useEffect(() => {
+    if (open && events.length > 0 && !selectedEventId) {
+      const activeEvent = events.find(e => e.is_active);
+      if (activeEvent) {
+        setSelectedEventId(activeEvent.id);
+      }
+    }
+  }, [open, events, selectedEventId]);
 
   const generateTicketExcel = async () => {
+    if (!selectedEventId) {
+      toast.error('Por favor seleccione un evento');
+      return;
+    }
+
     if (!selectedTemplateId) {
       toast.error('Por favor seleccione una plantilla');
       return;
     }
 
     if (attendees.length === 0) {
-      toast.error('No hay asistentes para exportar');
+      toast.error('No hay asistentes para exportar en este evento');
       return;
     }
 
@@ -370,8 +393,9 @@ const ExportTicketsPrint: React.FC = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
+      const eventName = events.find(e => e.id === selectedEventId)?.event_name || '';
       toast.success('Tickets generados correctamente', {
-        description: `Se han generado ${attendees.length} tickets para impresión.`
+        description: `Se han generado ${attendees.length} tickets para ${eventName}.`
       });
 
       setOpen(false);
@@ -399,6 +423,28 @@ const ExportTicketsPrint: React.FC = () => {
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
+            <Label htmlFor="event">Seleccionar Evento</Label>
+            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+              <SelectTrigger id="event">
+                <SelectValue placeholder="Seleccione un evento" />
+              </SelectTrigger>
+              <SelectContent>
+                {events.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.event_name} {event.is_active ? '(Activo)' : ''}
+                    {event.event_date && ` - ${new Date(event.event_date).toLocaleDateString()}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {events.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No hay eventos disponibles.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="template">Seleccionar Plantilla</Label>
             <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
               <SelectTrigger id="template">
@@ -422,7 +468,10 @@ const ExportTicketsPrint: React.FC = () => {
           <div className="bg-muted p-4 rounded-lg space-y-2">
             <p className="text-sm font-medium">Resumen:</p>
             <ul className="text-sm space-y-1">
-              <li>• Total de asistentes: {attendees.length}</li>
+              {selectedEventId && (
+                <li>• Evento: {events.find(e => e.id === selectedEventId)?.event_name}</li>
+              )}
+              <li>• Total de asistentes del evento: {attendees.length}</li>
               <li>• Plantillas disponibles: {templates.length}</li>
               {selectedTemplateId && (
                 <li>
@@ -438,7 +487,7 @@ const ExportTicketsPrint: React.FC = () => {
 
           <Button
             onClick={generateTicketExcel}
-            disabled={!selectedTemplateId || isGenerating || attendees.length === 0}
+            disabled={!selectedEventId || !selectedTemplateId || isGenerating || attendees.length === 0}
             className="w-full"
           >
             {isGenerating ? (
