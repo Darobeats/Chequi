@@ -34,10 +34,10 @@ const EventSelector: React.FC<EventSelectorProps> = ({
   }
 
   return (
-    <div className="w-full mb-6 p-4 bg-gray-900/50 rounded-lg border border-gray-800">
+    <div className="w-full mb-4 md:mb-6 p-3 md:p-4 bg-gray-900/50 rounded-lg border border-gray-800">
       <div className="flex items-center gap-2 mb-3">
-        <Calendar className="h-5 w-5 text-dorado" />
-        <Label htmlFor="event-select" className="text-hueso text-lg font-semibold">
+        <Calendar className="h-4 w-4 md:h-5 md:w-5 text-dorado flex-shrink-0" />
+        <Label htmlFor="event-select" className="text-hueso text-base md:text-lg font-semibold">
           Seleccionar Evento
         </Label>
       </div>
@@ -45,21 +45,21 @@ const EventSelector: React.FC<EventSelectorProps> = ({
       <Select value={selectedEventId} onValueChange={onEventChange}>
         <SelectTrigger 
           id="event-select"
-          className="w-full bg-gray-950 border-gray-700 text-hueso hover:border-dorado focus:border-dorado transition-colors"
+          className="w-full bg-gray-950 border-gray-700 text-hueso hover:border-dorado focus:border-dorado transition-colors min-h-[44px] touch-manipulation"
         >
           <SelectValue placeholder="Selecciona un evento" />
         </SelectTrigger>
-        <SelectContent className="bg-gray-950 border-gray-700">
+        <SelectContent className="bg-gray-950 border-gray-700 z-[9999] max-h-[300px]">
           {events.map((event) => (
             <SelectItem 
               key={event.id} 
               value={event.id}
-              className="text-hueso hover:bg-gray-800 focus:bg-gray-800 cursor-pointer"
+              className="text-hueso hover:bg-gray-800 focus:bg-gray-800 cursor-pointer min-h-[44px] touch-manipulation"
             >
-              <div className="flex items-center justify-between w-full">
-                <span className="font-medium">{event.event_name}</span>
+              <div className="flex items-center justify-between w-full py-1">
+                <span className="font-medium text-sm md:text-base">{event.event_name}</span>
                 {event.is_active && (
-                  <span className="ml-2 px-2 py-0.5 bg-dorado/20 text-dorado text-xs rounded-full">
+                  <span className="ml-2 px-2 py-0.5 bg-dorado/20 text-dorado text-xs rounded-full flex-shrink-0">
                     Activo
                   </span>
                 )}
@@ -70,7 +70,7 @@ const EventSelector: React.FC<EventSelectorProps> = ({
       </Select>
 
       {selectedEventId && (
-        <p className="text-sm text-gray-400 mt-2">
+        <p className="text-xs md:text-sm text-gray-400 mt-2">
           Escaneando para: {events.find(e => e.id === selectedEventId)?.event_name}
         </p>
       )}

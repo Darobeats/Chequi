@@ -223,7 +223,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
   const needsPermission = hasCamera && (permissionStatus === 'unknown' || permissionStatus === 'prompt' || permissionStatus === 'denied');
 
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center justify-center touch-manipulation">
       <EventSelector
         events={allEvents}
         selectedEventId={selectedEventId}

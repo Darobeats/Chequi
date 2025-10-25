@@ -83,6 +83,19 @@
   .gold-gradient {
     @apply bg-gradient-to-r from-dorado/80 to-dorado;
   }
+  
+  /* Mejoras táctiles para móviles */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Prevenir problemas de scroll en móviles */
+  .scanner-video {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }
 
 @layer utilities {

@@ -47,33 +47,36 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
   };
 
   return (
-    <header className="bg-empresarial border-b border-dorado/30 p-4">
-      <div className="container mx-auto flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl md:text-2xl font-bold text-dorado">{title}</h1>
+    <header className="bg-empresarial border-b border-dorado/30 p-3 md:p-4 sticky top-0 z-50">
+      <div className="container mx-auto flex justify-between items-center gap-2">
+        <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-shrink">
+          <h1 className="text-lg md:text-2xl font-bold text-dorado truncate">{title}</h1>
           {profile && (
-            <Badge className={getRoleColor(profile.role)}>
+            <Badge className={`${getRoleColor(profile.role)} hidden sm:flex flex-shrink-0`}>
               {getRoleText(profile.role)}
             </Badge>
           )}
         </div>
         
-        <div className="flex items-center space-x-2">
+        <nav className="flex items-center gap-1 md:gap-2 flex-shrink-0">
           {user && profile ? (
             <>
               {canAccessScanner && (
                 <Button
                   variant="ghost"
-                  className="text-hueso hover:text-dorado hover:bg-empresarial"
+                  size="sm"
+                  className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4"
                   onClick={() => handleNavigation('/scanner')}
                 >
-                  Scanner
+                  <span className="hidden sm:inline">Scanner</span>
+                  <span className="sm:hidden">Scan</span>
                 </Button>
               )}
               {canAccessAdmin && (
                 <Button
                   variant="ghost"
-                  className="text-hueso hover:text-dorado hover:bg-empresarial"
+                  size="sm"
+                  className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4"
                   onClick={() => handleNavigation('/admin')}
                 >
                   Admin
@@ -82,7 +85,8 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
               {canManageUsers && (
                 <Button
                   variant="ghost"
-                  className="text-hueso hover:text-dorado hover:bg-empresarial"
+                  size="sm"
+                  className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4 hidden md:inline-flex"
                   onClick={() => handleNavigation('/users')}
                 >
                   Usuarios
@@ -91,7 +95,8 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
               {profile.role === 'attendee' && (
                 <Button
                   variant="ghost"
-                  className="text-hueso hover:text-dorado hover:bg-empresarial"
+                  size="sm"
+                  className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4 hidden md:inline-flex"
                   onClick={() => handleNavigation('/profile')}
                 >
                   Mi Perfil
@@ -99,22 +104,26 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
               )}
               <Button
                 variant="outline"
-                className="border-dorado text-dorado hover:bg-dorado/10"
+                size="sm"
+                className="border-dorado text-dorado hover:bg-dorado/10 touch-manipulation min-h-[44px] px-2 md:px-4"
                 onClick={handleSignOut}
               >
-                Cerrar Sesión
+                <span className="hidden sm:inline">Cerrar Sesión</span>
+                <span className="sm:hidden">Salir</span>
               </Button>
             </>
           ) : (
             <Button
               variant="outline"
-              className="border-dorado text-dorado hover:bg-dorado/10"
+              size="sm"
+              className="border-dorado text-dorado hover:bg-dorado/10 touch-manipulation min-h-[44px] px-3 md:px-4"
               onClick={() => handleNavigation('/auth')}
             >
-              Iniciar Sesión
+              <span className="hidden sm:inline">Iniciar Sesión</span>
+              <span className="sm:hidden">Login</span>
             </Button>
           )}
-        </div>
+        </nav>
       </div>
     </header>
   );

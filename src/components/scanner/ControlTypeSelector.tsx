@@ -57,7 +57,7 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
   }
 
   return (
-    <div className="w-full mb-6">
+    <div className="w-full mb-4 md:mb-6">
       <label className="block text-sm font-medium text-muted-foreground mb-2">
         Tipo de Control
       </label>
@@ -67,10 +67,10 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
         open={open}
         onOpenChange={setOpen}
       >
-        <SelectTrigger className="bg-input border-border text-foreground">
+        <SelectTrigger className="bg-input border-border text-foreground min-h-[44px] touch-manipulation">
           <SelectValue placeholder="Selecciona el tipo de control" />
         </SelectTrigger>
-        <SelectContent className="bg-popover border-border z-[9999]">
+        <SelectContent className="bg-popover border-border z-[9999] max-h-[300px]">
           {controlTypes?.map((controlType) => {
             const hasPrerequisite = controlType.requires_control_id;
             const requiredControl = hasPrerequisite 
@@ -78,16 +78,22 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
               : null;
             
             return (
-              <SelectItem key={controlType.id} value={controlType.id} className="text-foreground">
-                <div className="flex items-center gap-2">
-                  {getControlIcon(controlType.icon)}
-                  <span className="capitalize">{controlType.name}</span>
-                  <span className="text-xs text-muted-foreground">- {controlType.description}</span>
+              <SelectItem 
+                key={controlType.id} 
+                value={controlType.id} 
+                className="text-foreground min-h-[44px] touch-manipulation py-2"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <span className="flex-shrink-0">{getControlIcon(controlType.icon)}</span>
+                  <div className="flex flex-col items-start min-w-0 flex-1">
+                    <span className="capitalize font-medium text-sm md:text-base">{controlType.name}</span>
+                    <span className="text-xs text-muted-foreground truncate w-full">{controlType.description}</span>
+                  </div>
                   {requiredControl && (
                     <TooltipProvider>
                       <Tooltip>
-                        <TooltipTrigger>
-                          <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-500 ml-1">
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-500 ml-1 flex-shrink-0">
                             <Lock className="h-2 w-2" />
                           </Badge>
                         </TooltipTrigger>
