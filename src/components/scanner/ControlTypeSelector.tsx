@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
@@ -27,13 +27,6 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
   isLoading,
 }) => {
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    document.body.classList.toggle('select-open', open);
-    return () => {
-      document.body.classList.remove('select-open');
-    };
-  }, [open]);
 
   const getControlIcon = (iconName: string | null) => {
     switch (iconName) {

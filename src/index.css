@@ -99,10 +99,5 @@
 }
 
 @layer utilities {
-  /* Android dropdown + camera fix: hide camera feed while a Select is open */
-  body.select-open .scanner-video video,
-  body.select-open video#qr-video {
-    opacity: 0 !important;
-    pointer-events: none !important;
-  }
+  /* Utilities layer for custom utilities */
 }
