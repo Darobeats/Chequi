@@ -92,40 +92,47 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ timeSeriesData, hourlyDis
           {/* Cumulative Progress with Moving Average */}
           <Card className="bg-card/50 border-border">
             <CardHeader>
-              <CardTitle className="text-foreground flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Progreso Acumulado vs Promedio
+              <CardTitle className="text-sm sm:text-base text-foreground flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+                <span className="truncate">Progreso Acumulado vs Promedio</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={intradayInsights.movingAverage}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="hour" 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar 
-                      dataKey="actual" 
-                      fill="hsl(var(--primary))" 
-                      fillOpacity={0.6}
-                      name="Uso por Hora"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="average" 
-                      stroke="hsl(var(--accent))" 
-                      strokeWidth={2}
-                      name="Promedio Móvil"
-                      dot={{ fill: "hsl(var(--accent))", r: 3 }}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+            <CardContent className="overflow-x-auto">
+              <div className="min-w-[300px]">
+                <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={intradayInsights.movingAverage}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="hour" 
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={10}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={10}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar 
+                        dataKey="actual" 
+                        fill="hsl(var(--primary))" 
+                        fillOpacity={0.6}
+                        name="Uso por Hora"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="average" 
+                        stroke="hsl(var(--accent))" 
+                        strokeWidth={2}
+                        name="Promedio Móvil"
+                        dot={{ fill: "hsl(var(--accent))", r: 3 }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
             </CardContent>
           </Card>
 
@@ -173,36 +180,43 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ timeSeriesData, hourlyDis
         {intradayInsights.controlTypeByHour.length > 0 && (
           <Card className="bg-card/50 border-border">
             <CardHeader>
-              <CardTitle className="text-foreground flex items-center gap-2">
-                <Activity className="h-5 w-5 text-primary" />
-                Distribución de Tipos de Control por Hora
+              <CardTitle className="text-sm sm:text-base text-foreground flex items-center gap-2">
+                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+                <span className="truncate">Distribución de Tipos de Control por Hora</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={intradayInsights.controlTypeByHour}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="hour" 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    {Object.keys(intradayInsights.controlTypeByHour[0] || {})
-                      .filter(key => key !== 'hour')
-                      .map((controlType, index) => (
-                        <Bar
-                          key={controlType}
-                          dataKey={controlType}
-                          stackId="controlTypes"
-                          fill={`hsl(var(--chart-${(index % 5) + 1}))`}
-                        />
-                      ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
+            <CardContent className="overflow-x-auto">
+              <div className="min-w-[300px]">
+                <ChartContainer config={chartConfig} className="h-[300px] sm:h-[400px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={intradayInsights.controlTypeByHour}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="hour" 
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={10}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={10}
+                        tick={{ fontSize: 10 }}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      {Object.keys(intradayInsights.controlTypeByHour[0] || {})
+                        .filter(key => key !== 'hour')
+                        .map((controlType, index) => (
+                          <Bar
+                            key={controlType}
+                            dataKey={controlType}
+                            stackId="controlTypes"
+                            fill={`hsl(var(--chart-${(index % 5) + 1}))`}
+                          />
+                        ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -220,85 +234,99 @@ const TrendAnalysis: React.FC<TrendAnalysisProps> = ({ timeSeriesData, hourlyDis
       {/* Daily Trend */}
       <Card className="bg-card/50 border-border">
         <CardHeader>
-          <CardTitle className="text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Tendencia Diaria
-            {trend > 0 && <span className="text-green-400 text-sm">↗ +{trend}</span>}
-            {trend < 0 && <span className="text-red-400 text-sm">↘ {trend}</span>}
-            {trend === 0 && <span className="text-gray-400 text-sm">→ Sin cambio</span>}
+          <CardTitle className="text-sm sm:text-base text-foreground flex items-center gap-2 flex-wrap">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+            <span>Tendencia Diaria</span>
+            {trend > 0 && <span className="text-green-400 text-xs sm:text-sm">↗ +{trend}</span>}
+            {trend < 0 && <span className="text-red-400 text-xs sm:text-sm">↘ {trend}</span>}
+            {trend === 0 && <span className="text-gray-400 text-xs sm:text-sm">→ Sin cambio</span>}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={timeSeriesData}>
-                <defs>
-                  <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="formattedDate" 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <ChartTooltip 
-                  content={<ChartTooltipContent />}
-                  labelFormatter={(value, payload) => {
-                    const data = payload?.[0]?.payload;
-                    if (data?.isToday) return `Hoy (${value})`;
-                    if (data?.isYesterday) return `Ayer (${value})`;
-                    return value;
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="count" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  fill="url(#colorGradient)"
-                  dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+        <CardContent className="overflow-x-auto">
+          <div className="min-w-[300px]">
+            <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeSeriesData}>
+                  <defs>
+                    <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="formattedDate" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={10}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={10}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent />}
+                    labelFormatter={(value, payload) => {
+                      const data = payload?.[0]?.payload;
+                      if (data?.isToday) return `Hoy (${value})`;
+                      if (data?.isYesterday) return `Ayer (${value})`;
+                      return value;
+                    }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="count" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    fill="url(#colorGradient)"
+                    dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </div>
         </CardContent>
       </Card>
 
       {/* Hourly Distribution */}
       <Card className="bg-card/50 border-border">
         <CardHeader>
-          <CardTitle className="text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Distribución por Horas
+          <CardTitle className="text-sm sm:text-base text-foreground flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+            <span>Distribución por Horas</span>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={hourlyDistribution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis 
-                  dataKey="hour" 
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line 
-                  type="monotone" 
-                  dataKey="usage" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={3}
-                  dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 4 }}
-                  activeDot={{ r: 6, stroke: "hsl(var(--primary))", strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+        <CardContent className="overflow-x-auto">
+          <div className="min-w-[300px]">
+            <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={hourlyDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="hour" 
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={10}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))" 
+                    fontSize={10}
+                    tick={{ fontSize: 10 }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="usage" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--primary))", strokeWidth: 2, r: 3 }}
+                    activeDot={{ r: 5, stroke: "hsl(var(--primary))", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </div>
         </CardContent>
       </Card>
     </div>

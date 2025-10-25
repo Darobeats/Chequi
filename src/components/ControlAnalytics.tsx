@@ -109,27 +109,27 @@ const ControlAnalytics = () => {
       {/* Advanced Analytics Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <Card className="bg-card/50 border-border">
-          <CardContent className="pt-6">
-            <TabsList className="grid w-full grid-cols-5 bg-muted">
-              <TabsTrigger value="overview" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Resumen
+          <CardContent className="pt-6 overflow-x-auto">
+            <TabsList className="inline-flex w-full min-w-max bg-muted">
+              <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+                <BarChart3 className="h-4 w-4 shrink-0" />
+                <span className="text-xs sm:text-sm">Resumen</span>
               </TabsTrigger>
-              <TabsTrigger value="trends" className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Tendencias
+              <TabsTrigger value="trends" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+                <TrendingUp className="h-4 w-4 shrink-0" />
+                <span className="text-xs sm:text-sm">Tendencias</span>
               </TabsTrigger>
-              <TabsTrigger value="coverage" className="flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Cobertura
+              <TabsTrigger value="coverage" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+                <Target className="h-4 w-4 shrink-0" />
+                <span className="text-xs sm:text-sm">Cobertura</span>
               </TabsTrigger>
-              <TabsTrigger value="live" className="flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                En Vivo
+              <TabsTrigger value="live" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+                <Activity className="h-4 w-4 shrink-0" />
+                <span className="text-xs sm:text-sm">En Vivo</span>
               </TabsTrigger>
-              <TabsTrigger value="details" className="flex items-center gap-2">
-                <Eye className="h-4 w-4" />
-                Detalles
+              <TabsTrigger value="details" className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3">
+                <Eye className="h-4 w-4 shrink-0" />
+                <span className="text-xs sm:text-sm">Detalles</span>
               </TabsTrigger>
             </TabsList>
           </CardContent>
