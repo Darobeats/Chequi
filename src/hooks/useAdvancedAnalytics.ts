@@ -45,10 +45,11 @@ export const useAdvancedAnalytics = (filters: {
     });
   }, [controlUsage, filters]);
 
-  // Enhanced KPIs
+  // Enhanced KPIs - Main counters use ALL data (no filters), analytics use filtered data
   const enhancedMetrics = useMemo(() => {
-    const totalUsages = filteredData.length;
-    const uniqueAttendees = new Set(filteredData.map(u => u.attendee_id)).size;
+    // Main KPIs without filters (all event data)
+    const totalUsages = controlUsage.length;
+    const uniqueAttendees = new Set(controlUsage.map(u => u.attendee_id)).size;
     const totalAttendees = attendees.length;
     const participationRate = totalAttendees > 0 ? (uniqueAttendees / totalAttendees) * 100 : 0;
     
@@ -97,7 +98,7 @@ export const useAdvancedAnalytics = (filters: {
       controlTypeUsage,
       categoryEfficiency
     };
-  }, [filteredData, attendees, controlTypes, ticketCategories]);
+  }, [controlUsage, filteredData, attendees, controlTypes, ticketCategories]);
 
   // Time series data for trends
   const timeSeriesData = useMemo(() => {
