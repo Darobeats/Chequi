@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useControlUsage, useAttendees, useControlTypes, useTicketCategories, useCategoryControls } from './useSupabaseData';
 import { startOfHour, startOfDay, parseISO, format, isToday, isYesterday, subDays, startOfMinute, addMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useUsageCounters } from './useUsageCounters';
 
 export const useAdvancedAnalytics = (filters: {
   controlType: string;
@@ -13,6 +14,7 @@ export const useAdvancedAnalytics = (filters: {
   const { data: controlTypes = [] } = useControlTypes();
   const { data: ticketCategories = [] } = useTicketCategories();
   const { data: categoryControls = [] } = useCategoryControls();
+  const { totalUsagesCount, uniqueAttendeesCount } = useUsageCounters();
 
   // Filter data based on selections
   const filteredData = useMemo(() => {
@@ -48,8 +50,8 @@ export const useAdvancedAnalytics = (filters: {
   // Enhanced KPIs - Main counters use ALL data (no filters), analytics use filtered data
   const enhancedMetrics = useMemo(() => {
     // Main KPIs without filters (all event data)
-    const totalUsages = controlUsage.length;
-    const uniqueAttendees = new Set(controlUsage.map(u => u.attendee_id)).size;
+    const totalUsages = totalUsagesCount;
+    const uniqueAttendees = uniqueAttendeesCount;
     const totalAttendees = attendees.length;
     const participationRate = totalAttendees > 0 ? (uniqueAttendees / totalAttendees) * 100 : 0;
     
@@ -98,7 +100,7 @@ export const useAdvancedAnalytics = (filters: {
       controlTypeUsage,
       categoryEfficiency
     };
-  }, [controlUsage, filteredData, attendees, controlTypes, ticketCategories]);
+  }, [totalUsagesCount, uniqueAttendeesCount, filteredData, attendees, controlTypes, ticketCategories]);
 
   // Time series data for trends
   const timeSeriesData = useMemo(() => {
