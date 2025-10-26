@@ -1,41 +1,42 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveEventConfig } from './useEventConfig';
+import { useControlTypes } from './useSupabaseData';
 
 export const useUsageCounters = () => {
   const { data: event } = useActiveEventConfig();
+  const { data: controlTypes = [] } = useControlTypes();
+  const controlTypeIds = controlTypes.map((ct) => ct.id).filter(Boolean) as string[];
 
   const totalUsagesQuery = useQuery({
-    queryKey: ['usage_total_count', event?.id],
-    enabled: !!event?.id,
+    queryKey: ['usage_total_count', event?.id, controlTypeIds],
+    enabled: !!event?.id && controlTypeIds.length > 0,
     refetchInterval: 5000,
     queryFn: async () => {
-      if (!event?.id) return 0;
       const { count, error } = await supabase
         .from('control_usage')
         .select('*', { count: 'exact', head: true })
-        .eq('attendee.event_id', event.id);
+        .in('control_type_id', controlTypeIds);
       if (error) throw error;
       return count || 0;
     },
   });
 
   const uniqueAttendeesQuery = useQuery({
-    queryKey: ['usage_unique_attendees_count', event?.id],
-    enabled: !!event?.id,
+    queryKey: ['usage_unique_attendees_count', event?.id, controlTypeIds],
+    enabled: !!event?.id && controlTypeIds.length > 0,
     refetchInterval: 10000,
     queryFn: async () => {
-      if (!event?.id) return 0;
       const pageSize = 1000;
       let from = 0;
       const unique = new Set<string>();
-      // Paginar para evitar el límite de 1000 filas de PostgREST
-      // y contar asistentes únicos con uso
+      // Paginamos y contamos attendees únicos del evento activo
       while (true) {
         const { data, error } = await supabase
           .from('control_usage')
           .select('attendee_id')
-          .eq('attendee.event_id', event.id)
+          .in('control_type_id', controlTypeIds)
+          .not('attendee_id', 'is', null)
           .order('attendee_id', { ascending: true })
           .range(from, from + pageSize - 1);
         if (error) throw error;
