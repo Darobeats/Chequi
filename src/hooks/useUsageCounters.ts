@@ -1,41 +1,40 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveEventConfig } from './useEventConfig';
-import { useControlTypes } from './useSupabaseData';
 
 export const useUsageCounters = () => {
   const { data: event } = useActiveEventConfig();
-  const { data: controlTypes = [] } = useControlTypes();
-  const controlTypeIds = controlTypes.map((ct) => ct.id).filter(Boolean) as string[];
 
   const totalUsagesQuery = useQuery({
-    queryKey: ['usage_total_count', event?.id, controlTypeIds],
-    enabled: !!event?.id && controlTypeIds.length > 0,
+    queryKey: ['usage_total_count', event?.id],
+    enabled: !!event?.id,
     refetchInterval: 5000,
     queryFn: async () => {
+      if (!event?.id) return 0;
       const { count, error } = await supabase
         .from('control_usage')
-        .select('*', { count: 'exact', head: true })
-        .in('control_type_id', controlTypeIds);
+        .select('id, attendee!inner(id)', { count: 'exact', head: true })
+        .eq('attendee.event_id', event.id);
       if (error) throw error;
       return count || 0;
     },
   });
 
   const uniqueAttendeesQuery = useQuery({
-    queryKey: ['usage_unique_attendees_count', event?.id, controlTypeIds],
-    enabled: !!event?.id && controlTypeIds.length > 0,
+    queryKey: ['usage_unique_attendees_count', event?.id],
+    enabled: !!event?.id,
     refetchInterval: 10000,
     queryFn: async () => {
+      if (!event?.id) return 0;
       const pageSize = 1000;
       let from = 0;
       const unique = new Set<string>();
-      // Paginamos y contamos attendees únicos del evento activo
+      // Paginamos con join a attendees y filtramos por evento activo
       while (true) {
         const { data, error } = await supabase
           .from('control_usage')
-          .select('attendee_id')
-          .in('control_type_id', controlTypeIds)
+          .select('attendee_id, attendee!inner(event_id)')
+          .eq('attendee.event_id', event.id)
           .not('attendee_id', 'is', null)
           .order('attendee_id', { ascending: true })
           .range(from, from + pageSize - 1);
