@@ -1,1 +1,13 @@
 project_id = "kufuqtpqiaupaxchdnsy"
+
+[functions.process-qr-scan]
+verify_jwt = false
+
+[functions.create-user]
+verify_jwt = true
+
+[functions.delete-user]
+verify_jwt = true
+
+[functions.monitor-event-activity]
+verify_jwt = false

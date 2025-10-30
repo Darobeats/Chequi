@@ -3,12 +3,14 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
+import { useActiveEventConfig } from '@/hooks/useEventConfig';
 import * as ExcelJS from 'exceljs';
 import QRCode from 'qrcode';
 
 const ExportButton: React.FC = () => {
   const { data: attendees = [], isLoading } = useAttendees();
   const { data: controlUsage = [] } = useControlUsage();
+  const { data: event } = useActiveEventConfig();
 
   const handleExport = async () => {
     if (isLoading || attendees.length === 0) {
@@ -17,17 +19,61 @@ const ExportButton: React.FC = () => {
     }
 
     try {
+      // Calculate statistics
+      const uniqueAttendees = new Set(controlUsage.map(u => u.attendee_id));
+      const attendedCount = uniqueAttendees.size;
+      const noShowCount = attendees.length - attendedCount;
+      const attendanceRate = attendees.length > 0 ? (attendedCount / attendees.length * 100).toFixed(1) : '0';
+
       // Create a new workbook
       const workbook = new ExcelJS.Workbook();
+      
+      // === HOJA 1: RESUMEN EJECUTIVO ===
+      const summarySheet = workbook.addWorksheet('RESUMEN');
+      summarySheet.columns = [
+        { width: 30 },
+        { width: 20 }
+      ];
+
+      summarySheet.addRow(['REPORTE DE ASISTENCIA', event?.event_name || 'Sin nombre']);
+      summarySheet.addRow(['Fecha del evento:', event?.event_date || 'N/A']);
+      summarySheet.addRow(['Fecha de generación:', new Date().toLocaleDateString('es-ES')]);
+      summarySheet.addRow([]);
+      summarySheet.addRow(['=== ESTADÍSTICAS GENERALES ===']);
+      summarySheet.addRow(['Tickets emitidos:', attendees.length]);
+      summarySheet.addRow(['Asistentes confirmados:', attendedCount]);
+      summarySheet.addRow(['No se presentaron:', noShowCount]);
+      summarySheet.addRow(['Tasa de asistencia:', `${attendanceRate}%`]);
+      summarySheet.addRow([]);
+      summarySheet.addRow(['=== DESGLOSE POR CONTROL ===']);
+
+      const controlTypeStats = new Map<string, number>();
+      controlUsage.forEach(usage => {
+        const controlName = usage.control_type?.name || 'Sin tipo';
+        controlTypeStats.set(controlName, (controlTypeStats.get(controlName) || 0) + 1);
+      });
+
+      controlTypeStats.forEach((count, controlName) => {
+        summarySheet.addRow([`${controlName}:`, count]);
+      });
+
+      // Style summary sheet
+      summarySheet.getRow(1).font = { size: 16, bold: true };
+      summarySheet.getRow(5).font = { bold: true };
+      summarySheet.getRow(11).font = { bold: true };
+
+      // === HOJA 2: TODOS LOS ASISTENTES ===
       const worksheet = workbook.addWorksheet('Asistentes');
 
-      // Define columns with better width for QR images
+      // Define columns with attendance status
       worksheet.columns = [
+        { header: '¿ASISTIÓ?', key: 'asistio', width: 12 },
+        { header: 'Total Usos', key: 'totalUsos', width: 12 },
         { header: 'Nombre', key: 'nombre', width: 25 },
         { header: 'Cédula', key: 'cedula', width: 25 },
         { header: 'Categoría', key: 'categoria', width: 15 },
         { header: 'Código QR URL', key: 'qrUrl', width: 35 },
-        { header: 'Imagen QR', key: 'qrImage', width: 25 }, // Increased width for images
+        { header: 'Imagen QR', key: 'qrImage', width: 25 },
         { header: 'Estado', key: 'estado', width: 12 },
         { header: 'Fecha de Uso', key: 'fechaUso', width: 15 },
         { header: 'Hora de Uso', key: 'horaUso', width: 15 },
@@ -68,11 +114,13 @@ const ExportButton: React.FC = () => {
         if (attendeeUsage.length === 0) {
           // Attendee with no usage records
           const row = worksheet.addRow({
+            asistio: 'NO',
+            totalUsos: 0,
             nombre: attendee.name,
             cedula: attendee.cedula || 'N/A',
             categoria: attendee.ticket_category?.name || 'N/A',
             qrUrl: attendee.qr_code ? 'Ver QR →' : 'No generado',
-            qrImage: 'Ver imagen →', // Placeholder text
+            qrImage: 'Ver imagen →',
             estado: attendee.status === 'valid' ? 'Válido' : 
                    attendee.status === 'used' ? 'Usado' : 'Bloqueado',
             fechaUso: 'Sin registros',
@@ -81,6 +129,14 @@ const ExportButton: React.FC = () => {
             dispositivo: 'Sin registros',
             notas: 'Sin registros'
           });
+
+          // Red background for NO ASISTIÓ
+          row.getCell('asistio').fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFF0000' }
+          };
+          row.getCell('asistio').font = { color: { argb: 'FFFFFFFF' }, bold: true };
 
           // Set clickable hyperlink for QR URL (uses external API to render QR image)
           if (attendee.qr_code) {
@@ -94,11 +150,11 @@ const ExportButton: React.FC = () => {
             cell.font = { color: { argb: 'FF0066CC' }, underline: true };
           }
 
-          // Add QR image if available - positioned correctly in column E
+          // Add QR image if available - positioned correctly in column G (was E)
           if (imageId) {
             worksheet.addImage(imageId, {
-              tl: { col: 4, row: currentRow - 1 }, // Column E (0-indexed), current row
-              ext: { width: 120, height: 120 } // Size of the image
+              tl: { col: 6, row: currentRow - 1 },
+              ext: { width: 120, height: 120 }
             });
           }
           
@@ -108,11 +164,13 @@ const ExportButton: React.FC = () => {
           attendeeUsage.forEach((usage, index) => {
             const usedDate = new Date(usage.used_at);
             const row = worksheet.addRow({
+              asistio: index === 0 ? 'SÍ' : '',
+              totalUsos: index === 0 ? attendeeUsage.length : '',
               nombre: attendee.name,
               cedula: attendee.cedula || 'N/A',
               categoria: attendee.ticket_category?.name || 'N/A',
               qrUrl: attendee.qr_code ? (index === 0 ? 'Ver QR →' : '') : 'No generado',
-              qrImage: index === 0 ? 'Ver imagen →' : '', // Only show on first row per attendee
+              qrImage: index === 0 ? 'Ver imagen →' : '',
               estado: attendee.status === 'valid' ? 'Válido' : 
                      attendee.status === 'used' ? 'Usado' : 'Bloqueado',
               fechaUso: usedDate.toLocaleDateString('es-ES'),
@@ -125,6 +183,16 @@ const ExportButton: React.FC = () => {
               dispositivo: usage.device || 'N/A',
               notas: usage.notes || 'Sin notas'
             });
+
+            // Green background for SÍ ASISTIÓ (only first row)
+            if (index === 0) {
+              row.getCell('asistio').fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF00FF00' }
+              };
+              row.getCell('asistio').font = { bold: true };
+            }
 
             // Set QR URL hyperlink only on first row per attendee
             if (attendee.qr_code && index === 0) {
@@ -141,8 +209,8 @@ const ExportButton: React.FC = () => {
             // Add QR image only on first usage row per attendee
             if (imageId && index === 0) {
               worksheet.addImage(imageId, {
-                tl: { col: 4, row: currentRow - 1 }, // Column E (0-indexed), current row
-                ext: { width: 120, height: 120 } // Size of the image
+                tl: { col: 6, row: currentRow - 1 },
+                ext: { width: 120, height: 120 }
               });
             }
             
@@ -150,6 +218,42 @@ const ExportButton: React.FC = () => {
           });
         }
       }
+
+      // === HOJA 3: NO ASISTIERON ===
+      const noShowSheet = workbook.addWorksheet('NO ASISTIERON');
+      noShowSheet.columns = [
+        { header: 'Nombre', key: 'nombre', width: 30 },
+        { header: 'Cédula', key: 'cedula', width: 20 },
+        { header: 'Categoría', key: 'categoria', width: 20 },
+        { header: 'Ticket ID', key: 'ticketId', width: 25 },
+        { header: 'Estado', key: 'estado', width: 15 }
+      ];
+
+      const noShowAttendees = attendees.filter(attendee => 
+        !uniqueAttendees.has(attendee.id)
+      );
+
+      noShowAttendees.forEach(attendee => {
+        noShowSheet.addRow({
+          nombre: attendee.name,
+          cedula: attendee.cedula || 'N/A',
+          categoria: attendee.ticket_category?.name || 'N/A',
+          ticketId: attendee.ticket_id,
+          estado: attendee.status === 'valid' ? 'Válido' : 
+                 attendee.status === 'used' ? 'Usado' : 'Bloqueado'
+        });
+      });
+
+      // Style headers
+      [summarySheet, worksheet, noShowSheet].forEach(sheet => {
+        const headerRow = sheet.getRow(1);
+        headerRow.font = { bold: true, size: 12 };
+        headerRow.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD4AF37' }
+        };
+      });
 
       // Set row heights for better QR image display
       for (let i = 2; i <= currentRow; i++) {
@@ -173,7 +277,7 @@ const ExportButton: React.FC = () => {
       URL.revokeObjectURL(url);
 
       toast.success('Reporte Excel generado correctamente', {
-        description: `Se ha descargado el archivo con ${attendees.length} asistentes y sus códigos QR.`
+        description: `${attendedCount} de ${attendees.length} asistentes confirmados (${attendanceRate}% de asistencia)`
       });
     } catch (error) {
       console.error('Error al generar el reporte:', error);

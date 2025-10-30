@@ -4,11 +4,13 @@ import { toast } from "@/components/ui/sonner";
 import { useControlTypes, useProcessQRCode } from '@/hooks/useSupabaseData';
 import { useCameraPermissions } from '@/hooks/useCameraPermissions';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
+import { useOfflineScans } from '@/hooks/useOfflineScans';
 import EventSelector from './scanner/EventSelector';
 import ControlTypeSelector from './scanner/ControlTypeSelector';
 import CameraPermissions from './scanner/CameraPermissions';
 import ScannerVideo from './scanner/ScannerVideo';
 import ScanResult from './scanner/ScanResult';
+import OfflineSyncStatus from './scanner/OfflineSyncStatus';
 
 interface QRScannerProps {
   selectedEventId?: string;
@@ -42,6 +44,15 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     isRequestingPermission,
     requestCameraPermission,
   } = useCameraPermissions();
+  
+  const {
+    pendingScans,
+    addPendingScan,
+    syncPendingScans,
+    isSyncing,
+    isOnline,
+    hasPendingScans
+  } = useOfflineScans();
 
   // Set default event to active event
   useEffect(() => {
@@ -142,6 +153,27 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     console.log('🎯 [QRScanner] Control Type:', selectedControlType);
 
     try {
+      // If offline, save scan locally
+      if (!isOnline) {
+        addPendingScan({
+          ticketId: cleanedData,
+          controlTypeId: selectedControlType,
+          eventId: selectedEventId,
+          device: `Scanner Web - ${navigator.userAgent?.split(' ')[0] || 'Unknown'}`
+        });
+        
+        // Show success for offline scan
+        const selectedControl = controlTypes?.find((ct) => ct.id === selectedControlType);
+        setLastResult({
+          success: true,
+          message: 'Escaneo guardado localmente (sin conexión)',
+          controlType: selectedControl?.name
+        });
+        
+        processingRef.current = false;
+        return;
+      }
+
       const result = await processQRMutation.mutateAsync({
         ticketId: cleanedData,
         controlType: selectedControlType,
@@ -224,6 +256,13 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
 
   return (
     <div className="flex flex-col items-center justify-center touch-manipulation">
+      <OfflineSyncStatus
+        isOnline={isOnline}
+        pendingCount={pendingScans.length}
+        isSyncing={isSyncing}
+        onSync={syncPendingScans}
+      />
+
       <EventSelector
         events={allEvents}
         selectedEventId={selectedEventId}
