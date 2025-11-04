@@ -20,6 +20,9 @@ import TicketTemplateEditor from '@/components/TicketTemplateEditor';
 import { useTicketTemplates, useDeleteTicketTemplate, TicketTemplate } from '@/hooks/useTicketTemplates';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Edit, Trash2 } from 'lucide-react';
+import { ExportTicketsPNG } from '@/components/ExportTicketsPNG';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 const FONT_OPTIONS = [
   { name: 'Inter', value: 'Inter, sans-serif' },
@@ -48,6 +51,21 @@ const EventConfig = () => {
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const { data: ticketTemplates = [] } = useTicketTemplates();
   const deleteTemplateMutation = useDeleteTicketTemplate();
+  
+  const { data: attendees = [] } = useQuery({
+    queryKey: ['attendees'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('attendees')
+        .select(`
+          *,
+          ticket_category:ticket_categories(*)
+        `)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
   const [newConfig, setNewConfig] = useState({
     event_name: '',
     primary_color: '#D4AF37',
@@ -612,29 +630,42 @@ const EventConfig = () => {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <Label className="text-gray-400">Campos visibles:</Label>
-                            <div className="mt-1 space-y-1">
-                              {template.show_qr && <Badge variant="outline">QR</Badge>}
-                              {template.show_name && <Badge variant="outline">Nombre</Badge>}
-                              {template.show_email && <Badge variant="outline">Email</Badge>}
-                              {template.show_category && <Badge variant="outline">Categoría</Badge>}
-                              {template.show_ticket_id && <Badge variant="outline">Ticket ID</Badge>}
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <Label className="text-gray-400">Modo:</Label>
+                              <Badge variant="outline" className="mt-1">
+                                {template.use_visual_editor ? '🎨 Visual' : '📋 Formulario'}
+                              </Badge>
+                            </div>
+                            <div>
+                              <Label className="text-gray-400">Campos visibles:</Label>
+                              <div className="mt-1 space-y-1">
+                                {template.show_qr && <Badge variant="outline">QR</Badge>}
+                                {template.show_name && <Badge variant="outline">Nombre</Badge>}
+                                {template.show_email && <Badge variant="outline">Email</Badge>}
+                                {template.show_category && <Badge variant="outline">Categoría</Badge>}
+                                {template.show_ticket_id && <Badge variant="outline">Ticket ID</Badge>}
+                              </div>
+                            </div>
+                            <div>
+                              <Label className="text-gray-400">Tamaño QR:</Label>
+                              <p className="text-hueso mt-1">{template.qr_size}px</p>
+                            </div>
+                            <div>
+                              <Label className="text-gray-400">Canvas:</Label>
+                              <p className="text-hueso mt-1">
+                                {template.canvas_width || 800}x{template.canvas_height || 600}
+                              </p>
                             </div>
                           </div>
-                          <div>
-                            <Label className="text-gray-400">Tamaño QR:</Label>
-                            <p className="text-hueso mt-1">{template.qr_size}px</p>
-                          </div>
-                          <div>
-                            <Label className="text-gray-400">Fuente Nombre:</Label>
-                            <p className="text-hueso mt-1">{template.font_size_name}pt</p>
-                          </div>
-                          <div>
-                            <Label className="text-gray-400">Fuente Info:</Label>
-                            <p className="text-hueso mt-1">{template.font_size_info}pt</p>
-                          </div>
+                          
+                          {template.use_visual_editor && template.elements && template.elements.length > 0 && (
+                            <ExportTicketsPNG 
+                              template={template} 
+                              attendees={attendees || []} 
+                            />
+                          )}
                         </div>
                       </CardContent>
                     </Card>

@@ -6,10 +6,12 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { TicketTemplate, useCreateTicketTemplate, useUpdateTicketTemplate } from '@/hooks/useTicketTemplates';
+import { TicketTemplate, TicketElement, useCreateTicketTemplate, useUpdateTicketTemplate } from '@/hooks/useTicketTemplates';
 import { TicketBackgroundUploader } from './TicketBackgroundUploader';
-import { QrCode, Type, Tag, Hash } from 'lucide-react';
+import { QrCode, Type, Tag, Hash, Palette } from 'lucide-react';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
+import { VisualTicketEditor } from './VisualTicketEditor';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface TicketTemplateEditorProps {
   template?: TicketTemplate | null;
@@ -39,7 +41,11 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
     custom_fields: [],
     background_image_url: null as string | null,
     background_opacity: 0.15,
-    background_mode: 'tile' as 'tile' | 'cover' | 'contain'
+    background_mode: 'tile' as 'tile' | 'cover' | 'contain',
+    canvas_width: 800,
+    canvas_height: 600,
+    elements: [] as TicketElement[],
+    use_visual_editor: false,
   });
 
   const createMutation = useCreateTicketTemplate();
@@ -67,7 +73,11 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         custom_fields: template.custom_fields || [],
         background_image_url: template.background_image_url,
         background_opacity: template.background_opacity,
-        background_mode: template.background_mode
+        background_mode: template.background_mode,
+        canvas_width: template.canvas_width || 800,
+        canvas_height: template.canvas_height || 600,
+        elements: template.elements || [],
+        use_visual_editor: template.use_visual_editor || false,
       });
     }
   }, [template]);
@@ -128,53 +138,119 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="layout">Distribución</Label>
-              <Select
-                value={formData.layout}
-                onValueChange={(value) => {
-                  const ticketsMap: { [key: string]: number } = {
-                    '2x2': 4,
-                    '3x3': 9,
-                    '2x3': 6,
-                    '3x2': 6,
-                    '1x4': 4
-                  };
-                  setFormData({ 
-                    ...formData, 
-                    layout: value,
-                    tickets_per_page: ticketsMap[value] || 4
-                  });
-                }}
-              >
-                <SelectTrigger id="layout">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2x2">2x2 (4 tickets)</SelectItem>
-                  <SelectItem value="3x3">3x3 (9 tickets)</SelectItem>
-                  <SelectItem value="2x3">2x3 (6 tickets)</SelectItem>
-                  <SelectItem value="3x2">3x2 (6 tickets)</SelectItem>
-                  <SelectItem value="1x4">1x4 (4 tickets)</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center gap-2">
+              <Palette className="h-5 w-5 text-primary" />
+              <div>
+                <Label htmlFor="use_visual_editor" className="text-base font-semibold">
+                  Editor Visual de Tickets
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Usa un canvas interactivo para diseñar tickets personalizados
+                </p>
+              </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>Tickets por Página</Label>
-              <Input
-                type="number"
-                value={formData.tickets_per_page}
-                readOnly
-                className="bg-muted"
-              />
-            </div>
+            <Switch
+              id="use_visual_editor"
+              checked={formData.use_visual_editor}
+              onCheckedChange={(checked) => setFormData({ ...formData, use_visual_editor: checked })}
+            />
           </div>
+
+          {!formData.use_visual_editor && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="layout">Distribución</Label>
+                <Select
+                  value={formData.layout}
+                  onValueChange={(value) => {
+                    const ticketsMap: { [key: string]: number } = {
+                      '2x2': 4,
+                      '3x3': 9,
+                      '2x3': 6,
+                      '3x2': 6,
+                      '1x4': 4
+                    };
+                    setFormData({ 
+                      ...formData, 
+                      layout: value,
+                      tickets_per_page: ticketsMap[value] || 4
+                    });
+                  }}
+                >
+                  <SelectTrigger id="layout">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2x2">2x2 (4 tickets)</SelectItem>
+                    <SelectItem value="3x3">3x3 (9 tickets)</SelectItem>
+                    <SelectItem value="2x3">2x3 (6 tickets)</SelectItem>
+                    <SelectItem value="3x2">3x2 (6 tickets)</SelectItem>
+                    <SelectItem value="1x4">1x4 (4 tickets)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tickets por Página</Label>
+                <Input
+                  type="number"
+                  value={formData.tickets_per_page}
+                  readOnly
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <Card>
+      {formData.use_visual_editor ? (
+        <>
+          <VisualTicketEditor
+            canvasWidth={formData.canvas_width}
+            canvasHeight={formData.canvas_height}
+            elements={formData.elements}
+            backgroundImageUrl={formData.background_image_url}
+            backgroundOpacity={formData.background_opacity}
+            onElementsChange={(elements) => setFormData({ ...formData, elements })}
+            onCanvasSizeChange={(width, height) => 
+              setFormData({ ...formData, canvas_width: width, canvas_height: height })
+            }
+          />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Imagen de Fondo</CardTitle>
+              <CardDescription>Opcional: Suba una imagen de fondo para los tickets</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <TicketBackgroundUploader
+                currentImageUrl={formData.background_image_url}
+                onImageUpload={(url) => setFormData({ ...formData, background_image_url: url })}
+                onImageRemove={() => setFormData({ ...formData, background_image_url: null })}
+              />
+              
+              {formData.background_image_url && (
+                <div className="space-y-2">
+                  <Label>
+                    Opacidad: {(formData.background_opacity * 100).toFixed(0)}%
+                  </Label>
+                  <Slider
+                    value={[formData.background_opacity]}
+                    onValueChange={(value) => setFormData({ ...formData, background_opacity: value[0] })}
+                    min={0.05}
+                    max={0.5}
+                    step={0.05}
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        <>
+          <Card>
         <CardHeader>
           <CardTitle>Campos a Mostrar</CardTitle>
           <CardDescription>Seleccione qué información incluir en cada ticket</CardDescription>
@@ -394,6 +470,8 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>

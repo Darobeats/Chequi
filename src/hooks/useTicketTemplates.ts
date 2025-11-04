@@ -2,6 +2,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+export interface TicketElement {
+  id: string;
+  type: 'qr' | 'text' | 'image';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  content?: string;
+  field?: 'name' | 'email' | 'ticket_id' | 'category' | 'cedula';
+  fontSize?: number;
+  fontFamily?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  color?: string;
+  bold?: boolean;
+}
+
 export interface TicketTemplate {
   id: string;
   event_config_id: string | null;
@@ -26,6 +42,10 @@ export interface TicketTemplate {
   background_mode: 'tile' | 'cover' | 'contain';
   created_at: string;
   updated_at: string;
+  canvas_width?: number;
+  canvas_height?: number;
+  elements?: TicketElement[];
+  use_visual_editor?: boolean;
 }
 
 export const useTicketTemplates = () => {
@@ -38,7 +58,12 @@ export const useTicketTemplates = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as TicketTemplate[];
+      
+      // Parse elements JSON to proper type
+      return (data || []).map(template => ({
+        ...template,
+        elements: template.elements ? JSON.parse(JSON.stringify(template.elements)) as TicketElement[] : [],
+      })) as TicketTemplate[];
     },
   });
 };
@@ -50,7 +75,7 @@ export const useCreateTicketTemplate = () => {
     mutationFn: async (template: Omit<TicketTemplate, 'id' | 'created_at' | 'updated_at'>) => {
       const { data, error } = await supabase
         .from('ticket_templates')
-        .insert([template])
+        .insert([template as any])
         .select()
         .single();
 
@@ -81,7 +106,7 @@ export const useUpdateTicketTemplate = () => {
     mutationFn: async ({ id, ...updates }: Partial<TicketTemplate> & { id: string }) => {
       const { data, error } = await supabase
         .from('ticket_templates')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();

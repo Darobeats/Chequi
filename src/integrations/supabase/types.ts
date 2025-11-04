@@ -523,8 +523,11 @@ export type Database = {
           background_image_url: string | null
           background_mode: string | null
           background_opacity: number | null
+          canvas_height: number | null
+          canvas_width: number | null
           created_at: string
           custom_fields: Json | null
+          elements: Json | null
           event_config_id: string | null
           font_size_info: number
           font_size_name: number
@@ -543,13 +546,17 @@ export type Database = {
           show_ticket_id: boolean
           tickets_per_page: number
           updated_at: string
+          use_visual_editor: boolean | null
         }
         Insert: {
           background_image_url?: string | null
           background_mode?: string | null
           background_opacity?: number | null
+          canvas_height?: number | null
+          canvas_width?: number | null
           created_at?: string
           custom_fields?: Json | null
+          elements?: Json | null
           event_config_id?: string | null
           font_size_info?: number
           font_size_name?: number
@@ -568,13 +575,17 @@ export type Database = {
           show_ticket_id?: boolean
           tickets_per_page?: number
           updated_at?: string
+          use_visual_editor?: boolean | null
         }
         Update: {
           background_image_url?: string | null
           background_mode?: string | null
           background_opacity?: number | null
+          canvas_height?: number | null
+          canvas_width?: number | null
           created_at?: string
           custom_fields?: Json | null
+          elements?: Json | null
           event_config_id?: string | null
           font_size_info?: number
           font_size_name?: number
@@ -593,6 +604,7 @@ export type Database = {
           show_ticket_id?: boolean
           tickets_per_page?: number
           updated_at?: string
+          use_visual_editor?: boolean | null
         }
         Relationships: [
           {

@@ -71,6 +71,22 @@ export interface EventConfig {
   event_status: 'draft' | 'active' | 'finished';
 }
 
+export interface TicketElement {
+  id: string;
+  type: 'qr' | 'text' | 'image';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  content?: string;
+  field?: 'name' | 'email' | 'ticket_id' | 'category' | 'cedula';
+  fontSize?: number;
+  fontFamily?: string;
+  textAlign?: 'left' | 'center' | 'right';
+  color?: string;
+  bold?: boolean;
+}
+
 export interface TicketTemplate {
   id: string;
   event_config_id: string | null;
@@ -95,6 +111,10 @@ export interface TicketTemplate {
   background_mode: 'tile' | 'cover' | 'contain';
   created_at: string;
   updated_at: string;
+  canvas_width?: number;
+  canvas_height?: number;
+  elements?: TicketElement[];
+  use_visual_editor?: boolean;
 }
 
 export interface AdminUser {
