@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { EventConfig as EventConfigType } from '@/types/database';
+import { EventConfig as EventConfigType, Attendee } from '@/types/database';
 import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users, RefreshCw, Ticket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -63,7 +63,7 @@ const EventConfig = () => {
         `)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Attendee[];
     },
   });
   const [newConfig, setNewConfig] = useState({
