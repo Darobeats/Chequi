@@ -30,7 +30,14 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/scanner" element={<Scanner />} />
+            <Route 
+              path="/scanner" 
+              element={
+                <ProtectedRoute requiredRole="control">
+                  <Scanner />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/admin" 
               element={

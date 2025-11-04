@@ -11,10 +11,39 @@ interface PendingScan {
   device: string;
   timestamp: number;
   retryCount: number;
+  signature: string; // Cryptographic signature for integrity
+  userId: string; // User who performed the scan
 }
 
 const STORAGE_KEY = 'pending_scans';
 const MAX_RETRIES = 5;
+
+// Generate HMAC-SHA256 signature for scan integrity
+async function generateScanSignature(
+  ticketId: string,
+  controlTypeId: string,
+  timestamp: number,
+  userId: string
+): Promise<string> {
+  const data = `${ticketId}|${controlTypeId}|${timestamp}|${userId}`;
+  const encoder = new TextEncoder();
+  const dataBuffer = encoder.encode(data);
+  
+  // Use a combination of user ID and timestamp as key material
+  const keyMaterial = encoder.encode(`chequi_scan_${userId}_${Math.floor(timestamp / 86400000)}`);
+  
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyMaterial,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', key, dataBuffer);
+  const hashArray = Array.from(new Uint8Array(signature));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 export const useOfflineScans = () => {
   const [pendingScans, setPendingScans] = useState<PendingScan[]>([]);
@@ -76,19 +105,43 @@ export const useOfflineScans = () => {
     }
   }, [isOnline, pendingScans.length]);
 
-  const addPendingScan = useCallback((scan: Omit<PendingScan, 'id' | 'timestamp' | 'retryCount'>) => {
-    const newScan: PendingScan = {
-      ...scan,
-      id: crypto.randomUUID(),
-      timestamp: Date.now(),
-      retryCount: 0
-    };
+  const addPendingScan = useCallback(async (scan: Omit<PendingScan, 'id' | 'timestamp' | 'retryCount' | 'signature' | 'userId'>) => {
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Usuario no autenticado');
+      }
 
-    setPendingScans(prev => [...prev, newScan]);
-    
-    toast.info('Escaneo guardado localmente', {
-      description: 'Se sincronizará cuando haya conexión'
-    });
+      const timestamp = Date.now();
+      const signature = await generateScanSignature(
+        scan.ticketId,
+        scan.controlTypeId,
+        timestamp,
+        user.id
+      );
+
+      const newScan: PendingScan = {
+        ...scan,
+        id: crypto.randomUUID(),
+        timestamp,
+        retryCount: 0,
+        signature,
+        userId: user.id,
+      };
+
+      setPendingScans(prev => [...prev, newScan]);
+      
+      toast.info('Escaneo guardado localmente', {
+        description: 'Se sincronizará cuando haya conexión'
+      });
+
+      return newScan;
+    } catch (error) {
+      console.error('Error adding pending scan:', error);
+      toast.error('Error al guardar escaneo offline');
+      throw error;
+    }
   }, []);
 
   const syncPendingScans = useCallback(async () => {
@@ -100,16 +153,20 @@ export const useOfflineScans = () => {
 
     for (const scan of pendingScans) {
       try {
-        const { error } = await supabase.functions.invoke('process-qr-scan', {
+        const { error, data } = await supabase.functions.invoke('process-qr-scan', {
           body: {
             ticketId: scan.ticketId,
             controlTypeId: scan.controlTypeId,
             eventId: scan.eventId,
-            device: `${scan.device} (Sincronizado)`
+            device: `${scan.device} (Offline Sync)`,
+            timestamp: scan.timestamp,
+            signature: scan.signature,
+            userId: scan.userId,
           }
         });
 
         if (error) throw error;
+        if (!data?.success) throw new Error(data?.message || 'Error desconocido');
         
         successfulIds.push(scan.id);
         console.log('✅ Scan synced:', scan.ticketId);
