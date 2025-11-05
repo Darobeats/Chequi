@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { TicketElement } from '@/types/database';
 import { Plus, Trash2, Image as ImageIcon, Type, QrCode, ZoomIn, ZoomOut, Grid } from 'lucide-react';
 import QRCode from 'qrcode';
+import { toast } from '@/hooks/use-toast';
 
 interface VisualTicketEditorProps {
   canvasWidth: number;
@@ -91,7 +92,7 @@ export const VisualTicketEditor = ({
     });
   }, [fabricCanvas, backgroundImageUrl, backgroundOpacity, canvasWidth, canvasHeight]);
 
-  // Sync elements to canvas
+  // Sync elements to canvas (only when canvas is created, not on element changes)
   useEffect(() => {
     if (!fabricCanvas) return;
 
@@ -105,7 +106,7 @@ export const VisualTicketEditor = ({
     });
 
     fabricCanvas.renderAll();
-  }, [fabricCanvas, elements]);
+  }, [fabricCanvas]);
 
   const addElementToCanvas = async (canvas: FabricCanvas, element: TicketElement) => {
     let obj: FabricObject | null = null;
@@ -151,7 +152,7 @@ export const VisualTicketEditor = ({
       case 'email': return 'juan@example.com';
       case 'ticket_id': return 'EVT-VIP-ABC1-2024';
       case 'category': return 'VIP';
-      case 'cedula': return '1234567890';
+      case 'cedula': return 'Cc 1234567890';
       default: return 'Texto de ejemplo';
     }
   };
@@ -174,6 +175,16 @@ export const VisualTicketEditor = ({
   };
 
   const addQRElement = () => {
+    // Check if QR element already exists
+    if (elements.some(e => e.type === 'qr')) {
+      toast({
+        title: 'Ya existe un código QR',
+        description: 'Solo puedes agregar un código QR por plantilla',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const newElement: TicketElement = {
       id: crypto.randomUUID(),
       type: 'qr',
@@ -186,6 +197,16 @@ export const VisualTicketEditor = ({
   };
 
   const addTextField = (field: 'name' | 'email' | 'ticket_id' | 'category' | 'cedula') => {
+    // Check if field already exists
+    if (elements.some(e => e.type === 'text' && e.field === field)) {
+      toast({
+        title: 'Campo ya existe',
+        description: `El campo "${field}" ya fue agregado a la plantilla`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const newElement: TicketElement = {
       id: crypto.randomUUID(),
       type: 'text',

@@ -22,7 +22,7 @@ export const ExportTicketsPNG = ({ template, attendees }: ExportTicketsPNGProps)
       case 'email': return 'N/A'; // Email not in attendees table
       case 'ticket_id': return attendee.ticket_id;
       case 'category': return attendee.ticket_category?.name || 'N/A';
-      case 'cedula': return attendee.cedula || 'N/A';
+      case 'cedula': return attendee.cedula ? `Cc ${attendee.cedula}` : 'N/A';
       default: return '';
     }
   };
