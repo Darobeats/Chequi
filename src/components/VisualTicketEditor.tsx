@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TicketElement } from '@/types/database';
-import { Plus, Trash2, Image as ImageIcon, Type, QrCode, ZoomIn, ZoomOut, Grid } from 'lucide-react';
+import { Plus, Trash2, Image as ImageIcon, Type, QrCode, ZoomIn, ZoomOut, Grid, AlignLeft, AlignCenter, AlignRight, Bold } from 'lucide-react';
 import QRCode from 'qrcode';
 import { toast } from '@/hooks/use-toast';
 
@@ -241,6 +242,31 @@ export const VisualTicketEditor = ({
     setSelectedElement(null);
   };
 
+  const updateSelectedElement = (updates: Partial<TicketElement>) => {
+    if (!selectedElement) return;
+    
+    const updatedElements = elements.map(el => 
+      el.id === selectedElement ? { ...el, ...updates } : el
+    );
+    
+    onElementsChange(updatedElements);
+    
+    // Update canvas object
+    if (fabricCanvas) {
+      const obj = fabricCanvas.getObjects().find(o => (o as any).elementId === selectedElement);
+      if (obj && obj instanceof Text) {
+        if (updates.fontSize) obj.set('fontSize', updates.fontSize);
+        if (updates.fontFamily) obj.set('fontFamily', updates.fontFamily);
+        if (updates.bold !== undefined) obj.set('fontWeight', updates.bold ? 'bold' : 'normal');
+        if (updates.textAlign) obj.set('textAlign', updates.textAlign);
+        if (updates.color) obj.set('fill', updates.color);
+        fabricCanvas.renderAll();
+      }
+    }
+  };
+
+  const selectedElementData = elements.find(e => e.id === selectedElement);
+
   const handleZoomIn = () => {
     if (!fabricCanvas) return;
     const newZoom = Math.min(zoom * 1.2, 3);
@@ -378,6 +404,103 @@ export const VisualTicketEditor = ({
           )}
         </div>
       </Card>
+
+      {selectedElementData && selectedElementData.type === 'text' && (
+        <Card className="p-4">
+          <Label className="mb-3 block">Propiedades del Texto</Label>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm mb-2 block">Fuente</Label>
+                <Select
+                  value={selectedElementData.fontFamily || 'Arial'}
+                  onValueChange={(value) => updateSelectedElement({ fontFamily: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Arial">Arial</SelectItem>
+                    <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                    <SelectItem value="Georgia">Georgia</SelectItem>
+                    <SelectItem value="Courier New">Courier New</SelectItem>
+                    <SelectItem value="Verdana">Verdana</SelectItem>
+                    <SelectItem value="Helvetica">Helvetica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="text-sm mb-2 block">Tamaño</Label>
+                <Input
+                  type="number"
+                  value={selectedElementData.fontSize || 14}
+                  onChange={(e) => updateSelectedElement({ fontSize: parseInt(e.target.value) || 14 })}
+                  min={8}
+                  max={72}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm mb-2 block">Alineación</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={selectedElementData.textAlign === 'left' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateSelectedElement({ textAlign: 'left' })}
+                >
+                  <AlignLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedElementData.textAlign === 'center' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateSelectedElement({ textAlign: 'center' })}
+                >
+                  <AlignCenter className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedElementData.textAlign === 'right' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateSelectedElement({ textAlign: 'right' })}
+                >
+                  <AlignRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={selectedElementData.bold ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateSelectedElement({ bold: !selectedElementData.bold })}
+                >
+                  <Bold className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-sm mb-2 block">Color</Label>
+              <div className="flex gap-2 items-center">
+                <Input
+                  type="color"
+                  value={selectedElementData.color || '#000000'}
+                  onChange={(e) => updateSelectedElement({ color: e.target.value })}
+                  className="w-20 h-10"
+                />
+                <Input
+                  type="text"
+                  value={selectedElementData.color || '#000000'}
+                  onChange={(e) => updateSelectedElement({ color: e.target.value })}
+                  className="flex-1"
+                  placeholder="#000000"
+                />
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-4">
         <div 
