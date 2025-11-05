@@ -92,21 +92,31 @@ export const VisualTicketEditor = ({
     });
   }, [fabricCanvas, backgroundImageUrl, backgroundOpacity, canvasWidth, canvasHeight]);
 
-  // Sync elements to canvas (only when canvas is created, not on element changes)
+  // Sync elements to canvas
   useEffect(() => {
     if (!fabricCanvas) return;
 
-    // Clear canvas objects (except background)
-    const objects = fabricCanvas.getObjects();
-    objects.forEach(obj => fabricCanvas.remove(obj));
+    // Get current object IDs in canvas
+    const canvasElementIds = fabricCanvas.getObjects().map(obj => (obj as any).elementId).filter(Boolean);
+    const elementIds = elements.map(e => e.id);
 
-    // Add elements
+    // Remove objects that are no longer in elements
+    fabricCanvas.getObjects().forEach(obj => {
+      const elementId = (obj as any).elementId;
+      if (elementId && !elementIds.includes(elementId)) {
+        fabricCanvas.remove(obj);
+      }
+    });
+
+    // Add new elements that are not yet in canvas
     elements.forEach(element => {
-      addElementToCanvas(fabricCanvas, element);
+      if (!canvasElementIds.includes(element.id)) {
+        addElementToCanvas(fabricCanvas, element);
+      }
     });
 
     fabricCanvas.renderAll();
-  }, [fabricCanvas]);
+  }, [fabricCanvas, elements]);
 
   const addElementToCanvas = async (canvas: FabricCanvas, element: TicketElement) => {
     let obj: FabricObject | null = null;
