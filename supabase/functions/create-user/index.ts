@@ -6,6 +6,21 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Error sanitization - prevent information leakage
+function sanitizeError(error: any, context: string): string {
+  // Log full error server-side
+  console.error(`${context}:`, error);
+  
+  // Return generic message to client
+  if (error?.code === 'PGRST116') return 'No se encontró el recurso solicitado';
+  if (error?.code === '23505') return 'El usuario ya existe';
+  if (error?.message?.includes('violates')) return 'Los datos proporcionados son inválidos';
+  if (error?.message?.includes('permission')) return 'Permisos insuficientes';
+  if (error?.message?.includes('not found')) return 'Usuario no encontrado';
+  
+  return 'Error al procesar la solicitud';
+}
+
 // Input validation
 interface CreateUserRequest {
   email: string;
@@ -135,8 +150,8 @@ serve(async (req) => {
     })
 
     if (createError) {
-      console.error('User creation error:', createError);
-      throw new Error(`Error al crear usuario: ${createError.message}`);
+      const safeMessage = sanitizeError(createError, 'User creation error');
+      throw new Error(safeMessage);
     }
 
     // Update the profile with full_name (role is stored in separate table now)
@@ -146,10 +161,10 @@ serve(async (req) => {
       .eq('id', newUser.user.id)
 
     if (profileError) {
-      console.error('Profile update error:', profileError);
+      const safeMessage = sanitizeError(profileError, 'Profile update error');
       // Attempt to delete the user if profile update fails
       await supabaseClient.auth.admin.deleteUser(newUser.user.id);
-      throw new Error(`Error al actualizar perfil: ${profileError.message}`);
+      throw new Error(safeMessage);
     }
 
     // Insert role in user_roles table (separated for security)
@@ -162,10 +177,10 @@ serve(async (req) => {
       })
 
     if (roleError) {
-      console.error('Role assignment error:', roleError);
+      const safeMessage = sanitizeError(roleError, 'Role assignment error');
       // Attempt to delete the user if role assignment fails
       await supabaseClient.auth.admin.deleteUser(newUser.user.id);
-      throw new Error(`Error al asignar rol: ${roleError.message}`);
+      throw new Error(safeMessage);
     }
 
     console.log('User created successfully:', email);
@@ -181,9 +196,9 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    const safeMessage = sanitizeError(error, 'Unexpected error');
     return new Response(
-      JSON.stringify({ error: error.message || 'Error interno del servidor' }),
+      JSON.stringify({ error: safeMessage }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

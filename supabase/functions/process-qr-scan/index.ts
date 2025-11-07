@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Error sanitization - prevent information leakage
+function sanitizeError(error: any, context: string): string {
+  // Log full error server-side
+  console.error(`${context}:`, error);
+  
+  // Return generic message to client
+  if (error?.code === 'PGRST116') return 'No se encontró el ticket';
+  if (error?.message?.includes('violates')) return 'Los datos del escaneo son inválidos';
+  if (error?.message?.includes('permission')) return 'Permisos insuficientes';
+  if (error?.message?.includes('not found')) return 'Ticket no encontrado';
+  
+  return 'Error al procesar el escaneo';
+}
+
 // Input validation
 interface ScanRequest {
   ticketId: string;

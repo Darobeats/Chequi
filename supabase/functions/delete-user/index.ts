@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Error sanitization - prevent information leakage
+function sanitizeError(error: any, context: string): string {
+  // Log full error server-side
+  console.error(`${context}:`, error);
+  
+  // Return generic message to client
+  if (error?.code === 'PGRST116') return 'No se encontró el recurso solicitado';
+  if (error?.message?.includes('violates')) return 'Los datos proporcionados son inválidos';
+  if (error?.message?.includes('permission')) return 'Permisos insuficientes';
+  if (error?.message?.includes('not found')) return 'Usuario no encontrado';
+  
+  return 'Error al procesar la solicitud';
+}
+
 // Input validation
 function validateUUID(str: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -115,8 +129,8 @@ serve(async (req) => {
     const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId!)
 
     if (deleteError) {
-      console.error('Delete error:', deleteError);
-      throw new Error(`Error al eliminar usuario: ${deleteError.message}`);
+      const safeMessage = sanitizeError(deleteError, 'Delete error');
+      throw new Error(safeMessage);
     }
 
     console.log('User deleted successfully:', userId);
@@ -129,9 +143,9 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    const safeMessage = sanitizeError(error, 'Unexpected error');
     return new Response(
-      JSON.stringify({ error: error.message || 'Error interno del servidor' }),
+      JSON.stringify({ error: safeMessage }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
