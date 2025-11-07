@@ -12,7 +12,6 @@ import { toast } from '@/components/ui/sonner';
 import { Plus, Upload, Edit, Trash2, QrCode, RotateCcw, Users, FileX, AlertTriangle } from 'lucide-react';
 import AttendeeForm from './AttendeeForm';
 import BulkImportDialog from './BulkImportDialog';
-import ExportTicketsPrint from './ExportTicketsPrint';
 import { supabase } from '@/integrations/supabase/client';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
 
@@ -195,8 +194,6 @@ const AttendeeManagement: React.FC = () => {
             Importar Masivo
           </Button>
 
-          <ExportTicketsPrint />
-          
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button

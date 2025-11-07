@@ -14,7 +14,6 @@ import { Plus, Upload, Edit, Trash2, QrCode, RotateCcw } from 'lucide-react';
 import AttendeeForm from './AttendeeForm';
 import BulkImportDialog from './BulkImportDialog';
 import ExportButton from './ExportButton';
-import ExportQRDistribution from './ExportQRDistribution';
 import QRCodeDisplay from './QRCodeDisplay';
 
 const AttendeesManager: React.FC = () => {
@@ -151,8 +150,6 @@ const AttendeesManager: React.FC = () => {
             <RotateCcw className="w-4 h-4" />
             Resetear Todas las Entradas
           </Button>
-          
-          <ExportQRDistribution />
           
           <ExportButton />
           
