@@ -139,10 +139,10 @@ serve(async (req) => {
       throw new Error(`Error al crear usuario: ${createError.message}`);
     }
 
-    // Update the profile with the specified role
+    // Update the profile with full_name (role is stored in separate table now)
     const { error: profileError } = await supabaseClient
       .from('profiles')
-      .update({ role, full_name })
+      .update({ full_name })
       .eq('id', newUser.user.id)
 
     if (profileError) {
@@ -150,6 +150,22 @@ serve(async (req) => {
       // Attempt to delete the user if profile update fails
       await supabaseClient.auth.admin.deleteUser(newUser.user.id);
       throw new Error(`Error al actualizar perfil: ${profileError.message}`);
+    }
+
+    // Insert role in user_roles table (separated for security)
+    const { error: roleError } = await supabaseClient
+      .from('user_roles')
+      .insert({ 
+        user_id: newUser.user.id, 
+        role,
+        granted_by: authUser.user.id
+      })
+
+    if (roleError) {
+      console.error('Role assignment error:', roleError);
+      // Attempt to delete the user if role assignment fails
+      await supabaseClient.auth.admin.deleteUser(newUser.user.id);
+      throw new Error(`Error al asignar rol: ${roleError.message}`);
     }
 
     console.log('User created successfully:', email);

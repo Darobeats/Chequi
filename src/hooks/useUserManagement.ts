@@ -15,18 +15,37 @@ interface UserProfile {
 export const useUserManagement = () => {
   const queryClient = useQueryClient();
 
-  // Obtener todos los usuarios
+  // Obtener todos los usuarios con sus roles
   const useUsers = () => {
     return useQuery({
       queryKey: ['users'],
       queryFn: async () => {
-        const { data, error } = await supabase
+        // Fetch all profiles
+        const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false });
         
-        if (error) throw error;
-        return data as UserProfile[];
+        if (profilesError) throw profilesError;
+        if (!profiles) return [];
+
+        // Fetch all user roles
+        const { data: userRoles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role');
+        
+        if (rolesError) throw rolesError;
+
+        // Map roles to users
+        const usersWithRoles = profiles.map(profile => {
+          const roleData = userRoles?.find(r => r.user_id === profile.id);
+          return {
+            ...profile,
+            role: roleData?.role || 'attendee'
+          } as UserProfile;
+        });
+
+        return usersWithRoles;
       }
     });
   };
@@ -67,12 +86,45 @@ export const useUserManagement = () => {
         userId: string; 
         updates: Partial<Pick<UserProfile, 'full_name' | 'role' | 'attendee_id'>>
       }) => {
-        const { error } = await supabase
-          .from('profiles')
-          .update(updates)
-          .eq('id', userId);
+        const { role, ...profileUpdates } = updates;
 
-        if (error) throw error;
+        // Update profile fields (excluding role)
+        if (Object.keys(profileUpdates).length > 0) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update(profileUpdates)
+            .eq('id', userId);
+
+          if (profileError) throw profileError;
+        }
+
+        // Update role in user_roles table if role is being changed
+        if (role) {
+          // First, check if user already has a role entry
+          const { data: existingRole } = await supabase
+            .from('user_roles')
+            .select('id')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+          if (existingRole) {
+            // Update existing role
+            const { error: roleError } = await supabase
+              .from('user_roles')
+              .update({ role })
+              .eq('user_id', userId);
+
+            if (roleError) throw roleError;
+          } else {
+            // Insert new role
+            const { error: roleError } = await supabase
+              .from('user_roles')
+              .insert({ user_id: userId, role });
+
+            if (roleError) throw roleError;
+          }
+        }
+
         return updates;
       },
       onSuccess: () => {

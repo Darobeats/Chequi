@@ -40,19 +40,39 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.log(`Fetching profile for user: ${userId}`);
       console.log('Auth state:', { userId, sessionExists: !!session });
       
-      const { data, error } = await supabase
+      // Fetch profile data
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-        throw error;
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        throw profileError;
       }
 
-      console.log('Profile fetched successfully:', data);
-      return data as Profile;
+      // Fetch role from user_roles table (security: roles are now separated)
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error fetching user role:', roleError);
+        // Don't throw, just default to attendee
+      }
+
+      const userRole = roleData?.role || 'attendee';
+
+      const completeProfile = {
+        ...profileData,
+        role: userRole
+      } as Profile;
+
+      console.log('Profile fetched successfully:', completeProfile);
+      return completeProfile;
     } catch (error) {
       console.error('Error in fetchProfile:', error);
       throw error;
