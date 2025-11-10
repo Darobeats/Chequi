@@ -160,7 +160,7 @@ export const ExportTicketsPNG = ({ template, attendees }: ExportTicketsPNGProps)
         
         try {
           const imageBlob = await generateTicketImage(attendee);
-          const fileName = `${attendee.ticket_id}_${sanitizeFilename(attendee.name)}_${attendee.cedula || 'SinCedula'}.png`;
+          const fileName = `${attendee.cedula || 'SinCedula'}_${sanitizeFilename(attendee.name)}.png`;
           ticketsFolder.file(fileName, imageBlob);
           
           setProgress(Math.round(((i + 1) / attendees.length) * 100));
