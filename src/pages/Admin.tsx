@@ -72,9 +72,8 @@ const Admin = () => {
       <Header title="ADMIN DASHBOARD" />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-8">
           <h1 className="text-2xl font-bold text-dorado">Panel de Control</h1>
-          <ExportButton />
         </div>
         
         {/* Main Statistics */}
