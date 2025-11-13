@@ -14,7 +14,7 @@ import { BarChart3, Users, FileText, Settings, UserPlus } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading } = useSupabaseAuth();
-  const { isAdmin, isControl, isViewer, canAccessAdmin, canAccessConfig, loading: roleLoading } = useUserRole();
+  const { isAdmin, isControl, canAccessAdmin, canAccessConfig, canModifyData, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   
   const { data: attendees = [] } = useAttendees();

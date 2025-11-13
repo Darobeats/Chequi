@@ -13,8 +13,8 @@ export const useUsageCounters = () => {
       if (!event?.id) return 0;
       const { count, error } = await supabase
         .from('control_usage')
-        .select('id, attendee!inner(id)', { count: 'exact', head: true })
-        .eq('attendee.event_id', event.id);
+        .select('id, attendees!inner(id)', { count: 'exact', head: true })
+        .eq('attendees.event_id', event.id);
       if (error) throw error;
       return count || 0;
     },
@@ -33,8 +33,8 @@ export const useUsageCounters = () => {
       while (true) {
         const { data, error } = await supabase
           .from('control_usage')
-          .select('attendee_id, attendee!inner(event_id)')
-          .eq('attendee.event_id', event.id)
+          .select('attendee_id, attendees!inner(event_id)')
+          .eq('attendees.event_id', event.id)
           .not('attendee_id', 'is', null)
           .order('attendee_id', { ascending: true })
           .range(from, from + pageSize - 1);
