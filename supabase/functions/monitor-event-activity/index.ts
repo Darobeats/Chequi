@@ -15,7 +15,43 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('🔍 Monitoring event activity...');
+    // Verificar autenticación (JWT)
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'No authorization header', status: 'unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verificar que el usuario tiene rol admin o control
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token', status: 'unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verificar rol usando la función de base de datos
+    const { data: canAccess, error: roleError } = await supabase
+      .rpc('can_access_dashboard', { check_user_id: user.id });
+
+    if (roleError || !canAccess) {
+      console.log('❌ Access denied for user:', user.id);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Access denied. Only admin and control roles can access this endpoint.',
+          status: 'forbidden' 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('🔍 Monitoring event activity for user:', user.email);
 
     // Get active event
     const { data: activeEvent, error: eventError } = await supabase

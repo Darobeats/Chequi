@@ -13,27 +13,34 @@ export const useUserRole = () => {
   
   const isAdmin = role === 'admin';
   const isControl = role === 'control';
+  const isScanner = role === 'scanner';
   const isAttendee = role === 'attendee';
-  const isViewer = role === 'viewer';
   
   const hasRole = (requiredRole: UserRole) => role === requiredRole;
   
-  const canAccessAdmin = isAdmin || isControl || isViewer;
-  const canAccessScanner = isAdmin || isControl || isViewer;
-  const canAccessProfile = isAdmin || isAttendee;
-  const canAccessConfig = isAdmin; // Solo admins pueden ver configuración
+  // Permisos según el nuevo sistema:
+  // - admin: control total (dashboard con modificaciones + scanner)
+  // - control: dashboard solo lectura + scanner
+  // - scanner: SOLO scanner
+  // - attendee: solo perfil propio
+  const canAccessAdmin = isAdmin || isControl; // Dashboard (admin modifica, control lee)
+  const canAccessScanner = isAdmin || isControl || isScanner; // Módulo scanner
+  const canAccessProfile = isAdmin || isAttendee; // Perfil
+  const canAccessConfig = isAdmin; // Solo admins pueden ver/modificar configuración
+  const canModifyData = isAdmin; // Solo admin puede crear/modificar/eliminar
   
   return {
     role,
     loading,
     isAdmin,
     isControl,
+    isScanner,
     isAttendee,
-    isViewer,
     hasRole,
     canAccessAdmin,
     canAccessScanner,
     canAccessProfile,
     canAccessConfig,
+    canModifyData,
   };
 };
