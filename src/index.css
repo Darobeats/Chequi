@@ -61,6 +61,27 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold;
   }
+
+  /* Mejoras de legibilidad móvil */
+  @media (max-width: 640px) {
+    h1 {
+      @apply text-xl;
+    }
+    
+    h2 {
+      @apply text-lg;
+    }
+    
+    h3 {
+      @apply text-base;
+    }
+    
+    /* Touch targets mínimos */
+    button, a {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
 }
 
 @layer components {

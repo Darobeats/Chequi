@@ -77,64 +77,73 @@ const Admin = () => {
         </div>
         
         {/* Main Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow card-hover">
-            <h3 className="text-hueso text-lg font-medium mb-1">Total Asistentes</h3>
-            <p className="text-3xl font-bold text-dorado">{totalAttendees}</p>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6 mb-8">
+          <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-gray-800 shadow card-hover">
+            <h3 className="text-hueso text-base md:text-lg font-medium mb-1">Total Asistentes</h3>
+            <p className="text-2xl md:text-3xl font-bold text-dorado">{totalAttendees}</p>
           </div>
           
-          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow card-hover">
-            <h3 className="text-hueso text-lg font-medium mb-1">Con QR Generado</h3>
-            <p className="text-3xl font-bold text-dorado">{attendeesWithQR}</p>
+          <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-gray-800 shadow card-hover">
+            <h3 className="text-hueso text-base md:text-lg font-medium mb-1">Con QR Generado</h3>
+            <p className="text-2xl md:text-3xl font-bold text-dorado">{attendeesWithQR}</p>
           </div>
           
-          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow card-hover">
-            <h3 className="text-hueso text-lg font-medium mb-1">Con Registros</h3>
-            <p className="text-3xl font-bold text-dorado">{attendeesWithUsage}</p>
+          <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-gray-800 shadow card-hover">
+            <h3 className="text-hueso text-base md:text-lg font-medium mb-1">Con Registros</h3>
+            <p className="text-2xl md:text-3xl font-bold text-dorado">{attendeesWithUsage}</p>
           </div>
           
-          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow card-hover">
-            <h3 className="text-hueso text-lg font-medium mb-1">Total Usos</h3>
-            <p className="text-3xl font-bold text-dorado">{totalUsages}</p>
+          <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-gray-800 shadow card-hover">
+            <h3 className="text-hueso text-base md:text-lg font-medium mb-1">Total Usos</h3>
+            <p className="text-2xl md:text-3xl font-bold text-dorado">{totalUsages}</p>
           </div>
           
-          <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow card-hover">
-            <h3 className="text-hueso text-lg font-medium mb-1">Sin Registros</h3>
-            <p className="text-3xl font-bold text-dorado">{totalAttendees - attendeesWithUsage}</p>
+          <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-gray-800 shadow card-hover">
+            <h3 className="text-hueso text-base md:text-lg font-medium mb-1">Sin Registros</h3>
+            <p className="text-2xl md:text-3xl font-bold text-dorado">{totalAttendees - attendeesWithUsage}</p>
           </div>
         </div>
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800`}>
+          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800 gap-1`}>
             <TabsTrigger 
               value="analytics" 
-              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
             >
-              <BarChart3 className="h-4 w-4" />
-              Análisis
+              <BarChart3 className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
+                Análisis
+              </span>
             </TabsTrigger>
             <TabsTrigger 
               value="attendees" 
-              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
             >
-              <Users className="h-4 w-4" />
-              Asistentes
+              <Users className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
+                Asistentes
+              </span>
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
-              className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
             >
-              <FileText className="h-4 w-4" />
-              Resumen
+              <FileText className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
+                Resumen
+              </span>
             </TabsTrigger>
             {canAccessConfig && (
               <TabsTrigger 
                 value="config" 
-                className="flex items-center gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+                className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
               >
-                <Settings className="h-4 w-4" />
-                Configuración
+                <Settings className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
+                  <span className="hidden sm:inline">Configuración</span>
+                  <span className="sm:hidden">Config</span>
+                </span>
               </TabsTrigger>
             )}
           </TabsList>
