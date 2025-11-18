@@ -711,6 +711,12 @@ export type Database = {
     Functions: {
       auth_role: { Args: never; Returns: string }
       auth_uid: { Args: never; Returns: string }
+      can_access_dashboard: {
+        Args: { check_user_id?: string }
+        Returns: boolean
+      }
+      can_access_scanner: { Args: { check_user_id?: string }; Returns: boolean }
+      can_modify_data: { Args: { check_user_id?: string }; Returns: boolean }
       find_attendee_by_ticket: {
         Args: { ticket_id: string }
         Returns: {
@@ -814,7 +820,7 @@ export type Database = {
       }
     }
     Enums: {
-      user_role: "admin" | "control" | "attendee" | "viewer"
+      user_role: "admin" | "control" | "attendee" | "viewer" | "scanner"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -942,7 +948,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      user_role: ["admin", "control", "attendee", "viewer"],
+      user_role: ["admin", "control", "attendee", "viewer", "scanner"],
     },
   },
 } as const
