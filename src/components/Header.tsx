@@ -9,9 +9,10 @@ import { Badge } from '@/components/ui/badge';
 
 interface HeaderProps {
   title?: string;
+  showLandingNav?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
+const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = false }) => {
   const { user, profile, signOut } = useSupabaseAuth();
   const { canAccessAdmin, canAccessScanner } = useUserRole();
   const { canManageUsers } = useAuthorizeUserManagement();
@@ -50,8 +51,13 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
     <header className="bg-empresarial border-b border-dorado/30 p-3 md:p-4 sticky top-0 z-50">
       <div className="container mx-auto flex justify-between items-center gap-2">
         <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-shrink">
-          <h1 className="text-lg md:text-2xl font-bold text-dorado truncate">{title}</h1>
-          {profile && (
+          <h1 
+            className="text-lg md:text-2xl font-bold text-dorado truncate cursor-pointer hover:text-dorado/80 transition-colors"
+            onClick={() => handleNavigation('/')}
+          >
+            {title}
+          </h1>
+          {profile && !showLandingNav && (
             <Badge className={`${getRoleColor(profile.role)} hidden sm:flex flex-shrink-0`}>
               {getRoleText(profile.role)}
             </Badge>
@@ -59,7 +65,47 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
         </div>
         
         <nav className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-          {user && profile ? (
+          {showLandingNav ? (
+            // Landing page navigation
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4 hidden md:inline-flex"
+                onClick={() => document.getElementById('caracteristicas')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Características
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4 hidden md:inline-flex"
+                onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}
+              >
+                Cómo Funciona
+              </Button>
+              {user ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="bg-dorado hover:bg-dorado/90 text-empresarial font-medium touch-manipulation min-h-[44px] px-4"
+                  onClick={() => handleNavigation('/dashboard')}
+                >
+                  Dashboard
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="bg-dorado hover:bg-dorado/90 text-empresarial font-medium touch-manipulation min-h-[44px] px-4"
+                  onClick={() => handleNavigation('/auth')}
+                >
+                  Iniciar Sesión
+                </Button>
+              )}
+            </>
+          ) : user && profile ? (
+            // App navigation (existing)
             <>
               {canAccessScanner && (
                 <Button
@@ -112,17 +158,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI' }) => {
                 <span className="sm:hidden">Salir</span>
               </Button>
             </>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-dorado text-dorado hover:bg-dorado/10 touch-manipulation min-h-[44px] px-3 md:px-4"
-              onClick={() => handleNavigation('/auth')}
-            >
-              <span className="hidden sm:inline">Iniciar Sesión</span>
-              <span className="sm:hidden">Login</span>
-            </Button>
-          )}
+          ) : null}
         </nav>
       </div>
     </header>

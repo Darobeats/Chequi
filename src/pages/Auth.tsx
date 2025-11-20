@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
 import Header from "@/components/Header";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isDemo = searchParams.get('demo') === 'true';
 
   React.useEffect(() => {
     console.log("Auth page - user:", !!user, "loading:", loading);
@@ -68,6 +70,16 @@ const Auth = () => {
           <div className="text-center">
             <h1 className="text-3xl font-bold text-dorado mb-2">Chequi</h1>
             <p className="text-gray-400">Sistema de control de acceso para eventos</p>
+            {isDemo && (
+              <div className="mt-4 p-3 bg-dorado/10 border border-dorado/30 rounded-lg">
+                <p className="text-sm text-dorado font-semibold">
+                  🎯 Solicitud de Demo
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Ingresa tus credenciales o contáctanos para una demostración personalizada
+                </p>
+              </div>
+            )}
           </div>
 
           <form className="space-y-6" onSubmit={handleSignIn}>
