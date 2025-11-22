@@ -68,7 +68,7 @@ const FinalCTA = () => {
             </Button>
 
             <Button
-              onClick={() => window.open("https://wa.me/573000000000?text=Hola,%20quiero%20información%20sobre%20Chequi", "_blank")}
+              onClick={() => window.open("https://wa.me/573204963384?text=Hola,%20estoy%20interesado%20en%20conocer%20más%20sobre%20Chequi%20para%20mis%20eventos.%20¿Podrían%20brindarme%20información?", "_blank")}
               variant="outline"
               className="border-2 border-dorado/50 text-dorado hover:bg-dorado/10 font-bold text-lg px-10 py-7 touch-manipulation group"
               size="lg"
