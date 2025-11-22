@@ -68,8 +68,8 @@ const LandingFooter = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-dorado flex-shrink-0" />
-                  <a href="tel:+573000000000" className="hover:text-dorado transition-colors">
-                    +57 300 000 0000
+                  <a href="https://wa.me/573204963384?text=Hola,%20estoy%20interesado%20en%20conocer%20más%20sobre%20Chequi%20para%20mis%20eventos.%20¿Podrían%20brindarme%20información?" target="_blank" rel="noopener noreferrer" className="hover:text-dorado transition-colors">
+                    +57 320 496 3384
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
