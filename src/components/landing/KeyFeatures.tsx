@@ -59,8 +59,8 @@ const KeyFeatures = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {features.map((feature, index) => (
             <Card 
-              key={index} 
-              className="bg-gray-900/40 border-gray-800 hover:border-dorado/30 transition-all duration-300 hover:shadow-lg hover:shadow-dorado/10 group"
+              key={index}
+              className="bg-gray-900/40 border-gray-800 hover:border-dorado/30 transition-colors duration-300 hover:shadow-lg hover:shadow-dorado/10 group"
             >
               <CardHeader>
                 <div className="w-12 h-12 md:w-14 md:h-14 rounded-lg bg-gray-800/50 flex items-center justify-center mb-4 group-hover:bg-gray-800 transition-colors">
