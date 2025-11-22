@@ -129,12 +129,12 @@ const UseCases = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 bg-gray-900/50 border border-gray-800 gap-1 mb-8">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 bg-gray-900/50 border border-gray-800 rounded-md gap-2 p-2 mb-8">
             {useCases.map((useCase) => (
               <TabsTrigger
                 key={useCase.id}
                 value={useCase.id}
-                className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
+                className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial data-[state=active]:shadow-sm min-h-[48px] px-2 sm:px-3 rounded-md transition-colors duration-200"
               >
                 <useCase.icon className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
