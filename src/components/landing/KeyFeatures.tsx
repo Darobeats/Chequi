@@ -43,7 +43,7 @@ const KeyFeatures = () => {
   ];
 
   return (
-    <section className="py-16 md:py-24 px-4 bg-gradient-to-b from-empresarial to-gray-950">
+    <section id="caracteristicas" className="py-16 md:py-24 px-4 bg-gradient-to-b from-empresarial to-gray-950">
       <div className="container mx-auto">
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">
