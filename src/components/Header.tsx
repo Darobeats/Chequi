@@ -72,7 +72,12 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                 variant="ghost"
                 size="sm"
                 className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4 hidden md:inline-flex"
-                onClick={() => document.getElementById('caracteristicas')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => {
+                  const element = document.getElementById('caracteristicas');
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
               >
                 Características
               </Button>
@@ -80,7 +85,12 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                 variant="ghost"
                 size="sm"
                 className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4 hidden md:inline-flex"
-                onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => {
+                  const element = document.getElementById('como-funciona');
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
               >
                 Cómo Funciona
               </Button>

@@ -13,8 +13,6 @@ import FinalCTA from "@/components/landing/FinalCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
 
 const Index = () => {
-  const { user } = useSupabaseAuth();
-
   return (
     <div className="min-h-screen bg-empresarial">
       <Header showLandingNav={true} />

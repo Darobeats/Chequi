@@ -1,10 +1,8 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { QrCode, Mail, MapPin, Phone } from "lucide-react";
 
 const LandingFooter = () => {
-  const navigate = useNavigate();
 
   const footerLinks = {
     producto: [

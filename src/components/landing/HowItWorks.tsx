@@ -106,7 +106,7 @@ const HowItWorks = () => {
 
                 {/* Arrow between steps (desktop only) */}
                 {index < steps.length - 1 && (
-                  <div className="hidden md:flex items-center justify-center absolute top-1/2 -translate-y-1/2" style={{ left: `${((index + 1) * 100 / 3) - 2}%` }}>
+                  <div className="hidden md:flex items-center justify-center absolute top-1/2 -translate-y-1/2 -right-4 translate-x-1/2">
                     <ArrowRight className="h-8 w-8 text-dorado/50" />
                   </div>
                 )}
