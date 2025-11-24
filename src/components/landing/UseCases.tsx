@@ -5,6 +5,28 @@ import { Building, Music, GraduationCap, Trophy, Store } from "lucide-react";
 
 const UseCases = () => {
   const [activeTab, setActiveTab] = useState("corporativos");
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const tabsRef = React.useRef<HTMLDivElement>(null);
+
+  const handleTabChange = (value: string) => {
+    setIsTransitioning(true);
+    setActiveTab(value);
+    
+    setTimeout(() => {
+      setIsTransitioning(false);
+    }, 200);
+    
+    // Prevenir scroll jump en móvil
+    if (window.innerWidth < 768 && tabsRef.current) {
+      const tabsPosition = tabsRef.current.getBoundingClientRect().top + window.pageYOffset;
+      const offset = 100; // Espacio para header
+      
+      window.scrollTo({
+        top: tabsPosition - offset,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const useCases = [
     {
@@ -115,8 +137,8 @@ const UseCases = () => {
   ];
 
   return (
-    <section className="py-16 md:py-24 px-4">
-      <div className="container mx-auto">
+    <section id="casos-de-uso" className="py-16 md:py-24 px-4 overflow-hidden scroll-mt-20">
+      <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-dorado mb-4">
@@ -128,24 +150,52 @@ const UseCases = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 bg-gray-900/50 border border-gray-800 rounded-md gap-2 p-2 mb-8">
-            {useCases.map((useCase) => (
-              <TabsTrigger
-                key={useCase.id}
-                value={useCase.id}
-                className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial data-[state=active]:shadow-sm min-h-[48px] px-2 sm:px-3 rounded-md transition-colors duration-200"
-              >
-                <useCase.icon className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
-                  {useCase.label}
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <div ref={tabsRef}>
+            <TabsList className="flex md:grid md:grid-cols-5 w-full overflow-x-auto md:overflow-x-visible scrollbar-hide bg-gray-900/50 border border-gray-800 rounded-md gap-2 p-2 mb-8 snap-x snap-mandatory md:snap-none relative">
+              {useCases.map((useCase) => (
+                <TabsTrigger
+                  key={useCase.id}
+                  value={useCase.id}
+                  className="
+                    relative
+                    flex flex-col sm:flex-row items-center justify-center 
+                    gap-1 sm:gap-2
+                    min-h-[48px] min-w-[44px]
+                    w-[140px] md:w-auto
+                    px-3 py-2
+                    rounded-md
+                    text-xs sm:text-sm font-medium
+                    text-gray-300
+                    bg-transparent
+                    border border-transparent
+                    transition-all duration-200 ease-in-out
+                    hover:bg-gray-800/50 hover:border-gray-700
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-dorado/50 focus-visible:ring-offset-0
+                    data-[state=active]:bg-dorado data-[state=active]:text-empresarial data-[state=active]:border-dorado
+                    data-[state=active]:shadow-[0_0_20px_rgba(212,175,55,0.3)]
+                    disabled:pointer-events-none disabled:opacity-50
+                    touch-manipulation
+                    select-none
+                    snap-center md:snap-none
+                    flex-shrink-0
+                  "
+                >
+                  <useCase.icon className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm leading-tight text-center sm:text-left whitespace-nowrap">
+                    {useCase.label}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           {useCases.map((useCase) => (
-            <TabsContent key={useCase.id} value={useCase.id} className="mt-0">
+            <TabsContent 
+              key={useCase.id} 
+              value={useCase.id} 
+              className="mt-0 animate-in fade-in-50 duration-200"
+            >
               <Card className="bg-gray-900/40 border-gray-800">
                 <CardContent className="p-6 md:p-8">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
