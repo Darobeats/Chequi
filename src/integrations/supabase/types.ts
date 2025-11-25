@@ -167,6 +167,74 @@ export type Database = {
           },
         ]
       }
+      cedula_registros: {
+        Row: {
+          created_at: string
+          device_info: string | null
+          event_id: string
+          fecha_expedicion: string | null
+          fecha_nacimiento: string | null
+          id: string
+          lugar_expedicion: string | null
+          nombre_completo: string | null
+          nombres: string
+          numero_cedula: string
+          primer_apellido: string
+          raw_data: string | null
+          rh: string | null
+          scanned_at: string
+          scanned_by: string | null
+          segundo_apellido: string | null
+          sexo: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_info?: string | null
+          event_id: string
+          fecha_expedicion?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          lugar_expedicion?: string | null
+          nombre_completo?: string | null
+          nombres: string
+          numero_cedula: string
+          primer_apellido: string
+          raw_data?: string | null
+          rh?: string | null
+          scanned_at?: string
+          scanned_by?: string | null
+          segundo_apellido?: string | null
+          sexo?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_info?: string | null
+          event_id?: string
+          fecha_expedicion?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          lugar_expedicion?: string | null
+          nombre_completo?: string | null
+          nombres?: string
+          numero_cedula?: string
+          primer_apellido?: string
+          raw_data?: string | null
+          rh?: string | null
+          scanned_at?: string
+          scanned_by?: string | null
+          segundo_apellido?: string | null
+          sexo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cedula_registros_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       control_types: {
         Row: {
           color: string | null
