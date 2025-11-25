@@ -135,16 +135,22 @@ export function CedulaScanner({ onScanSuccess, isActive }: CedulaScannerProps) {
             </div>
           )}
 
-          {/* Estado: Escaneando (overlay sutil) */}
+          {/* Estado: Escaneando (overlay sutil con área ampliada) */}
           {cameraReady && isScanning && (
             <div className="absolute inset-0 pointer-events-none z-10">
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="border-2 border-primary rounded-lg w-[350px] h-[180px] shadow-lg">
+                {/* Área de escaneo más amplia (85% del ancho) */}
+                <div className="border-2 border-primary rounded-lg w-[85%] max-w-[500px] aspect-[2.2/1] shadow-lg">
                   <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-primary"></div>
                   <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-primary"></div>
                   <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-primary"></div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-primary"></div>
                 </div>
+              </div>
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-background/90 px-4 py-2 rounded-lg text-xs font-medium">
+                <p className="text-center">
+                  📸 Escaneando en HD (1080p)
+                </p>
               </div>
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/90 px-4 py-2 rounded-full text-xs font-medium">
                 <span className="flex items-center gap-2">
@@ -152,7 +158,7 @@ export function CedulaScanner({ onScanSuccess, isActive }: CedulaScannerProps) {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                   </span>
-                  Escaneando código PDF417...
+                  Buscando código PDF417...
                 </span>
               </div>
             </div>
@@ -170,14 +176,16 @@ export function CedulaScanner({ onScanSuccess, isActive }: CedulaScannerProps) {
           </div>
         )}
 
-        {/* Instrucciones */}
-        <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
-          <p className="font-medium mb-2">💡 Instrucciones:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Coloca la cédula con el código PDF417 (reverso) frente a la cámara</li>
-            <li>Asegúrate de tener buena iluminación</li>
-            <li>Mantén la cédula estable dentro del área marcada</li>
-            <li>El código se leerá automáticamente</li>
+        {/* Instrucciones mejoradas */}
+        <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground space-y-3">
+          <p className="font-medium mb-2">💡 Instrucciones para mejor lectura:</p>
+          <ul className="list-disc list-inside space-y-1.5">
+            <li><strong>Reverso de la cédula:</strong> Escanea el código PDF417 (código de barras rectangular)</li>
+            <li><strong>Distancia:</strong> Mantén la cédula a 15-25 cm de la cámara</li>
+            <li><strong>Iluminación:</strong> Asegúrate de tener buena luz, evita sombras y reflejos</li>
+            <li><strong>Ángulo:</strong> Coloca la cédula plana, paralela a la cámara (sin inclinación)</li>
+            <li><strong>Estabilidad:</strong> Mantén la cédula quieta por 2-3 segundos dentro del área marcada</li>
+            <li><strong>Detección automática:</strong> El sistema usa alta resolución (1080p) para mejor precisión</li>
           </ul>
         </div>
 
