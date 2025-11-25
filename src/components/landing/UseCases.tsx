@@ -152,43 +152,15 @@ const UseCases = () => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <div ref={tabsRef}>
-            <TabsList className="grid grid-cols-3 md:grid-cols-5 w-full bg-gray-900/50 border border-gray-800 rounded-md gap-2 p-3 md:p-2 mb-8">
+            <TabsList className="grid grid-cols-3 md:grid-cols-5 w-full bg-gray-900/50 border border-gray-800 rounded-lg p-2 gap-2 mb-8">
               {useCases.map((useCase) => (
                 <TabsTrigger
                   key={useCase.id}
                   value={useCase.id}
-                  className="
-                    relative
-                    flex flex-col items-center justify-center 
-                    gap-1
-                    min-h-[56px] md:min-h-[48px]
-                    min-w-[44px]
-                    w-full
-                    px-2 md:px-3 py-2
-                    rounded-md
-                    text-[10px] sm:text-xs md:text-sm font-medium
-                    text-gray-300
-                    bg-transparent
-                    border border-transparent
-                    transition-all duration-200 ease-in-out
-                    hover:bg-gray-800/50 hover:border-gray-700
-                    focus:outline-none 
-                    focus-visible:ring-2 
-                    focus-visible:ring-dorado/50 
-                    focus-visible:ring-offset-0
-                    data-[state=active]:bg-dorado 
-                    data-[state=active]:text-empresarial 
-                    data-[state=active]:border-dorado
-                    data-[state=active]:ring-2 
-                    data-[state=active]:ring-dorado 
-                    data-[state=active]:ring-inset
-                    disabled:pointer-events-none disabled:opacity-50
-                    touch-manipulation
-                    select-none
-                  "
+                  className="flex flex-col items-center justify-center gap-1.5 min-h-[52px] md:min-h-[44px] w-full px-2 py-2 rounded-md text-gray-300 data-[state=active]:bg-dorado data-[state=active]:text-empresarial hover:bg-gray-800/50"
                 >
                   <useCase.icon className="h-5 w-5 md:h-4 md:w-4 flex-shrink-0" />
-                  <span className="text-[10px] sm:text-xs md:text-sm leading-tight text-center whitespace-nowrap">
+                  <span className="text-[10px] sm:text-xs md:text-sm leading-tight text-center">
                     {useCase.label}
                   </span>
                 </TabsTrigger>
