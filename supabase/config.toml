@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.monitor-event-activity]
 verify_jwt = true
+
+[functions.scan-cedula-ai]
+verify_jwt = true
