@@ -106,41 +106,35 @@ const Admin = () => {
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800 gap-1`}>
+          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
             <TabsTrigger 
               value="analytics" 
-              className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
+              className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
             >
-              <BarChart3 className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
-                Análisis
-              </span>
+              <BarChart3 className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">Análisis</span>
             </TabsTrigger>
             <TabsTrigger 
               value="attendees" 
-              className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
+              className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
             >
-              <Users className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
-                Asistentes
-              </span>
+              <Users className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">Asistentes</span>
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
-              className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
+              className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
             >
-              <FileText className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-              <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
-                Resumen
-              </span>
+              <FileText className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">Resumen</span>
             </TabsTrigger>
             {canAccessConfig && (
               <TabsTrigger 
                 value="config" 
-                className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-dorado data-[state=active]:text-empresarial min-h-[48px] px-2 sm:px-3"
+                className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
               >
-                <Settings className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="text-xs sm:text-sm leading-tight text-center sm:text-left">
+                <Settings className="h-4 w-4 flex-shrink-0" />
+                <span className="text-xs sm:text-sm">
                   <span className="hidden sm:inline">Configuración</span>
                   <span className="sm:hidden">Config</span>
                 </span>
