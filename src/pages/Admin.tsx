@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -8,14 +8,18 @@ import AttendeesManager from '@/components/AttendeesManager';
 import ControlAnalytics from '@/components/ControlAnalytics';
 import ExportButton from '@/components/ExportButton';
 import EventConfig from '@/components/EventConfig';
+import ScannerSetup from '@/components/scanner/ScannerSetup';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
-import { BarChart3, Users, FileText, Settings, UserPlus } from 'lucide-react';
+import { BarChart3, Users, FileText, Settings, UserPlus, ClipboardCheck } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading } = useSupabaseAuth();
   const { isAdmin, isControl, canAccessAdmin, canAccessConfig, canModifyData, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
   
   const { data: attendees = [] } = useAttendees();
   const { data: controlUsage = [] } = useControlUsage();
@@ -72,8 +76,24 @@ const Admin = () => {
       <Header title="ADMIN DASHBOARD" />
       
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+        <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-dorado">Panel de Control</h1>
+          {isAdmin && (
+            <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Verificación Pre-Evento
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Verificación del Sistema</DialogTitle>
+                </DialogHeader>
+                <ScannerSetup onSetupComplete={() => setShowSetupDialog(false)} />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
         
         {/* Main Statistics */}

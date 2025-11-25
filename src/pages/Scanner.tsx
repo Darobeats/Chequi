@@ -1,13 +1,9 @@
 import React, { useState } from "react";
 import Header from "@/components/Header";
 import QRScanner from "@/components/QRScanner";
-import ScannerSetup from "@/components/scanner/ScannerSetup";
-import LiveScanMonitor from "@/components/scanner/LiveScanMonitor";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Scanner = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
-  const [setupComplete, setSetupComplete] = useState(false);
 
   return (
     <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation">
@@ -15,36 +11,17 @@ const Scanner = () => {
 
       <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto">
         <div className="w-full max-w-4xl space-y-4">
-          {!setupComplete ? (
-            <div className="max-w-2xl mx-auto">
-              <ScannerSetup onSetupComplete={() => setSetupComplete(true)} />
+          <div className="max-w-lg mx-auto p-4 md:p-8 space-y-4 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
+            <div className="text-center mb-4">
+              <h1 className="text-xl md:text-2xl font-bold text-dorado mb-2">Escáner QR de Acceso</h1>
+              <p className="text-sm md:text-base text-gray-400">Escanee el código QR del asistente</p>
             </div>
-          ) : (
-            <Tabs defaultValue="scanner" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="scanner">Escaneo</TabsTrigger>
-                <TabsTrigger value="monitor">Monitoreo</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="scanner">
-                <div className="max-w-lg mx-auto p-4 md:p-8 space-y-4 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
-                  <div className="text-center mb-4">
-                    <h1 className="text-xl md:text-2xl font-bold text-dorado mb-2">Escáner QR de Acceso</h1>
-                    <p className="text-sm md:text-base text-gray-400">Escanee el código QR del asistente</p>
-                  </div>
 
-                  <QRScanner 
-                    selectedEventId={selectedEventId}
-                    onEventChange={setSelectedEventId}
-                  />
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="monitor">
-                <LiveScanMonitor />
-              </TabsContent>
-            </Tabs>
-          )}
+            <QRScanner 
+              selectedEventId={selectedEventId}
+              onEventChange={setSelectedEventId}
+            />
+          </div>
         </div>
       </main>
 

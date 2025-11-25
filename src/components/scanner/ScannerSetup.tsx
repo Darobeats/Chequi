@@ -43,6 +43,7 @@ const ScannerSetup: React.FC<ScannerSetupProps> = ({ onSetupComplete }) => {
 
   const [isRunning, setIsRunning] = useState(false);
   const [canProceed, setCanProceed] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
 
   const updateCheck = (id: string, updates: Partial<SetupCheck>) => {
     setChecks(prev => prev.map(check => 
@@ -53,6 +54,7 @@ const ScannerSetup: React.FC<ScannerSetupProps> = ({ onSetupComplete }) => {
   const runChecks = async () => {
     setIsRunning(true);
     setCanProceed(false);
+    setHasRun(true);
 
     // Check 1: Event configured
     updateCheck('event', { status: 'checking' });
@@ -141,13 +143,6 @@ const ScannerSetup: React.FC<ScannerSetupProps> = ({ onSetupComplete }) => {
     setIsRunning(false);
   };
 
-  // Auto-run checks on mount
-  useEffect(() => {
-    if (!loadingEvent && !loadingControls) {
-      runChecks();
-    }
-  }, [loadingEvent, loadingControls]);
-
   // Check if all critical tests passed
   useEffect(() => {
     const allPassed = checks.every(check => check.status === 'success');
@@ -176,7 +171,15 @@ const ScannerSetup: React.FC<ScannerSetupProps> = ({ onSetupComplete }) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!canProceed && !isRunning && (
+        {!hasRun && (
+          <Alert>
+            <AlertDescription>
+              Presione el botón "Iniciar Verificación" para comenzar las pruebas del sistema
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {hasRun && !canProceed && !isRunning && (
           <Alert variant="destructive">
             <AlertDescription>
               ⚠️ <strong>NO INICIE EL EVENTO</strong> hasta que todas las verificaciones estén en verde
@@ -219,7 +222,7 @@ const ScannerSetup: React.FC<ScannerSetupProps> = ({ onSetupComplete }) => {
           <Button 
             onClick={runChecks} 
             disabled={isRunning}
-            variant="outline"
+            variant={hasRun ? "outline" : "default"}
             className="flex-1"
           >
             {isRunning ? (
@@ -227,18 +230,22 @@ const ScannerSetup: React.FC<ScannerSetupProps> = ({ onSetupComplete }) => {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Verificando...
               </>
-            ) : (
+            ) : hasRun ? (
               'Verificar Nuevamente'
+            ) : (
+              'Iniciar Verificación'
             )}
           </Button>
           
-          <Button 
-            onClick={onSetupComplete}
-            disabled={!canProceed || isRunning}
-            className="flex-1"
-          >
-            Iniciar Escaneo
-          </Button>
+          {hasRun && (
+            <Button 
+              onClick={onSetupComplete}
+              disabled={!canProceed || isRunning}
+              className="flex-1"
+            >
+              {canProceed ? 'Continuar' : 'Esperando Verificación'}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

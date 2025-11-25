@@ -167,13 +167,16 @@ serve(async (req) => {
       throw new Error(safeMessage);
     }
 
-    // Insert role in user_roles table (separated for security)
+    // Upsert role in user_roles table (handle new_user trigger that creates 'attendee' role)
     const { error: roleError } = await supabaseClient
       .from('user_roles')
-      .insert({ 
+      .upsert({ 
         user_id: newUser.user.id, 
         role,
         granted_by: authUser.user.id
+      }, {
+        onConflict: 'user_id',
+        ignoreDuplicates: false
       })
 
     if (roleError) {
