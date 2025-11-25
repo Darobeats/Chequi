@@ -98,31 +98,14 @@ export const useUserManagement = () => {
           if (profileError) throw profileError;
         }
 
-        // Update role in user_roles table if role is being changed
+        // Update role using edge function (bypasses RLS with service_role_key)
         if (role) {
-          // First, check if user already has a role entry
-          const { data: existingRole } = await supabase
-            .from('user_roles')
-            .select('id')
-            .eq('user_id', userId)
-            .maybeSingle();
+          const { data, error } = await supabase.functions.invoke('update-user-role', {
+            body: { userId, role }
+          });
 
-          if (existingRole) {
-            // Update existing role
-            const { error: roleError } = await supabase
-              .from('user_roles')
-              .update({ role })
-              .eq('user_id', userId);
-
-            if (roleError) throw roleError;
-          } else {
-            // Insert new role
-            const { error: roleError } = await supabase
-              .from('user_roles')
-              .insert({ user_id: userId, role });
-
-            if (roleError) throw roleError;
-          }
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
         }
 
         return updates;
