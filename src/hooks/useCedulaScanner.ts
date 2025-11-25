@@ -57,9 +57,13 @@ export function useCedulaScanner() {
       const selectedCamera = backCamera || cameras[cameras.length - 1]; // Última cámara suele ser la trasera
       console.log('📸 Cámara seleccionada:', selectedCamera.label);
       
-      // Crear instancia del escáner
+      // Crear instancia del escáner con múltiples formatos de código
       const scanner = new Html5Qrcode(elementId, {
-        formatsToSupport: [Html5QrcodeSupportedFormats.PDF_417],
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.PDF_417,
+          Html5QrcodeSupportedFormats.AZTEC,
+          Html5QrcodeSupportedFormats.DATA_MATRIX
+        ],
         verbose: false,
         useBarCodeDetectorIfSupported: true // Usar API nativa si está disponible
       });
@@ -68,10 +72,21 @@ export function useCedulaScanner() {
       
       // Configuración optimizada para PDF417 de cédulas colombianas
       const config = {
-        fps: 10,
-        qrbox: { width: 350, height: 180 }, // Aumentado para mejor captura
-        aspectRatio: 1.94, // Ratio típico de PDF417 en cédulas
-        disableFlip: false // Permitir escaneo en ambas direcciones
+        fps: 15, // Aumentado para mejor tasa de detección
+        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+          // Área de escaneo dinámica: 85% del ancho con ratio PDF417
+          const width = Math.floor(viewfinderWidth * 0.85);
+          const height = Math.floor(width * 0.45); // Ratio óptimo para PDF417
+          return { width, height };
+        },
+        aspectRatio: 1.7778, // 16:9 para mejor cobertura de la imagen
+        disableFlip: false, // Permitir escaneo en ambas direcciones
+        videoConstraints: {
+          width: { min: 1280, ideal: 1920, max: 2560 },
+          height: { min: 720, ideal: 1080, max: 1440 },
+          facingMode: { ideal: 'environment' },
+          focusMode: { ideal: 'continuous' }
+        }
       };
       
       console.log('⚙️ Configuración del escáner:', config);
@@ -117,8 +132,12 @@ export function useCedulaScanner() {
           }
         },
         (errorMessage) => {
-          // Errores de escaneo (normales cuando no hay código en el frame)
-          // No los mostramos para no saturar la consola
+          // Solo loguear errores significativos, no los de "No QR code found"
+          if (errorMessage && 
+              !errorMessage.includes('No MultiFormat Readers') &&
+              !errorMessage.includes('NotFoundException')) {
+            console.log('🔍 Intento de escaneo:', errorMessage.substring(0, 100));
+          }
         }
       );
       
