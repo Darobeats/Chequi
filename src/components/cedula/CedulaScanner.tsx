@@ -55,8 +55,8 @@ export function CedulaScanner({ onScanSuccess, isActive }: CedulaScannerProps) {
         if (!granted) return;
       }
       
+      // Solo cambiar el estado, el useEffect se encarga de iniciar el escáner
       setHasStarted(true);
-      await startScanning(scannerId, onScanSuccess);
     }
   };
 
@@ -71,13 +71,18 @@ export function CedulaScanner({ onScanSuccess, isActive }: CedulaScannerProps) {
           <h3 className="text-lg font-semibold">Escanear Cédula</h3>
         </div>
 
-        <div 
-          id={scannerId} 
-          className="relative w-full rounded-lg overflow-hidden bg-muted min-h-[300px] flex items-center justify-center"
-        >
+        {/* Contenedor del escáner con estructura separada */}
+        <div className="relative w-full max-w-2xl mx-auto">
+          {/* Contenedor LIMPIO para html5-qrcode - SIN overlays dentro */}
+          <div 
+            id={scannerId}
+            className="w-full rounded-lg overflow-hidden bg-black min-h-[300px]"
+          />
+          
+          {/* Overlays como hermanos del contenedor de video - NO dentro */}
           {/* Estado: Sin permisos */}
           {needsPermission && !hasStarted && (
-            <div className="absolute inset-0 flex items-center justify-center p-8 bg-muted z-10">
+            <div className="absolute inset-0 flex items-center justify-center p-8 bg-muted z-10 rounded-lg">
               <div className="text-center space-y-4">
                 <Camera className="h-16 w-16 mx-auto text-muted-foreground" />
                 <div>
@@ -109,7 +114,7 @@ export function CedulaScanner({ onScanSuccess, isActive }: CedulaScannerProps) {
 
           {/* Estado: Inicializando cámara */}
           {isInitializing && (
-            <div className="absolute inset-0 flex items-center justify-center bg-muted/90 z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-muted/90 z-10 rounded-lg">
               <div className="text-center space-y-3">
                 <Loader2 className="h-12 w-12 mx-auto text-primary animate-spin" />
                 <p className="text-sm font-medium">Iniciando cámara...</p>
@@ -120,7 +125,7 @@ export function CedulaScanner({ onScanSuccess, isActive }: CedulaScannerProps) {
 
           {/* Estado: Sin iniciar */}
           {!hasStarted && !isInitializing && permissionStatus === 'granted' && (
-            <div className="absolute inset-0 flex items-center justify-center p-8 bg-muted z-10">
+            <div className="absolute inset-0 flex items-center justify-center p-8 bg-muted z-10 rounded-lg">
               <div className="text-center">
                 <Camera className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-muted-foreground">
