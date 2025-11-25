@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CedulaScanner } from '@/components/cedula/CedulaScanner';
-import { CedulaScanResult } from '@/components/cedula/CedulaScanResult';
+import { CedulaConfirmation } from '@/components/cedula/CedulaConfirmation';
 import { CedulaRegistrosList } from '@/components/cedula/CedulaRegistrosList';
 import { CedulaExportButton } from '@/components/cedula/CedulaExportButton';
 import { useCedulaRegistros, useCreateCedulaRegistro, useCedulaStats } from '@/hooks/useCedulaRegistros';
@@ -29,21 +29,21 @@ export default function CedulaRegistro() {
     setPendingScan(data);
   };
 
-  const handleConfirmScan = async () => {
-    if (!pendingScan || !selectedEventId) return;
+  const handleConfirmScan = async (data: CedulaData) => {
+    if (!selectedEventId) return;
 
     const registro: InsertCedulaRegistro = {
       event_id: selectedEventId,
-      numero_cedula: pendingScan.numeroCedula,
-      primer_apellido: pendingScan.primerApellido,
-      segundo_apellido: pendingScan.segundoApellido,
-      nombres: pendingScan.nombres,
-      fecha_nacimiento: pendingScan.fechaNacimiento || undefined,
-      sexo: pendingScan.sexo || undefined,
-      rh: pendingScan.rh || undefined,
-      lugar_expedicion: pendingScan.lugarExpedicion || undefined,
-      fecha_expedicion: pendingScan.fechaExpedicion || undefined,
-      raw_data: pendingScan.rawData,
+      numero_cedula: data.numeroCedula,
+      primer_apellido: data.primerApellido,
+      segundo_apellido: data.segundoApellido,
+      nombres: data.nombres,
+      fecha_nacimiento: data.fechaNacimiento || undefined,
+      sexo: data.sexo || undefined,
+      rh: data.rh || undefined,
+      lugar_expedicion: data.lugarExpedicion || undefined,
+      fecha_expedicion: data.fechaExpedicion || undefined,
+      raw_data: data.rawData,
       scanned_by: user?.id,
       device_info: navigator.userAgent,
     };
@@ -76,7 +76,7 @@ export default function CedulaRegistro() {
             <h1 className="text-3xl font-bold">Registro de Cédulas</h1>
           </div>
           <p className="text-muted-foreground">
-            Escanea cédulas colombianas usando el código PDF417
+            Captura cédulas colombianas con IA para registro automático
           </p>
         </div>
 
@@ -135,7 +135,7 @@ export default function CedulaRegistro() {
           {/* Scanner */}
           <div>
             {pendingScan ? (
-              <CedulaScanResult
+              <CedulaConfirmation
                 data={pendingScan}
                 onConfirm={handleConfirmScan}
                 onCancel={handleCancelScan}
