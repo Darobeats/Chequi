@@ -18,6 +18,19 @@ export function useCedulaScanner() {
     onSuccess: (data: CedulaData) => void
   ) => {
     try {
+      // Verificar si ya hay una instancia activa
+      if (scannerRef.current) {
+        console.log('⚠️ Escáner ya activo, deteniendo primero...');
+        await stopScanning();
+      }
+      
+      // Limpiar el contenedor antes de inicializar
+      const container = document.getElementById(elementId);
+      if (!container) {
+        throw new Error(`No se encontró el elemento con ID: ${elementId}`);
+      }
+      container.innerHTML = ''; // Limpiar cualquier contenido previo
+      
       setError(null);
       setIsInitializing(true);
       setCameraReady(false);
