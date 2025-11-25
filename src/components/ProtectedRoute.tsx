@@ -19,7 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo = '/auth'
 }) => {
   const { user, loading } = useSupabaseAuth();
-  const { hasRole, isControl, loading: roleLoading } = useUserRole();
+  const { hasRole, isControl, isAdmin, isScanner, role, loading: roleLoading } = useUserRole();
 
   if (loading || roleLoading) {
     return (
@@ -34,8 +34,27 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (requiredRole) {
-    // Control tiene acceso al dashboard en modo lectura
-    const allowed = hasRole(requiredRole) || (requiredRole === 'admin' && isControl);
+    // Jerarquía de roles: admin > control > scanner > attendee
+    // admin puede acceder a todo
+    // control puede acceder a rutas de control y scanner
+    // scanner solo puede acceder a rutas de scanner
+    
+    let allowed = false;
+    
+    if (isAdmin) {
+      // Admin tiene acceso a todo
+      allowed = true;
+    } else if (isControl) {
+      // Control puede acceder a rutas de control y scanner
+      allowed = requiredRole === 'control' || requiredRole === 'scanner';
+    } else if (isScanner) {
+      // Scanner solo puede acceder a rutas de scanner
+      allowed = requiredRole === 'scanner';
+    } else {
+      // Otros roles solo tienen acceso si coincide exactamente
+      allowed = hasRole(requiredRole);
+    }
+    
     if (!allowed) {
       // Redirect based on user role
       return <Navigate to="/dashboard" replace />;
