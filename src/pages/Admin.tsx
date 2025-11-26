@@ -9,11 +9,12 @@ import ControlAnalytics from '@/components/ControlAnalytics';
 import ExportButton from '@/components/ExportButton';
 import EventConfig from '@/components/EventConfig';
 import ScannerSetup from '@/components/scanner/ScannerSetup';
+import { CedulaDashboardMonitor } from '@/components/cedula/CedulaDashboardMonitor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
-import { BarChart3, Users, FileText, Settings, UserPlus, ClipboardCheck } from 'lucide-react';
+import { BarChart3, Users, FileText, Settings, UserPlus, ClipboardCheck, IdCard } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading } = useSupabaseAuth();
@@ -126,7 +127,7 @@ const Admin = () => {
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
+          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-5' : 'grid-cols-4'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
             <TabsTrigger 
               value="analytics" 
               className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
@@ -140,6 +141,13 @@ const Admin = () => {
             >
               <Users className="h-4 w-4 flex-shrink-0" />
               <span className="text-xs sm:text-sm">Asistentes</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="cedulas" 
+              className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
+            >
+              <IdCard className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">Cédulas</span>
             </TabsTrigger>
             <TabsTrigger 
               value="summary" 
@@ -173,6 +181,9 @@ const Admin = () => {
             </div>
           </TabsContent>
 
+          <TabsContent value="cedulas" className="space-y-6">
+            <CedulaDashboardMonitor />
+          </TabsContent>
 
           <TabsContent value="summary" className="space-y-6">
             {/* Control Types Usage */}
