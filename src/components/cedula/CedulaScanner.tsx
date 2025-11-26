@@ -33,11 +33,19 @@ export const CedulaScanner = ({ onScanSuccess, isActive }: CedulaScannerProps) =
   // Iniciar cámara
   const startCamera = async () => {
     try {
+      console.log('🎥 Iniciando cámara...');
+      
       if (permissionStatus !== 'granted') {
+        console.log('🔐 Solicitando permisos...');
         const granted = await requestCameraPermission();
-        if (!granted) return;
+        if (!granted) {
+          console.log('❌ Permisos denegados');
+          return;
+        }
+        console.log('✅ Permisos concedidos');
       }
 
+      console.log('📹 Solicitando stream de cámara...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment',
@@ -46,13 +54,24 @@ export const CedulaScanner = ({ onScanSuccess, isActive }: CedulaScannerProps) =
         }
       });
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsCameraActive(true);
-      }
+      console.log('🎥 Stream obtenido:', stream.active);
+      streamRef.current = stream;
+      
+      // Primero actualizar el estado para renderizar el video visible
+      setIsCameraActive(true);
+      
+      // Luego asignar el stream después de que React actualice el DOM
+      requestAnimationFrame(() => {
+        console.log('🎥 Video ref disponible:', !!videoRef.current);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          console.log('✅ Stream asignado al video');
+        } else {
+          console.error('❌ Video ref no está disponible');
+        }
+      });
     } catch (error) {
-      console.error('Error al iniciar cámara:', error);
+      console.error('❌ Error al iniciar cámara:', error);
     }
   };
 
@@ -129,7 +148,7 @@ export const CedulaScanner = ({ onScanSuccess, isActive }: CedulaScannerProps) =
         {/* Área de video/foto */}
         <div className="relative w-full aspect-video bg-muted rounded-lg overflow-hidden">
           {needsPermission && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-background/95">
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-background/95 z-10">
               <CameraOff className="h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-sm text-muted-foreground mb-4">
                 Se requieren permisos de cámara para capturar la cédula
@@ -137,17 +156,16 @@ export const CedulaScanner = ({ onScanSuccess, isActive }: CedulaScannerProps) =
             </div>
           )}
 
-          {/* Video en vivo */}
-          {isCameraActive && !capturedImage && (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
-          )}
+          {/* Video SIEMPRE en el DOM, visible solo cuando está activo */}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`w-full h-full object-cover ${(!isCameraActive || capturedImage) ? 'hidden' : ''}`}
+          />
 
-          {/* Foto capturada */}
+          {/* Foto capturada superpuesta */}
           {capturedImage && (
             <img
               src={capturedImage}
