@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro } from '@/hooks/useCedulaRegistros';
 import { useActiveEventConfig } from '@/hooks/useEventConfig';
+import { useUserRole } from '@/hooks/useUserRole';
 import { CedulaExportButton } from './CedulaExportButton';
 import { IdCard, TrendingUp, Clock, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -14,6 +15,7 @@ export function CedulaDashboardMonitor() {
   const { data: activeEvent } = useActiveEventConfig();
   const { data: registros = [], isLoading } = useCedulaRegistros(activeEvent?.id || null);
   const { data: stats } = useCedulaStats(activeEvent?.id || null);
+  const { isAdmin } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -101,13 +103,13 @@ export function CedulaDashboardMonitor() {
                 <TableHead className="text-dorado">Cédula</TableHead>
                 <TableHead className="text-dorado">Nombre Completo</TableHead>
                 <TableHead className="text-dorado">Hora de Registro</TableHead>
-                <TableHead className="text-dorado w-16">Acciones</TableHead>
+                {isAdmin && <TableHead className="text-dorado w-16">Acciones</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {registros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-hueso/60 py-8">
+                  <TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-hueso/60 py-8">
                     No hay registros de cédulas aún
                   </TableCell>
                 </TableRow>
@@ -119,41 +121,43 @@ export function CedulaDashboardMonitor() {
                     <TableCell className="text-hueso">
                       {format(new Date(registro.scanned_at), "dd/MM/yyyy HH:mm", { locale: es })}
                     </TableCell>
-                    <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                            disabled={deletingId === registro.id}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-empresarial border-gray-800">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-dorado">Eliminar Registro</AlertDialogTitle>
-                            <AlertDialogDescription className="text-hueso/80">
-                              ¿Estás seguro de eliminar el registro de <span className="font-semibold text-hueso">{registro.nombre_completo}</span> (Cédula: {registro.numero_cedula})?
-                              <br /><br />
-                              Esta acción no se puede deshacer.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel className="border-gray-700 text-hueso hover:bg-gray-800">
-                              Cancelar
-                            </AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDelete(registro.id)}
-                              className="bg-red-600 hover:bg-red-700 text-white"
+                    {isAdmin && (
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                              disabled={deletingId === registro.id}
                             >
-                              Eliminar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-empresarial border-gray-800">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-dorado">Eliminar Registro</AlertDialogTitle>
+                              <AlertDialogDescription className="text-hueso/80">
+                                ¿Estás seguro de eliminar el registro de <span className="font-semibold text-hueso">{registro.nombre_completo}</span> (Cédula: {registro.numero_cedula})?
+                                <br /><br />
+                                Esta acción no se puede deshacer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel className="border-gray-700 text-hueso hover:bg-gray-800">
+                                Cancelar
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDelete(registro.id)}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                Eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
