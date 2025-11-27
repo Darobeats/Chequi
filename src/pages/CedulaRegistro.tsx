@@ -14,6 +14,25 @@ import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
 import type { CedulaData, InsertCedulaRegistro } from '@/types/cedula';
 import { ArrowLeft, IdCard, TrendingUp } from 'lucide-react';
 
+// Convierte DD/MM/YYYY a YYYY-MM-DD (formato ISO para PostgreSQL)
+const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
+  if (!dateStr) return undefined;
+  
+  // Intentar parsear DD/MM/YYYY
+  const ddmmyyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyy) {
+    const [, day, month, year] = ddmmyyyy;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  
+  // Si ya está en formato ISO, retornar como está
+  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return dateStr;
+  
+  // Si no se puede parsear, no enviar fecha
+  console.warn('Formato de fecha no reconocido:', dateStr);
+  return undefined;
+};
+
 export default function CedulaRegistro() {
   const navigate = useNavigate();
   const { user } = useSupabaseAuth();
@@ -44,11 +63,11 @@ export default function CedulaRegistro() {
       primer_apellido: data.primerApellido,
       segundo_apellido: data.segundoApellido,
       nombres: data.nombres,
-      fecha_nacimiento: data.fechaNacimiento || undefined,
+      fecha_nacimiento: convertDateToISO(data.fechaNacimiento),
       sexo: data.sexo || undefined,
       rh: data.rh || undefined,
       lugar_expedicion: data.lugarExpedicion || undefined,
-      fecha_expedicion: data.fechaExpedicion || undefined,
+      fecha_expedicion: convertDateToISO(data.fechaExpedicion),
       raw_data: data.rawData,
       scanned_by: user?.id,
       device_info: navigator.userAgent,
