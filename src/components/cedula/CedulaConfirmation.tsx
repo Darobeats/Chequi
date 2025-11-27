@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, XCircle, User } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle2, XCircle, User, AlertTriangle } from 'lucide-react';
 import type { CedulaData } from '@/types/cedula';
 
 interface CedulaConfirmationProps {
@@ -11,13 +12,15 @@ interface CedulaConfirmationProps {
   onConfirm: (data: CedulaData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  isDuplicate?: boolean;
 }
 
 export const CedulaConfirmation = ({ 
   data, 
   onConfirm, 
   onCancel,
-  isLoading = false 
+  isLoading = false,
+  isDuplicate = false
 }: CedulaConfirmationProps) => {
   const [editedData, setEditedData] = useState<CedulaData>(data);
 
@@ -40,6 +43,16 @@ export const CedulaConfirmation = ({
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {/* Alerta de duplicado */}
+        {isDuplicate && (
+          <Alert variant="destructive" className="border-amber-500 bg-amber-500/10">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <AlertDescription className="text-amber-500 font-medium">
+              Esta cédula ya fue registrada anteriormente. Si confirmas, se actualizará el registro existente.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Número de Cédula */}
         <div className="space-y-2">
           <Label htmlFor="numero_cedula">Número de Cédula *</Label>
@@ -104,9 +117,10 @@ export const CedulaConfirmation = ({
             onClick={handleConfirm}
             disabled={isLoading || !editedData.numeroCedula || !editedData.nombres || !editedData.primerApellido}
             className="flex-1"
+            variant={isDuplicate ? "secondary" : "default"}
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
-            {isLoading ? 'Registrando...' : 'Confirmar y Registrar'}
+            {isLoading ? 'Registrando...' : isDuplicate ? 'Actualizar Registro' : 'Confirmar y Registrar'}
           </Button>
           <Button
             onClick={onCancel}
