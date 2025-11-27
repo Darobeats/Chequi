@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro } from '@/hooks/useCedulaRegistros';
 import { useActiveEventConfig } from '@/hooks/useEventConfig';
 import { useUserRole } from '@/hooks/useUserRole';
 import { CedulaExportButton } from './CedulaExportButton';
-import { IdCard, TrendingUp, Clock, Trash2 } from 'lucide-react';
+import { CedulaManualRegistro } from './CedulaManualRegistro';
+import { IdCard, TrendingUp, Clock, Trash2, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -18,6 +20,16 @@ export function CedulaDashboardMonitor() {
   const { isAdmin } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Filtrar registros por búsqueda de cédula
+  const filteredRegistros = useMemo(() => {
+    if (!searchTerm.trim()) return registros;
+    return registros.filter(r => 
+      r.numero_cedula.includes(searchTerm.trim()) ||
+      r.nombre_completo?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [registros, searchTerm]);
 
   const handleDelete = async (id: string) => {
     if (!activeEvent?.id) return;
@@ -85,15 +97,36 @@ export function CedulaDashboardMonitor() {
 
       {/* Tabla de Registros */}
       <Card className="p-6 bg-gray-900/50 border-gray-800">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <h3 className="text-xl font-semibold text-dorado flex items-center gap-2">
             <IdCard className="h-5 w-5" />
             Registros de Cédulas
           </h3>
-          <CedulaExportButton 
-            registros={registros} 
-            eventName={activeEvent?.event_name || 'Evento'}
-          />
+          
+          <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+            {/* Buscador */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-hueso/40" />
+              <Input
+                type="text"
+                placeholder="Buscar por cédula o nombre..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 w-full sm:w-64 bg-gray-900/50 border-gray-700 text-hueso placeholder:text-hueso/40"
+              />
+            </div>
+            
+            {/* Botones de acción */}
+            <div className="flex gap-2">
+              {activeEvent?.id && (
+                <CedulaManualRegistro eventId={activeEvent.id} />
+              )}
+              <CedulaExportButton 
+                registros={filteredRegistros} 
+                eventName={activeEvent?.event_name || 'Evento'}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="border border-gray-800 rounded-lg overflow-hidden">
@@ -107,14 +140,14 @@ export function CedulaDashboardMonitor() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {registros.length === 0 ? (
+              {filteredRegistros.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-hueso/60 py-8">
-                    No hay registros de cédulas aún
+                    {searchTerm ? 'No se encontraron registros con esa búsqueda' : 'No hay registros de cédulas aún'}
                   </TableCell>
                 </TableRow>
               ) : (
-                registros.map((registro) => (
+                filteredRegistros.map((registro) => (
                   <TableRow key={registro.id} className="hover:bg-gray-900/30">
                     <TableCell className="font-mono text-hueso">{registro.numero_cedula}</TableCell>
                     <TableCell className="font-medium text-hueso">{registro.nombre_completo}</TableCell>
