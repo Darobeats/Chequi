@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card } from '@/components/ui/card';
@@ -24,6 +24,12 @@ export default function CedulaRegistro() {
   const { data: registros = [], isLoading } = useCedulaRegistros(selectedEventId);
   const { data: stats } = useCedulaStats(selectedEventId);
   const createMutation = useCreateCedulaRegistro();
+
+  // Verificar si la cédula pendiente ya está registrada
+  const isDuplicate = useMemo(() => {
+    if (!pendingScan?.numeroCedula || registros.length === 0) return false;
+    return registros.some(r => r.numero_cedula === pendingScan.numeroCedula);
+  }, [pendingScan?.numeroCedula, registros]);
 
   const handleScanSuccess = (data: CedulaData) => {
     setPendingScan(data);
@@ -140,6 +146,7 @@ export default function CedulaRegistro() {
                 onConfirm={handleConfirmScan}
                 onCancel={handleCancelScan}
                 isLoading={createMutation.isPending}
+                isDuplicate={isDuplicate}
               />
             ) : (
               <CedulaScanner

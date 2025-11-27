@@ -48,6 +48,53 @@ export function useCreateCedulaRegistro() {
   });
 }
 
+export function useDeleteCedulaRegistro() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, eventId }: { id: string; eventId: string }) => {
+      const { error } = await supabase
+        .from('cedula_registros')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      return { id, eventId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['cedula_registros', data.eventId] 
+      });
+      toast.success('Registro eliminado correctamente');
+    },
+    onError: (error: any) => {
+      toast.error('Error al eliminar: ' + error.message);
+    }
+  });
+}
+
+export function useCheckCedulaDuplicate(eventId: string | null) {
+  const queryClient = useQueryClient();
+  
+  return async (numeroCedula: string): Promise<boolean> => {
+    if (!eventId || !numeroCedula) return false;
+    
+    const registros = queryClient.getQueryData<any[]>(['cedula_registros', eventId]);
+    if (registros) {
+      return registros.some(r => r.numero_cedula === numeroCedula);
+    }
+    
+    const { data } = await supabase
+      .from('cedula_registros')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('numero_cedula', numeroCedula)
+      .maybeSingle();
+    
+    return !!data;
+  };
+}
+
 export function useCedulaStats(eventId: string | null) {
   return useQuery({
     queryKey: ['cedula_stats', eventId],
