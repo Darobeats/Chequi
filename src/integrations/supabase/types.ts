@@ -167,6 +167,50 @@ export type Database = {
           },
         ]
       }
+      cedula_access_logs: {
+        Row: {
+          access_result: string
+          created_at: string | null
+          denial_reason: string | null
+          device_info: string | null
+          event_id: string
+          id: string
+          nombre_detectado: string | null
+          numero_cedula: string
+          scanned_by: string | null
+        }
+        Insert: {
+          access_result: string
+          created_at?: string | null
+          denial_reason?: string | null
+          device_info?: string | null
+          event_id: string
+          id?: string
+          nombre_detectado?: string | null
+          numero_cedula: string
+          scanned_by?: string | null
+        }
+        Update: {
+          access_result?: string
+          created_at?: string | null
+          denial_reason?: string | null
+          device_info?: string | null
+          event_id?: string
+          id?: string
+          nombre_detectado?: string | null
+          numero_cedula?: string
+          scanned_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cedula_access_logs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cedula_registros: {
         Row: {
           created_at: string
@@ -228,6 +272,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "cedula_registros_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cedulas_autorizadas: {
+        Row: {
+          categoria: string | null
+          created_at: string | null
+          created_by: string | null
+          empresa: string | null
+          event_id: string
+          id: string
+          nombre_completo: string | null
+          notas: string | null
+          numero_cedula: string
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          empresa?: string | null
+          event_id: string
+          id?: string
+          nombre_completo?: string | null
+          notas?: string | null
+          numero_cedula: string
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          empresa?: string | null
+          event_id?: string
+          id?: string
+          nombre_completo?: string | null
+          notas?: string | null
+          numero_cedula?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cedulas_autorizadas_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "event_configs"
@@ -345,6 +433,7 @@ export type Database = {
           is_active: boolean | null
           logo_url: string | null
           primary_color: string | null
+          require_whitelist: boolean | null
           secondary_color: string | null
           updated_at: string
         }
@@ -360,6 +449,7 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           primary_color?: string | null
+          require_whitelist?: boolean | null
           secondary_color?: string | null
           updated_at?: string
         }
@@ -375,6 +465,7 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           primary_color?: string | null
+          require_whitelist?: boolean | null
           secondary_color?: string | null
           updated_at?: string
         }

@@ -10,9 +10,12 @@ import { CedulaRegistrosList } from '@/components/cedula/CedulaRegistrosList';
 import { CedulaExportButton } from '@/components/cedula/CedulaExportButton';
 import { useCedulaRegistros, useCreateCedulaRegistro, useCedulaStats } from '@/hooks/useCedulaRegistros';
 import { useActiveEventConfig } from '@/hooks/useEventConfig';
+import { useEventWhitelistConfig } from '@/hooks/useEventWhitelistConfig';
+import { useCheckCedulaAuthorization, useCreateAccessLog } from '@/hooks/useCedulasAutorizadas';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
-import type { CedulaData, InsertCedulaRegistro } from '@/types/cedula';
-import { ArrowLeft, IdCard, TrendingUp } from 'lucide-react';
+import type { CedulaData, InsertCedulaRegistro, CedulaAutorizada } from '@/types/cedula';
+import { ArrowLeft, IdCard, TrendingUp, ShieldCheck } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // Convierte DD/MM/YYYY a YYYY-MM-DD (formato ISO para PostgreSQL)
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
@@ -37,12 +40,18 @@ export default function CedulaRegistro() {
   const navigate = useNavigate();
   const { user } = useSupabaseAuth();
   const { data: activeEvent } = useActiveEventConfig();
+  const { data: whitelistConfig } = useEventWhitelistConfig();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(activeEvent?.id || null);
   const [pendingScan, setPendingScan] = useState<CedulaData | null>(null);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [autorizadaData, setAutorizadaData] = useState<CedulaAutorizada | null>(null);
 
-  const { data: registros = [], isLoading } = useCedulaRegistros(selectedEventId);
-  const { data: stats } = useCedulaStats(selectedEventId);
+  const eventId = selectedEventId || activeEvent?.id || null;
+  const { data: registros = [], isLoading } = useCedulaRegistros(eventId);
+  const { data: stats } = useCedulaStats(eventId);
   const createMutation = useCreateCedulaRegistro();
+  const createAccessLog = useCreateAccessLog();
+  const checkAuthorization = useCheckCedulaAuthorization(eventId);
 
   // Verificar si la cédula pendiente ya está registrada
   const isDuplicate = useMemo(() => {
@@ -50,15 +59,45 @@ export default function CedulaRegistro() {
     return registros.some(r => r.numero_cedula === pendingScan.numeroCedula);
   }, [pendingScan?.numeroCedula, registros]);
 
-  const handleScanSuccess = (data: CedulaData) => {
+  const handleScanSuccess = async (data: CedulaData) => {
+    setIsUnauthorized(false);
+    setAutorizadaData(null);
+    
+    // Si la lista blanca está activa, verificar autorización
+    if (whitelistConfig?.requireWhitelist && eventId) {
+      const autorizada = await checkAuthorization(data.numeroCedula);
+      
+      if (!autorizada) {
+        // Cédula NO autorizada - registrar intento y bloquear
+        setIsUnauthorized(true);
+        setPendingScan(data);
+        
+        // Registrar intento de acceso denegado
+        await createAccessLog.mutateAsync({
+          event_id: eventId,
+          numero_cedula: data.numeroCedula,
+          nombre_detectado: data.nombreCompleto,
+          access_result: 'denied',
+          denial_reason: 'Cédula no autorizada en lista blanca',
+          scanned_by: user?.id,
+          device_info: navigator.userAgent,
+        });
+        
+        return;
+      }
+      
+      // Cédula autorizada - guardar datos para mostrar en confirmación
+      setAutorizadaData(autorizada);
+    }
+    
     setPendingScan(data);
   };
 
   const handleConfirmScan = async (data: CedulaData) => {
-    if (!selectedEventId) return;
+    if (!eventId) return;
 
     const registro: InsertCedulaRegistro = {
-      event_id: selectedEventId,
+      event_id: eventId,
       numero_cedula: data.numeroCedula,
       primer_apellido: data.primerApellido,
       segundo_apellido: data.segundoApellido,
@@ -75,10 +114,14 @@ export default function CedulaRegistro() {
 
     await createMutation.mutateAsync(registro);
     setPendingScan(null);
+    setIsUnauthorized(false);
+    setAutorizadaData(null);
   };
 
   const handleCancelScan = () => {
     setPendingScan(null);
+    setIsUnauthorized(false);
+    setAutorizadaData(null);
   };
 
   return (
@@ -99,6 +142,12 @@ export default function CedulaRegistro() {
           <div className="flex items-center gap-3 mb-2">
             <IdCard className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold">Registro de Cédulas</h1>
+            {whitelistConfig?.requireWhitelist && (
+              <Badge variant="outline" className="border-amber-500 text-amber-500">
+                <ShieldCheck className="h-3 w-3 mr-1" />
+                Lista Blanca Activa
+              </Badge>
+            )}
           </div>
           <p className="text-muted-foreground">
             Captura cédulas colombianas con IA para registro automático
@@ -109,7 +158,7 @@ export default function CedulaRegistro() {
         {!activeEvent && (
           <Card className="p-4 mb-6">
             <label className="block text-sm font-medium mb-2">Seleccionar Evento</label>
-            <Select value={selectedEventId || ''} onValueChange={setSelectedEventId}>
+            <Select value={eventId || ''} onValueChange={setSelectedEventId}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un evento" />
               </SelectTrigger>
@@ -166,6 +215,8 @@ export default function CedulaRegistro() {
                 onCancel={handleCancelScan}
                 isLoading={createMutation.isPending}
                 isDuplicate={isDuplicate}
+                isUnauthorized={isUnauthorized}
+                autorizadaData={autorizadaData}
               />
             ) : (
               <CedulaScanner

@@ -3,13 +3,16 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro } from '@/hooks/useCedulaRegistros';
+import { useCedulasAutorizadasStats } from '@/hooks/useCedulasAutorizadas';
+import { useEventWhitelistConfigById } from '@/hooks/useEventWhitelistConfig';
 import { useActiveEventConfig } from '@/hooks/useEventConfig';
 import { useUserRole } from '@/hooks/useUserRole';
 import { CedulaExportButton } from './CedulaExportButton';
 import { CedulaManualRegistro } from './CedulaManualRegistro';
-import { IdCard, TrendingUp, Clock, Trash2, Search } from 'lucide-react';
+import { IdCard, TrendingUp, Clock, Trash2, Search, Users, ShieldCheck, ShieldX, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -17,10 +20,14 @@ export function CedulaDashboardMonitor() {
   const { data: activeEvent } = useActiveEventConfig();
   const { data: registros = [], isLoading } = useCedulaRegistros(activeEvent?.id || null);
   const { data: stats } = useCedulaStats(activeEvent?.id || null);
+  const { data: whitelistConfig } = useEventWhitelistConfigById(activeEvent?.id || null);
+  const { data: whitelistStats } = useCedulasAutorizadasStats(activeEvent?.id || null);
   const { isAdmin } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const isWhitelistActive = whitelistConfig?.requireWhitelist ?? false;
 
   // Filtrar registros por búsqueda de cédula
   const filteredRegistros = useMemo(() => {
@@ -57,8 +64,18 @@ export function CedulaDashboardMonitor() {
 
   return (
     <div className="space-y-6">
+      {/* Badge de modo lista blanca */}
+      {isWhitelistActive && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+          <ShieldCheck className="h-5 w-5 text-amber-500" />
+          <span className="text-amber-400 text-sm">
+            <strong>Modo Lista Blanca Activo:</strong> Solo las cédulas autorizadas pueden registrarse.
+          </span>
+        </div>
+      )}
+
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-2 ${isWhitelistActive ? 'md:grid-cols-6' : 'md:grid-cols-3'} gap-4`}>
         <Card className="p-6 bg-gray-900/50 border-gray-800">
           <div className="flex items-center justify-between">
             <div>
@@ -93,6 +110,41 @@ export function CedulaDashboardMonitor() {
             <Clock className="h-10 w-10 text-dorado/50" />
           </div>
         </Card>
+
+        {/* Estadísticas de lista blanca (solo si está activa) */}
+        {isWhitelistActive && whitelistStats && (
+          <>
+            <Card className="p-6 bg-gray-900/50 border-gray-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-hueso text-sm mb-1">Autorizados</p>
+                  <p className="text-3xl font-bold text-blue-400">{whitelistStats.total}</p>
+                </div>
+                <Users className="h-10 w-10 text-blue-400/50" />
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-gray-900/50 border-gray-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-hueso text-sm mb-1">Pendientes</p>
+                  <p className="text-3xl font-bold text-amber-400">{whitelistStats.pending}</p>
+                </div>
+                <CheckCircle2 className="h-10 w-10 text-amber-400/50" />
+              </div>
+            </Card>
+
+            <Card className="p-6 bg-gray-900/50 border-gray-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-hueso text-sm mb-1">Rechazados</p>
+                  <p className="text-3xl font-bold text-red-400">{whitelistStats.denied}</p>
+                </div>
+                <ShieldX className="h-10 w-10 text-red-400/50" />
+              </div>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Tabla de Registros */}
