@@ -20,7 +20,7 @@ const FinalCTA = () => {
     <section className="py-16 md:py-24 px-4 relative overflow-hidden">
       {/* Background with gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-dorado/10 via-empresarial to-empresarial"></div>
-      
+
       {/* Decorative elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-dorado/5 rounded-full blur-3xl"></div>
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-dorado/5 rounded-full blur-3xl"></div>
@@ -34,7 +34,8 @@ const FinalCTA = () => {
 
           {/* Subheading */}
           <p className="text-base md:text-xl text-gray-300 mb-8 md:mb-12 max-w-2xl mx-auto">
-            Únete a cientos de organizadores que ya confían en Chequi para gestionar sus eventos con profesionalismo y eficiencia
+            Únete a cientos de organizadores que ya confían en Chequi para gestionar sus eventos con profesionalismo y
+            eficiencia
           </p>
 
           {/* Stats bar */}
@@ -43,15 +44,11 @@ const FinalCTA = () => {
               { value: "500+", label: "Eventos exitosos" },
               { value: "50K+", label: "Asistentes gestionados" },
               { value: "95%", label: "Satisfacción" },
-              { value: "<2min", label: "Setup promedio" }
+              { value: "<2min", label: "Setup promedio" },
             ].map((stat, index) => (
               <div key={index} className="bg-gray-900/60 backdrop-blur-sm border border-gray-800 rounded-lg p-4">
-                <div className="text-2xl md:text-3xl font-bold text-dorado mb-1">
-                  {stat.value}
-                </div>
-                <div className="text-xs md:text-sm text-gray-400">
-                  {stat.label}
-                </div>
+                <div className="text-2xl md:text-3xl font-bold text-dorado mb-1">{stat.value}</div>
+                <div className="text-xs md:text-sm text-gray-400">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -68,7 +65,12 @@ const FinalCTA = () => {
             </Button>
 
             <Button
-              onClick={() => window.open("https://wa.me/573204963384?text=Hola,%20estoy%20interesado%20en%20conocer%20más%20sobre%20Chequi%20para%20mis%20eventos.%20¿Podrían%20brindarme%20información?", "_blank")}
+              onClick={() =>
+                window.open(
+                  "https://wa.me/573505175312?text=Hola,%20estoy%20interesado%20en%20conocer%20más%20sobre%20Chequi%20para%20mis%20eventos.%20¿Podrían%20brindarme%20información?",
+                  "_blank",
+                )
+              }
               variant="outline"
               className="border-2 border-dorado/50 text-dorado hover:bg-dorado/10 font-bold text-lg px-10 py-7 touch-manipulation group"
               size="lg"
