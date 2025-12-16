@@ -3,13 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CedulaScanner } from '@/components/cedula/CedulaScanner';
 import { CedulaConfirmation } from '@/components/cedula/CedulaConfirmation';
 import { CedulaRegistrosList } from '@/components/cedula/CedulaRegistrosList';
 import { CedulaExportButton } from '@/components/cedula/CedulaExportButton';
 import { useCedulaRegistros, useCreateCedulaRegistro, useCedulaStats } from '@/hooks/useCedulaRegistros';
-import { useActiveEventConfig } from '@/hooks/useEventConfig';
+import { useEventContext } from '@/context/EventContext';
 import { useEventWhitelistConfig } from '@/hooks/useEventWhitelistConfig';
 import { useCheckCedulaAuthorization, useCreateAccessLog } from '@/hooks/useCedulasAutorizadas';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
@@ -39,14 +38,13 @@ const convertDateToISO = (dateStr: string | null | undefined): string | undefine
 export default function CedulaRegistro() {
   const navigate = useNavigate();
   const { user } = useSupabaseAuth();
-  const { data: activeEvent } = useActiveEventConfig();
+  const { selectedEvent } = useEventContext();
   const { data: whitelistConfig } = useEventWhitelistConfig();
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(activeEvent?.id || null);
   const [pendingScan, setPendingScan] = useState<CedulaData | null>(null);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [autorizadaData, setAutorizadaData] = useState<CedulaAutorizada | null>(null);
 
-  const eventId = selectedEventId || activeEvent?.id || null;
+  const eventId = selectedEvent?.id || null;
   const { data: registros = [], isLoading } = useCedulaRegistros(eventId);
   const { data: stats } = useCedulaStats(eventId);
   const createMutation = useCreateCedulaRegistro();
@@ -154,21 +152,6 @@ export default function CedulaRegistro() {
           </p>
         </div>
 
-        {/* Selector de Evento */}
-        {!activeEvent && (
-          <Card className="p-4 mb-6">
-            <label className="block text-sm font-medium mb-2">Seleccionar Evento</label>
-            <Select value={eventId || ''} onValueChange={setSelectedEventId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un evento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Evento Actual</SelectItem>
-              </SelectContent>
-            </Select>
-          </Card>
-        )}
-
         {/* Estadísticas */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -199,7 +182,7 @@ export default function CedulaRegistro() {
             <Card className="p-4 flex items-center justify-center">
               <CedulaExportButton 
                 registros={registros}
-                eventName={activeEvent?.event_name || 'Evento'}
+                eventName={selectedEvent?.event_name || 'Evento'}
               />
             </Card>
           </div>

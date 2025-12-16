@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { EventConfig as EventConfigType, Attendee } from '@/types/database';
-import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users, RefreshCw, Ticket, Shield } from 'lucide-react';
+import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users, RefreshCw, Ticket, Shield, UsersRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import AttendeesManager from '@/components/AttendeesManager';
@@ -22,8 +22,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Edit, Trash2 } from 'lucide-react';
 import { ExportTicketsPNG } from '@/components/ExportTicketsPNG';
 import { CedulasAutorizadasManager } from '@/components/cedula/CedulasAutorizadasManager';
+import { EventTeamManager } from '@/components/EventTeamManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useEventContext } from '@/context/EventContext';
 
 const FONT_OPTIONS = [
   { name: 'Inter', value: 'Inter, sans-serif' },
@@ -228,7 +230,7 @@ const EventConfig = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-7 bg-gray-900/50 border border-gray-800 gap-1">
+        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-4 md:grid-cols-8 bg-gray-900/50 border border-gray-800 gap-1">
           <TabsTrigger value="configuration" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
             <Settings className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
             <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
@@ -276,6 +278,13 @@ const EventConfig = () => {
             <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
               <span className="hidden md:inline">Lista de Acceso</span>
               <span className="md:hidden">Acceso</span>
+            </span>
+          </TabsTrigger>
+          <TabsTrigger value="team" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
+            <UsersRound className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
+              <span className="hidden md:inline">Equipo del Evento</span>
+              <span className="md:hidden">Equipo</span>
             </span>
           </TabsTrigger>
         </TabsList>
@@ -728,6 +737,23 @@ const EventConfig = () => {
                 <Shield className="h-12 w-12 mx-auto text-hueso/30 mb-4" />
                 <p className="text-hueso/60">No hay un evento activo seleccionado.</p>
                 <p className="text-hueso/40 text-sm">Activa un evento para gestionar la lista de acceso.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="team" className="space-y-6">
+          {eventConfigs.find(c => c.is_active)?.id ? (
+            <EventTeamManager 
+              eventId={eventConfigs.find(c => c.is_active)!.id} 
+              eventName={eventConfigs.find(c => c.is_active)!.event_name}
+            />
+          ) : (
+            <Card className="bg-gray-900/50 border border-gray-800">
+              <CardContent className="p-8 text-center">
+                <UsersRound className="h-12 w-12 mx-auto text-hueso/30 mb-4" />
+                <p className="text-hueso/60">No hay un evento activo seleccionado.</p>
+                <p className="text-hueso/40 text-sm">Activa un evento para gestionar el equipo.</p>
               </CardContent>
             </Card>
           )}
