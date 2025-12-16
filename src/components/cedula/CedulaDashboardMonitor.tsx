@@ -3,12 +3,11 @@ import { Card } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro } from '@/hooks/useCedulaRegistros';
 import { useCedulasAutorizadasStats } from '@/hooks/useCedulasAutorizadas';
 import { useEventWhitelistConfigById } from '@/hooks/useEventWhitelistConfig';
-import { useActiveEventConfig } from '@/hooks/useEventConfig';
+import { useEventContext } from '@/context/EventContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { CedulaExportButton } from './CedulaExportButton';
 import { CedulaManualRegistro } from './CedulaManualRegistro';
@@ -17,11 +16,11 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export function CedulaDashboardMonitor() {
-  const { data: activeEvent } = useActiveEventConfig();
-  const { data: registros = [], isLoading } = useCedulaRegistros(activeEvent?.id || null);
-  const { data: stats } = useCedulaStats(activeEvent?.id || null);
-  const { data: whitelistConfig } = useEventWhitelistConfigById(activeEvent?.id || null);
-  const { data: whitelistStats } = useCedulasAutorizadasStats(activeEvent?.id || null);
+  const { selectedEvent } = useEventContext();
+  const { data: registros = [], isLoading } = useCedulaRegistros(selectedEvent?.id || null);
+  const { data: stats } = useCedulaStats(selectedEvent?.id || null);
+  const { data: whitelistConfig } = useEventWhitelistConfigById(selectedEvent?.id || null);
+  const { data: whitelistStats } = useCedulasAutorizadasStats(selectedEvent?.id || null);
   const { isAdmin } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -39,10 +38,10 @@ export function CedulaDashboardMonitor() {
   }, [registros, searchTerm]);
 
   const handleDelete = async (id: string) => {
-    if (!activeEvent?.id) return;
+    if (!selectedEvent?.id) return;
     setDeletingId(id);
     try {
-      await deleteRegistro.mutateAsync({ id, eventId: activeEvent.id });
+      await deleteRegistro.mutateAsync({ id, eventId: selectedEvent.id });
     } finally {
       setDeletingId(null);
     }
@@ -170,12 +169,12 @@ export function CedulaDashboardMonitor() {
             
             {/* Botones de acción */}
             <div className="flex gap-2">
-              {activeEvent?.id && (
-                <CedulaManualRegistro eventId={activeEvent.id} />
+              {selectedEvent?.id && (
+                <CedulaManualRegistro eventId={selectedEvent.id} />
               )}
               <CedulaExportButton 
                 registros={filteredRegistros} 
-                eventName={activeEvent?.event_name || 'Evento'}
+                eventName={selectedEvent?.event_name || 'Evento'}
               />
             </div>
           </div>

@@ -2,9 +2,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Attendee } from '@/types/database';
+import { useEventContext } from '@/context/EventContext';
 
 export const useCreateAttendee = () => {
   const queryClient = useQueryClient();
+  const { selectedEvent } = useEventContext();
   
   return useMutation({
     mutationFn: async (attendeeData: {
@@ -13,12 +15,8 @@ export const useCreateAttendee = () => {
       category_id: string;
       ticket_id: string;
     }) => {
-      // Get active event ID
-      const { data: eventId, error: eventError } = await supabase
-        .rpc('get_active_event_id');
-      
-      if (eventError) throw eventError;
-      if (!eventId) throw new Error('No hay evento activo');
+      const eventId = selectedEvent?.id;
+      if (!eventId) throw new Error('No hay evento seleccionado');
 
       const { data, error } = await supabase
         .from('attendees')
@@ -103,6 +101,7 @@ export const useDeleteAttendee = () => {
 
 export const useBulkCreateAttendees = () => {
   const queryClient = useQueryClient();
+  const { selectedEvent } = useEventContext();
   
   return useMutation({
     mutationFn: async ({ attendees, eventId }: {
@@ -115,16 +114,9 @@ export const useBulkCreateAttendees = () => {
       }>;
       eventId?: string;
     }) => {
-      // Use provided eventId or get active event ID
-      let targetEventId = eventId;
-      if (!targetEventId) {
-        const { data: activeEventId, error: eventError } = await supabase
-          .rpc('get_active_event_id');
-        
-        if (eventError) throw eventError;
-        if (!activeEventId) throw new Error('No hay evento activo');
-        targetEventId = activeEventId;
-      }
+      // Use provided eventId or get from context
+      const targetEventId = eventId || selectedEvent?.id;
+      if (!targetEventId) throw new Error('No hay evento seleccionado');
 
       // Add event_id to all attendees
       const attendeesWithEvent = attendees.map(attendee => ({
@@ -151,6 +143,8 @@ export const useBulkCreateAttendees = () => {
 
 export const useUpsertAttendees = () => {
   const queryClient = useQueryClient();
+  const { selectedEvent } = useEventContext();
+  
   return useMutation({
     mutationFn: async ({ attendees, eventId }: {
       attendees: Array<{
@@ -162,14 +156,9 @@ export const useUpsertAttendees = () => {
       }>;
       eventId?: string;
     }) => {
-      // Use provided eventId or get active event ID
-      let targetEventId = eventId;
-      if (!targetEventId) {
-        const { data: activeEventId, error: eventError } = await supabase.rpc('get_active_event_id');
-        if (eventError) throw eventError;
-        if (!activeEventId) throw new Error('No hay evento activo');
-        targetEventId = activeEventId;
-      }
+      // Use provided eventId or get from context
+      const targetEventId = eventId || selectedEvent?.id;
+      if (!targetEventId) throw new Error('No hay evento seleccionado');
       
       // Fallback per-row update-then-insert (upsert doesn't work well with optional fields)
       const results: Attendee[] = [];

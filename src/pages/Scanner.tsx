@@ -5,14 +5,14 @@ import { CedulaScanner } from "@/components/cedula/CedulaScanner";
 import { CedulaScanResult } from "@/components/cedula/CedulaScanResult";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCreateCedulaRegistro } from "@/hooks/useCedulaRegistros";
-import { useActiveEventConfig } from "@/hooks/useEventConfig";
+import { useEventContext } from "@/context/EventContext";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
 import type { CedulaData, InsertCedulaRegistro } from "@/types/cedula";
 import { QrCode, IdCard } from "lucide-react";
 
 const Scanner = () => {
   const { user } = useSupabaseAuth();
-  const { data: activeEvent } = useActiveEventConfig();
+  const { selectedEvent } = useEventContext();
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [pendingScan, setPendingScan] = useState<CedulaData | null>(null);
   const createCedulaMutation = useCreateCedulaRegistro();
@@ -22,10 +22,10 @@ const Scanner = () => {
   };
 
   const handleConfirmCedulaScan = async () => {
-    if (!pendingScan || !activeEvent?.id) return;
+    if (!pendingScan || !selectedEvent?.id) return;
 
     const registro: InsertCedulaRegistro = {
-      event_id: activeEvent.id,
+      event_id: selectedEvent.id,
       numero_cedula: pendingScan.numeroCedula,
       primer_apellido: pendingScan.primerApellido,
       segundo_apellido: pendingScan.segundoApellido,

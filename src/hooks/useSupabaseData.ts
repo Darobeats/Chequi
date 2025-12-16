@@ -3,16 +3,16 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Attendee, ControlType, TicketCategory, ControlUsage, CategoryControl } from '@/types/database';
-import { useActiveEventConfig } from './useEventConfig';
+import { useEventContext } from '@/context/EventContext';
 
 export const useAttendees = () => {
   const queryClient = useQueryClient();
-  const { data: eventConfig } = useActiveEventConfig();
+  const { selectedEvent } = useEventContext();
 
   const query = useQuery({
-    queryKey: ['attendees', eventConfig?.id],
+    queryKey: ['attendees', selectedEvent?.id],
     queryFn: async () => {
-      if (!eventConfig?.id) return [];
+      if (!selectedEvent?.id) return [];
       
       const { data, error } = await supabase
         .from('attendees')
@@ -29,12 +29,12 @@ export const useAttendees = () => {
           updated_at,
           ticket_category:ticket_categories(*)
         `)
-        .eq('event_id', eventConfig.id);
+        .eq('event_id', selectedEvent.id);
       
       if (error) throw error;
       return data as (Attendee & { ticket_category: TicketCategory })[];
     },
-    enabled: !!eventConfig?.id
+    enabled: !!selectedEvent?.id
   });
 
   // Set up real-time subscription
@@ -64,52 +64,52 @@ export const useAttendees = () => {
 };
 
 export const useControlTypes = () => {
-  const { data: eventConfig } = useActiveEventConfig();
+  const { selectedEvent } = useEventContext();
   
   return useQuery({
-    queryKey: ['control_types', eventConfig?.id],
+    queryKey: ['control_types', selectedEvent?.id],
     queryFn: async () => {
-      if (!eventConfig?.id) return [];
+      if (!selectedEvent?.id) return [];
       
       const { data, error } = await supabase
         .from('control_types')
         .select('*')
-        .eq('event_id', eventConfig.id);
+        .eq('event_id', selectedEvent.id);
       
       if (error) throw error;
       return data as ControlType[];
     },
-    enabled: !!eventConfig?.id
+    enabled: !!selectedEvent?.id
   });
 };
 
 export const useTicketCategories = () => {
-  const { data: eventConfig } = useActiveEventConfig();
+  const { selectedEvent } = useEventContext();
   
   return useQuery({
-    queryKey: ['ticket_categories', eventConfig?.id],
+    queryKey: ['ticket_categories', selectedEvent?.id],
     queryFn: async () => {
-      if (!eventConfig?.id) return [];
+      if (!selectedEvent?.id) return [];
       
       const { data, error } = await supabase
         .from('ticket_categories')
         .select('*')
-        .eq('event_id', eventConfig.id);
+        .eq('event_id', selectedEvent.id);
       
       if (error) throw error;
       return data as TicketCategory[];
     },
-    enabled: !!eventConfig?.id
+    enabled: !!selectedEvent?.id
   });
 };
 
 export const useControlUsage = () => {
-  const { data: eventConfig } = useActiveEventConfig();
+  const { selectedEvent } = useEventContext();
   
   return useQuery({
-    queryKey: ['control_usage', eventConfig?.id],
+    queryKey: ['control_usage', selectedEvent?.id],
     queryFn: async () => {
-      if (!eventConfig?.id) return [];
+      if (!selectedEvent?.id) return [];
       
       const { data, error } = await supabase
         .from('control_usage')
@@ -121,7 +121,7 @@ export const useControlUsage = () => {
             ticket_category:ticket_categories(*)
           )
         `)
-        .eq('attendee.event_id', eventConfig.id)
+        .eq('attendee.event_id', selectedEvent.id)
         .order('used_at', { ascending: false });
       
       if (error) throw error;
@@ -131,17 +131,17 @@ export const useControlUsage = () => {
       })[];
     },
     refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
-    enabled: !!eventConfig?.id
+    enabled: !!selectedEvent?.id
   });
 };
 
 export const useCategoryControls = () => {
-  const { data: eventConfig } = useActiveEventConfig();
+  const { selectedEvent } = useEventContext();
   
   return useQuery({
-    queryKey: ['category_controls', eventConfig?.id],
+    queryKey: ['category_controls', selectedEvent?.id],
     queryFn: async () => {
-      if (!eventConfig?.id) return [];
+      if (!selectedEvent?.id) return [];
       
       const { data, error } = await supabase
         .from('category_controls')
@@ -150,8 +150,8 @@ export const useCategoryControls = () => {
           control_type:control_types!inner(*),
           ticket_category:ticket_categories!inner(*)
         `)
-        .eq('control_type.event_id', eventConfig.id)
-        .eq('ticket_category.event_id', eventConfig.id);
+        .eq('control_type.event_id', selectedEvent.id)
+        .eq('ticket_category.event_id', selectedEvent.id);
       
       if (error) throw error;
       return data as (CategoryControl & {
@@ -159,26 +159,29 @@ export const useCategoryControls = () => {
         ticket_category: TicketCategory;
       })[];
     },
-    enabled: !!eventConfig?.id
+    enabled: !!selectedEvent?.id
   });
 };
 
 export const useProcessQRCode = () => {
   const queryClient = useQueryClient();
+  const { selectedEvent } = useEventContext();
   
   return useMutation({
     mutationFn: async ({ ticketId, controlType, eventId }: { ticketId: string; controlType: string; eventId?: string }) => {
       const cleanTicketId = ticketId.trim();
+      const targetEventId = eventId || selectedEvent?.id;
+      
       console.log('=== PROCESANDO QR CODE MEDIANTE EDGE FUNCTION SEGURA ===');
       console.log('ProcessQRCode - Ticket ID:', cleanTicketId);
       console.log('ProcessQRCode - Control type:', controlType);
-      console.log('ProcessQRCode - Event ID:', eventId);
+      console.log('ProcessQRCode - Event ID:', targetEventId);
       
       const { data, error } = await supabase.functions.invoke('process-qr-scan', {
         body: {
           ticketId: cleanTicketId,
           controlTypeId: controlType,
-          eventId: eventId,
+          eventId: targetEventId,
           device: `Scanner Web - ${navigator.userAgent?.split(' ')[0] || 'Unknown'}`
         }
       });
