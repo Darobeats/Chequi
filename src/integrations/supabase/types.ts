@@ -786,6 +786,44 @@ export type Database = {
           },
         ]
       }
+      user_event_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          event_id: string
+          id: string
+          is_primary: boolean | null
+          role_in_event: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          event_id: string
+          id?: string
+          is_primary?: boolean | null
+          role_in_event?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          event_id?: string
+          id?: string
+          is_primary?: boolean | null
+          role_in_event?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_event_assignments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -933,9 +971,25 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_user_events: {
+        Args: { check_user_id?: string }
+        Returns: {
+          event_date: string
+          event_id: string
+          event_name: string
+          event_status: string
+          is_active: boolean
+          is_primary: boolean
+          role_in_event: string
+        }[]
+      }
       get_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_user_role_in_event: {
+        Args: { check_event_id: string; check_user_id?: string }
+        Returns: string
       }
       get_user_role_secure: {
         Args: { _user_id?: string }
@@ -947,6 +1001,10 @@ export type Database = {
       }
       is_authenticated: { Args: never; Returns: boolean }
       is_super_admin: { Args: { check_user_id?: string }; Returns: boolean }
+      user_can_access_event: {
+        Args: { check_event_id: string; check_user_id?: string }
+        Returns: boolean
+      }
       user_has_role_secure: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]

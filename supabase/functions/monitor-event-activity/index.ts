@@ -5,6 +5,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface ActiveEventConfig {
+  id: string;
+  event_name: string;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  logo_url: string | null;
+  event_image_url: string | null;
+  font_family: string;
+  event_status?: string;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -54,9 +66,10 @@ Deno.serve(async (req) => {
     console.log('🔍 Monitoring event activity for user:', user.email);
 
     // Get active event
-    const { data: activeEvent, error: eventError } = await supabase
-      .rpc('get_active_event_config')
-      .single();
+    const { data: activeEventData, error: eventError } = await supabase
+      .rpc('get_active_event_config');
+    
+    const activeEvent = (activeEventData as ActiveEventConfig[] | null)?.[0] as ActiveEventConfig | undefined;
 
     if (eventError || !activeEvent) {
       console.log('⚠️ No active event found');
@@ -137,12 +150,13 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error) {
-    console.error('❌ Error in monitor-event-activity:', error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Error in monitor-event-activity:', errorMessage);
     
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: errorMessage,
         status: 'error'
       }),
       {
