@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from "@/components/ui/sonner";
 import { useControlTypes, useProcessQRCode } from '@/hooks/useSupabaseData';
 import { useCameraPermissions } from '@/hooks/useCameraPermissions';
-import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { useOfflineScans } from '@/hooks/useOfflineScans';
+import { useEventContext } from '@/context/EventContext';
 import EventSelector from './scanner/EventSelector';
 import ControlTypeSelector from './scanner/ControlTypeSelector';
 import CameraPermissions from './scanner/CameraPermissions';
@@ -18,9 +17,10 @@ interface QRScannerProps {
 }
 
 const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onEventChange }) => {
+  const { selectedEvent, isLoadingEvents } = useEventContext();
+  
   const [scanning, setScanning] = useState(false);
   const [selectedControlType, setSelectedControlType] = useState<string>('');
-  const [selectedEventId, setSelectedEventId] = useState<string>(propEventId || '');
   const [lastScannedCode, setLastScannedCode] = useState<string>('');
   const [lastResult, setLastResult] = useState<null | { 
     success: boolean; 
@@ -33,8 +33,10 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
   }>(null);
 
   const processingRef = useRef(false);
+  
+  // Use context event or prop event
+  const selectedEventId = selectedEvent?.id || propEventId || '';
 
-  const { data: allEvents, isLoading: loadingEvents } = useAllEventConfigs();
   const { data: controlTypes, isLoading: loadingControlTypes } = useControlTypes();
   const processQRMutation = useProcessQRCode();
   const {
@@ -54,23 +56,12 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     hasPendingScans
   } = useOfflineScans();
 
-  // Set default event to active event
+  // Notify parent of event change
   useEffect(() => {
-    if (allEvents && allEvents.length > 0 && !selectedEventId) {
-      const activeEvent = allEvents.find(e => e.is_active);
-      if (activeEvent) {
-        setSelectedEventId(activeEvent.id);
-        if (onEventChange) onEventChange(activeEvent.id);
-      }
+    if (selectedEvent?.id && onEventChange) {
+      onEventChange(selectedEvent.id);
     }
-  }, [allEvents, selectedEventId, onEventChange]);
-
-  // Sync prop changes
-  useEffect(() => {
-    if (propEventId && propEventId !== selectedEventId) {
-      setSelectedEventId(propEventId);
-    }
-  }, [propEventId]);
+  }, [selectedEvent?.id, onEventChange]);
 
   // Set default control type to "ingreso"
   useEffect(() => {
@@ -82,15 +73,13 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     }
   }, [controlTypes, selectedControlType]);
 
-  const handleEventChange = (eventId: string) => {
-    setSelectedEventId(eventId);
-    if (onEventChange) onEventChange(eventId);
-    // Reset scanner state when changing events
+  // Reset state when event changes
+  useEffect(() => {
     setSelectedControlType('');
     setLastScannedCode('');
     setLastResult(null);
     setScanning(false);
-  };
+  }, [selectedEventId]);
 
   const startScanning = async () => {
     if (!selectedEventId) {
@@ -243,7 +232,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     setLastScannedCode(''); // Permitir escanear el mismo QR de nuevo
   };
 
-  if (loadingEvents || loadingControlTypes) {
+  if (isLoadingEvents || loadingControlTypes) {
     return (
       <div className="flex flex-col items-center justify-center">
         <p className="text-hueso">Cargando...</p>
@@ -263,12 +252,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
         onSync={syncPendingScans}
       />
 
-      <EventSelector
-        events={allEvents}
-        selectedEventId={selectedEventId}
-        onEventChange={handleEventChange}
-        isLoading={loadingEvents}
-      />
+      <EventSelector />
 
       <ControlTypeSelector
         controlTypes={controlTypes}
