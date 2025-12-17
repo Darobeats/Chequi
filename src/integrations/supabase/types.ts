@@ -913,6 +913,10 @@ export type Database = {
         Returns: boolean
       }
       can_access_scanner: { Args: { check_user_id?: string }; Returns: boolean }
+      can_manage_event_team: {
+        Args: { check_event_id: string; check_user_id?: string }
+        Returns: boolean
+      }
       can_modify_data: { Args: { check_user_id?: string }; Returns: boolean }
       find_attendee_by_ticket: {
         Args: { ticket_id: string }
