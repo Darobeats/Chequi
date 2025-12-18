@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCreateCedulaRegistro } from "@/hooks/useCedulaRegistros";
 import { useEventContext } from "@/context/EventContext";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
+import { useControlTypes } from "@/hooks/useSupabaseData";
+import ControlTypeSelector from "@/components/scanner/ControlTypeSelector";
 import type { CedulaData, InsertCedulaRegistro } from "@/types/cedula";
 import { QrCode, IdCard } from "lucide-react";
 
@@ -15,7 +17,9 @@ const Scanner = () => {
   const { selectedEvent } = useEventContext();
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [pendingScan, setPendingScan] = useState<CedulaData | null>(null);
+  const [selectedControlType, setSelectedControlType] = useState<string>("");
   const createCedulaMutation = useCreateCedulaRegistro();
+  const { data: controlTypes = [], isLoading: controlTypesLoading } = useControlTypes();
 
   const handleCedulaScanSuccess = (data: CedulaData) => {
     setPendingScan(data);
@@ -93,6 +97,13 @@ const Scanner = () => {
                   <p className="text-sm md:text-base text-gray-400">Escanee el código PDF417 en el reverso de la cédula</p>
                 </div>
 
+                <ControlTypeSelector
+                  controlTypes={controlTypes}
+                  selectedControlType={selectedControlType}
+                  onControlTypeChange={setSelectedControlType}
+                  isLoading={controlTypesLoading}
+                />
+
                 {pendingScan ? (
                   <CedulaScanResult
                     data={pendingScan}
@@ -103,8 +114,14 @@ const Scanner = () => {
                 ) : (
                   <CedulaScanner
                     onScanSuccess={handleCedulaScanSuccess}
-                    isActive={!pendingScan}
+                    isActive={!pendingScan && !!selectedControlType}
                   />
+                )}
+
+                {!selectedControlType && !pendingScan && (
+                  <p className="text-center text-yellow-500 text-sm">
+                    Seleccione un tipo de control para habilitar el escáner
+                  </p>
                 )}
               </div>
             </TabsContent>

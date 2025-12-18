@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,9 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useAttendees, useResetControlUsage } from '@/hooks/useSupabaseData';
 import { useDeleteAttendee, useRegenerateQRCode } from '@/hooks/useAttendeeManagement';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
+import { useCedulasAutorizadas } from '@/hooks/useCedulasAutorizadas';
+import { useEventWhitelistConfigById } from '@/hooks/useEventWhitelistConfig';
+import { useEventContext } from '@/context/EventContext';
 import { Attendee } from '@/types/database';
 import { toast } from '@/components/ui/sonner';
-import { Plus, Upload, Edit, Trash2, QrCode, RotateCcw } from 'lucide-react';
+import { Plus, Upload, Edit, Trash2, QrCode, RotateCcw, Users, IdCard } from 'lucide-react';
 import AttendeeForm from './AttendeeForm';
 import BulkImportDialog from './BulkImportDialog';
 import ExportButton from './ExportButton';
@@ -24,22 +27,41 @@ const AttendeesManager: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [attendeeToDelete, setAttendeeToDelete] = useState<Attendee | null>(null);
 
+  const { selectedEvent } = useEventContext();
   const { data: attendees = [], isLoading } = useAttendees();
   const { data: events = [] } = useAllEventConfigs();
+  const { data: whitelistConfig } = useEventWhitelistConfigById(selectedEvent?.id || null);
+  const { data: cedulasAutorizadas = [], isLoading: cedulasLoading } = useCedulasAutorizadas(selectedEvent?.id || null);
   const deleteMutation = useDeleteAttendee();
   const regenerateQRMutation = useRegenerateQRCode();
   const resetControlUsage = useResetControlUsage();
 
-  const filteredAttendees = attendees.filter(attendee => {
+  // Determine if we should show whitelist data (cedulas_autorizadas) or regular attendees
+  const useWhitelistData = whitelistConfig?.requireWhitelist === true;
+
+  // Filter data based on source (whitelist cedulas or regular attendees)
+  const filteredData = useMemo(() => {
     const searchTermLower = searchTerm.toLowerCase();
-    return (
+    
+    if (useWhitelistData) {
+      return cedulasAutorizadas.filter(cedula => 
+        cedula.numero_cedula.toLowerCase().includes(searchTermLower) ||
+        cedula.nombre_completo?.toLowerCase().includes(searchTermLower) ||
+        cedula.categoria?.toLowerCase().includes(searchTermLower) ||
+        cedula.empresa?.toLowerCase().includes(searchTermLower)
+      );
+    }
+    
+    return attendees.filter(attendee => 
       attendee.name.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
       attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
       attendee.cedula?.toLowerCase().includes(searchTermLower) ||
       attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
     );
-  });
+  }, [searchTerm, useWhitelistData, cedulasAutorizadas, attendees]);
+
+  const totalCount = useWhitelistData ? cedulasAutorizadas.length : attendees.length;
 
   const getCategoryColor = (categoryName: string) => {
     switch (categoryName?.toLowerCase()) {
@@ -116,7 +138,7 @@ const AttendeesManager: React.FC = () => {
     setShowForm(false);
   };
 
-  if (isLoading) {
+  if (isLoading || cedulasLoading) {
     return (
       <div className="flex items-center justify-center p-8">
         <p className="text-hueso">Cargando gestión de asistentes...</p>
@@ -127,49 +149,62 @@ const AttendeesManager: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-dorado">Gestión de Asistentes</h2>
-          <p className="text-gray-400">
-            Total: {attendees.length} asistentes | Filtrados: {filteredAttendees.length}
-          </p>
+        <div className="flex items-center gap-2">
+          {useWhitelistData ? (
+            <IdCard className="h-6 w-6 text-dorado" />
+          ) : (
+            <Users className="h-6 w-6 text-dorado" />
+          )}
+          <div>
+            <h2 className="text-2xl font-bold text-dorado">
+              {useWhitelistData ? 'Lista de Acceso (Cédulas Autorizadas)' : 'Gestión de Asistentes'}
+            </h2>
+            <p className="text-gray-400">
+              Total: {totalCount} {useWhitelistData ? 'cédulas autorizadas' : 'asistentes'} | Filtrados: {filteredData.length}
+            </p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={() => setShowBulkImport(true)}
-            variant="outline"
-            className="border-gray-700 flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            Importar Masivo
-          </Button>
-          <Button
-            onClick={handleResetAllUsage}
-            variant="destructive"
-            className="bg-red-600 hover:bg-red-700 flex items-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Resetear Todas las Entradas
-          </Button>
-          
-          <ExportButton />
-          
-          <Button
-            onClick={() => {
-              setSelectedAttendee(null);
-              setShowForm(true);
-            }}
-            className="bg-dorado text-empresarial hover:bg-dorado/90 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Asistente
-          </Button>
+          {!useWhitelistData && (
+            <>
+              <Button
+                onClick={() => setShowBulkImport(true)}
+                variant="outline"
+                className="border-gray-700 flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Importar Masivo
+              </Button>
+              <Button
+                onClick={handleResetAllUsage}
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700 flex items-center gap-2"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Resetear Todas las Entradas
+              </Button>
+              
+              <ExportButton />
+              
+              <Button
+                onClick={() => {
+                  setSelectedAttendee(null);
+                  setShowForm(true);
+                }}
+                className="bg-dorado text-empresarial hover:bg-dorado/90 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Nuevo Asistente
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       <div className="flex justify-between items-center">
         <Input
           type="search"
-          placeholder="Buscar por nombre, ticket ID, QR code..."
+          placeholder={useWhitelistData ? "Buscar por cédula, nombre, categoría..." : "Buscar por nombre, ticket ID, QR code..."}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-md bg-empresarial border-gray-800 text-hueso"
@@ -180,95 +215,134 @@ const AttendeesManager: React.FC = () => {
         <Table>
           <TableHeader className="bg-gray-900">
             <TableRow>
-              <TableHead className="text-hueso">Nombre</TableHead>
-              <TableHead className="text-hueso">Cédula</TableHead>
-              <TableHead className="text-hueso">Evento</TableHead>
-              <TableHead className="text-hueso">Categoría</TableHead>
-              <TableHead className="text-hueso">Código QR</TableHead>
-              <TableHead className="text-hueso">Estado</TableHead>
-              <TableHead className="text-hueso">Acciones</TableHead>
+              {useWhitelistData ? (
+                <>
+                  <TableHead className="text-hueso">Cédula</TableHead>
+                  <TableHead className="text-hueso">Nombre Completo</TableHead>
+                  <TableHead className="text-hueso">Categoría</TableHead>
+                  <TableHead className="text-hueso">Empresa</TableHead>
+                  <TableHead className="text-hueso">Notas</TableHead>
+                </>
+              ) : (
+                <>
+                  <TableHead className="text-hueso">Nombre</TableHead>
+                  <TableHead className="text-hueso">Cédula</TableHead>
+                  <TableHead className="text-hueso">Evento</TableHead>
+                  <TableHead className="text-hueso">Categoría</TableHead>
+                  <TableHead className="text-hueso">Código QR</TableHead>
+                  <TableHead className="text-hueso">Estado</TableHead>
+                  <TableHead className="text-hueso">Acciones</TableHead>
+                </>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAttendees.map((attendee) => (
-              <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
-                <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
-                <TableCell className="text-gray-300">{attendee.cedula || 'N/A'}</TableCell>
-                <TableCell className="text-gray-300">
-                  {events.find(e => e.id === attendee.event_id)?.event_name || 'N/A'}
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}
-                  >
-                    {attendee.ticket_category?.name || 'N/A'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="py-2">
-                  <QRCodeDisplay 
-                    value={attendee.qr_code || ''} 
-                    size={80}
-                    className="mx-auto"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    className={`${
-                      attendee.status === 'valid' ? 'bg-green-800/30 text-green-400' : 
-                      attendee.status === 'used' ? 'bg-yellow-800/30 text-yellow-400' :
-                      'bg-red-800/30 text-red-400'
-                    }`}
-                  >
-                    {attendee.status === 'valid' ? 'Válido' : 
-                     attendee.status === 'used' ? 'Usado' : 'Bloqueado'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEdit(attendee)}
-                      className="h-8 w-8 p-0"
+            {useWhitelistData ? (
+              // Render cedulas autorizadas
+              (filteredData as typeof cedulasAutorizadas).map((cedula) => (
+                <TableRow key={cedula.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
+                  <TableCell className="font-medium text-hueso">{cedula.numero_cedula}</TableCell>
+                  <TableCell className="text-gray-300">{cedula.nombre_completo || 'N/A'}</TableCell>
+                  <TableCell>
+                    {cedula.categoria ? (
+                      <Badge className="bg-dorado/20 text-dorado capitalize">
+                        {cedula.categoria}
+                      </Badge>
+                    ) : (
+                      <span className="text-gray-500">N/A</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-gray-300">{cedula.empresa || 'N/A'}</TableCell>
+                  <TableCell className="text-gray-300 max-w-[200px] truncate">{cedula.notas || '-'}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              // Render regular attendees
+              (filteredData as (Attendee & { ticket_category: any })[]).map((attendee) => (
+                <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
+                  <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
+                  <TableCell className="text-gray-300">{attendee.cedula || 'N/A'}</TableCell>
+                  <TableCell className="text-gray-300">
+                    {events.find(e => e.id === attendee.event_id)?.event_name || 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}
                     >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRegenerateQR(attendee.id, attendee.name)}
-                      className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300"
-                      disabled={regenerateQRMutation.isPending}
-                      title="Regenerar QR"
+                      {attendee.ticket_category?.name || 'N/A'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <QRCodeDisplay 
+                      value={attendee.qr_code || ''} 
+                      size={80}
+                      className="mx-auto"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      className={`${
+                        attendee.status === 'valid' ? 'bg-green-800/30 text-green-400' : 
+                        attendee.status === 'used' ? 'bg-yellow-800/30 text-yellow-400' :
+                        'bg-red-800/30 text-red-400'
+                      }`}
                     >
-                      <QrCode className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleResetUsage(attendee.id, attendee.name)}
-                      className="h-8 w-8 p-0 text-orange-400 hover:text-orange-300"
-                      disabled={resetControlUsage.isPending}
-                      title="Resetear entradas"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDelete(attendee)}
-                      className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredAttendees.length === 0 && (
+                      {attendee.status === 'valid' ? 'Válido' : 
+                       attendee.status === 'used' ? 'Usado' : 'Bloqueado'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEdit(attendee)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRegenerateQR(attendee.id, attendee.name)}
+                        className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300"
+                        disabled={regenerateQRMutation.isPending}
+                        title="Regenerar QR"
+                      >
+                        <QrCode className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleResetUsage(attendee.id, attendee.name)}
+                        className="h-8 w-8 p-0 text-orange-400 hover:text-orange-300"
+                        disabled={resetControlUsage.isPending}
+                        title="Resetear entradas"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDelete(attendee)}
+                        className="h-8 w-8 p-0 text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+            {filteredData.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-400">
-                  {searchTerm ? 'No se encontraron asistentes que coincidan con la búsqueda' : 'No hay asistentes registrados'}
+                <TableCell colSpan={useWhitelistData ? 5 : 7} className="text-center py-8 text-gray-400">
+                  {searchTerm 
+                    ? 'No se encontraron registros que coincidan con la búsqueda' 
+                    : useWhitelistData 
+                      ? 'No hay cédulas autorizadas. Configure la lista de acceso en Configuración → Lista de Acceso'
+                      : 'No hay asistentes registrados'
+                  }
                 </TableCell>
               </TableRow>
             )}
