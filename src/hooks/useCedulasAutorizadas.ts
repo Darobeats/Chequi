@@ -20,6 +20,8 @@ export function useCedulasAutorizadas(eventId: string | null) {
       return data as CedulaAutorizada[];
     },
     enabled: !!eventId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 
@@ -220,7 +222,8 @@ export function useCedulasAutorizadasStats(eventId: string | null) {
       const { data: registros = [] } = await supabase
         .from('cedula_registros')
         .select('numero_cedula')
-        .eq('event_id', eventId);
+        .eq('event_id', eventId)
+        .limit(10000);
       
       const registeredCedulas = new Set(registros?.map(r => r.numero_cedula) || []);
       

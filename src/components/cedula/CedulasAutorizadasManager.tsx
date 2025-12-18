@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { useEventWhitelistConfigById, useUpdateWhitelistConfig } from '@/hooks/u
 import { useCedulaRegistros } from '@/hooks/useCedulaRegistros';
 import { CedulasBulkImport } from './CedulasBulkImport';
 import { CedulaAccessLogs } from './CedulaAccessLogs';
-import { Shield, ShieldCheck, ShieldX, UserPlus, Search, Trash2, Upload, Users, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Shield, ShieldCheck, ShieldX, UserPlus, Search, Trash2, Upload, Users, Clock, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
@@ -25,7 +26,8 @@ interface CedulasAutorizadasManagerProps {
 
 export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManagerProps) {
   const { user } = useSupabaseAuth();
-  const { data: autorizadas = [], isLoading } = useCedulasAutorizadas(eventId);
+  const queryClient = useQueryClient();
+  const { data: autorizadas = [], isLoading, isFetching } = useCedulasAutorizadas(eventId);
   const { data: registros = [] } = useCedulaRegistros(eventId);
   const { data: whitelistConfig } = useEventWhitelistConfigById(eventId);
   const { data: stats } = useCedulasAutorizadasStats(eventId);
@@ -34,6 +36,11 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
   const createAutorizada = useCreateCedulaAutorizada();
   const deleteAutorizada = useDeleteCedulaAutorizada();
   const clearAutorizadas = useClearCedulasAutorizadas();
+  
+  const handleRefreshList = () => {
+    queryClient.invalidateQueries({ queryKey: ['cedulas_autorizadas', eventId] });
+    queryClient.invalidateQueries({ queryKey: ['cedulas_autorizadas_stats', eventId] });
+  };
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -192,17 +199,34 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
           <Card className="bg-gray-900/50 border-gray-800">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-hueso/40" />
-                  <Input
-                    placeholder="Buscar por cédula, nombre, categoría..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 bg-gray-900/50 border-gray-700 text-hueso placeholder:text-hueso/40"
-                  />
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-hueso/40" />
+                    <Input
+                      placeholder="Buscar por cédula, nombre, categoría..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 bg-gray-900/50 border-gray-700 text-hueso placeholder:text-hueso/40"
+                    />
+                  </div>
+                  <span className="text-hueso/60 text-sm whitespace-nowrap">
+                    {filteredAutorizadas.length} de {autorizadas.length}
+                  </span>
                 </div>
                 
                 <div className="flex gap-2">
+                  {/* Recargar lista */}
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handleRefreshList}
+                    disabled={isFetching}
+                    className="border-gray-700 text-hueso hover:bg-gray-800"
+                    title="Recargar lista"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+                  </Button>
+                  
                   {/* Agregar manual */}
                   <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                     <DialogTrigger asChild>
