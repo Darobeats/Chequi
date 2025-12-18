@@ -3,21 +3,43 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CedulaAutorizada, InsertCedulaAutorizada, InsertCedulaAccessLog } from '@/types/cedula';
 
-// Obtener lista de cédulas autorizadas
+// Helper para paginación automática (superar límite de 1000 filas de Supabase)
+async function fetchAllPaginated<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
+): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  const allData: T[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await fetchPage(offset, offset + PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    
+    allData.push(...data);
+    hasMore = data.length === PAGE_SIZE;
+    offset += PAGE_SIZE;
+  }
+
+  return allData;
+}
+
+// Obtener lista de cédulas autorizadas (con paginación automática)
 export function useCedulasAutorizadas(eventId: string | null) {
   return useQuery({
     queryKey: ['cedulas_autorizadas', eventId],
     queryFn: async () => {
       if (!eventId) return [];
-      const { data, error } = await supabase
-        .from('cedulas_autorizadas')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('created_at', { ascending: false })
-        .limit(10000);
       
-      if (error) throw error;
-      return data as CedulaAutorizada[];
+      return fetchAllPaginated<CedulaAutorizada>((from, to) =>
+        supabase
+          .from('cedulas_autorizadas')
+          .select('*')
+          .eq('event_id', eventId)
+          .order('created_at', { ascending: false })
+          .range(from, to) as PromiseLike<{ data: CedulaAutorizada[] | null; error: any }>
+      );
     },
     enabled: !!eventId,
     staleTime: 0,
@@ -167,23 +189,37 @@ export function useClearCedulasAutorizadas() {
 
 // ============ LOGS DE ACCESO ============
 
-// Obtener logs de acceso
+// Obtener logs de acceso (con paginación automática)
+type CedulaAccessLog = {
+  id: string;
+  event_id: string;
+  numero_cedula: string;
+  nombre_detectado: string | null;
+  access_result: string;
+  denial_reason: string | null;
+  device_info: string | null;
+  scanned_by: string | null;
+  created_at: string | null;
+};
+
 export function useCedulaAccessLogs(eventId: string | null) {
   return useQuery({
     queryKey: ['cedula_access_logs', eventId],
     queryFn: async () => {
       if (!eventId) return [];
-      const { data, error } = await supabase
-        .from('cedula_access_logs')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('created_at', { ascending: false })
-        .limit(10000);
       
-      if (error) throw error;
-      return data;
+      return fetchAllPaginated<CedulaAccessLog>((from, to) =>
+        supabase
+          .from('cedula_access_logs')
+          .select('*')
+          .eq('event_id', eventId)
+          .order('created_at', { ascending: false })
+          .range(from, to) as PromiseLike<{ data: CedulaAccessLog[] | null; error: any }>
+      );
     },
     enabled: !!eventId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 
@@ -218,14 +254,16 @@ export function useCedulasAutorizadasStats(eventId: string | null) {
     queryFn: async () => {
       if (!eventId) return null;
       
-      // Obtener registros para comparar
-      const { data: registros = [] } = await supabase
-        .from('cedula_registros')
-        .select('numero_cedula')
-        .eq('event_id', eventId)
-        .limit(10000);
+      // Obtener registros con paginación automática
+      const registros = await fetchAllPaginated<{ numero_cedula: string }>((from, to) =>
+        supabase
+          .from('cedula_registros')
+          .select('numero_cedula')
+          .eq('event_id', eventId)
+          .range(from, to) as PromiseLike<{ data: { numero_cedula: string }[] | null; error: any }>
+      );
       
-      const registeredCedulas = new Set(registros?.map(r => r.numero_cedula) || []);
+      const registeredCedulas = new Set(registros.map(r => r.numero_cedula));
       
       const total = autorizadas.length;
       const registered = autorizadas.filter(a => registeredCedulas.has(a.numero_cedula)).length;
