@@ -1,7 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { InsertCedulaRegistro } from '@/types/cedula';
+import type { CedulaRegistro, InsertCedulaRegistro } from '@/types/cedula';
 import { toast } from 'sonner';
+
+// Helper para paginación automática (superar límite de 1000 filas de Supabase)
+async function fetchAllPaginated<T>(
+  fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>
+): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  const allData: T[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await fetchPage(offset, offset + PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    
+    allData.push(...data);
+    hasMore = data.length === PAGE_SIZE;
+    offset += PAGE_SIZE;
+  }
+
+  return allData;
+}
 
 export function useCedulaRegistros(eventId: string | null) {
   return useQuery({
@@ -9,17 +31,18 @@ export function useCedulaRegistros(eventId: string | null) {
     queryFn: async () => {
       if (!eventId) return [];
       
-      const { data, error } = await supabase
-        .from('cedula_registros')
-        .select('*')
-        .eq('event_id', eventId)
-        .order('scanned_at', { ascending: false })
-        .limit(10000);
-      
-      if (error) throw error;
-      return data;
+      return fetchAllPaginated<CedulaRegistro>((from, to) =>
+        supabase
+          .from('cedula_registros')
+          .select('*')
+          .eq('event_id', eventId)
+          .order('scanned_at', { ascending: false })
+          .range(from, to) as PromiseLike<{ data: CedulaRegistro[] | null; error: any }>
+      );
     },
-    enabled: !!eventId
+    enabled: !!eventId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 
