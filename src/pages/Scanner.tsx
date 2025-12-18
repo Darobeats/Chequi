@@ -8,9 +8,25 @@ import { useCreateCedulaRegistro } from "@/hooks/useCedulaRegistros";
 import { useEventContext } from "@/context/EventContext";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
 import { useControlTypes } from "@/hooks/useSupabaseData";
+import { useEventWhitelistConfigById } from "@/hooks/useEventWhitelistConfig";
+import { useCheckCedulaAuthorization, useCreateAccessLog } from "@/hooks/useCedulasAutorizadas";
 import ControlTypeSelector from "@/components/scanner/ControlTypeSelector";
-import type { CedulaData, InsertCedulaRegistro } from "@/types/cedula";
+import type { CedulaData, CedulaAutorizada, InsertCedulaRegistro } from "@/types/cedula";
 import { QrCode, IdCard } from "lucide-react";
+
+// Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
+const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
+  if (!dateStr) return undefined;
+  // Try DD/MM/YYYY format
+  const ddmmyyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyy) {
+    const [, day, month, year] = ddmmyyyy;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  }
+  // Already in ISO format
+  if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return dateStr;
+  return undefined;
+};
 
 const Scanner = () => {
   const { user } = useSupabaseAuth();
@@ -18,15 +34,50 @@ const Scanner = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [pendingScan, setPendingScan] = useState<CedulaData | null>(null);
   const [selectedControlType, setSelectedControlType] = useState<string>("");
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [autorizadaData, setAutorizadaData] = useState<CedulaAutorizada | null>(null);
+  
   const createCedulaMutation = useCreateCedulaRegistro();
   const { data: controlTypes = [], isLoading: controlTypesLoading } = useControlTypes();
+  const { data: whitelistConfig } = useEventWhitelistConfigById(selectedEvent?.id || null);
+  const checkAuthorization = useCheckCedulaAuthorization(selectedEvent?.id || null);
+  const createAccessLog = useCreateAccessLog();
 
-  const handleCedulaScanSuccess = (data: CedulaData) => {
+  const handleCedulaScanSuccess = async (data: CedulaData) => {
+    // Reset authorization state
+    setIsUnauthorized(false);
+    setAutorizadaData(null);
+    
+    // Check whitelist if enabled
+    if (whitelistConfig?.requireWhitelist && selectedEvent?.id) {
+      const autorizada = await checkAuthorization(data.numeroCedula);
+      
+      if (!autorizada) {
+        // Log denied attempt
+        await createAccessLog.mutateAsync({
+          event_id: selectedEvent.id,
+          numero_cedula: data.numeroCedula,
+          nombre_detectado: data.nombreCompleto,
+          access_result: 'denied',
+          denial_reason: 'Cédula no está en la lista de acceso autorizado',
+          scanned_by: user?.id,
+          device_info: navigator.userAgent,
+        });
+        
+        setIsUnauthorized(true);
+        setPendingScan(data);
+        return;
+      }
+      
+      // Store authorized data for display
+      setAutorizadaData(autorizada);
+    }
+    
     setPendingScan(data);
   };
 
   const handleConfirmCedulaScan = async () => {
-    if (!pendingScan || !selectedEvent?.id) return;
+    if (!pendingScan || !selectedEvent?.id || isUnauthorized) return;
 
     const registro: InsertCedulaRegistro = {
       event_id: selectedEvent.id,
@@ -34,22 +85,39 @@ const Scanner = () => {
       primer_apellido: pendingScan.primerApellido,
       segundo_apellido: pendingScan.segundoApellido,
       nombres: pendingScan.nombres,
-      fecha_nacimiento: pendingScan.fechaNacimiento || undefined,
+      fecha_nacimiento: convertDateToISO(pendingScan.fechaNacimiento),
       sexo: pendingScan.sexo || undefined,
       rh: pendingScan.rh || undefined,
       lugar_expedicion: pendingScan.lugarExpedicion || undefined,
-      fecha_expedicion: pendingScan.fechaExpedicion || undefined,
+      fecha_expedicion: convertDateToISO(pendingScan.fechaExpedicion),
       raw_data: pendingScan.rawData,
       scanned_by: user?.id,
       device_info: navigator.userAgent,
     };
 
     await createCedulaMutation.mutateAsync(registro);
+    
+    // Log successful access if whitelist is enabled
+    if (whitelistConfig?.requireWhitelist) {
+      await createAccessLog.mutateAsync({
+        event_id: selectedEvent.id,
+        numero_cedula: pendingScan.numeroCedula,
+        nombre_detectado: pendingScan.nombreCompleto,
+        access_result: 'authorized',
+        scanned_by: user?.id,
+        device_info: navigator.userAgent,
+      });
+    }
+    
     setPendingScan(null);
+    setIsUnauthorized(false);
+    setAutorizadaData(null);
   };
 
   const handleCancelCedulaScan = () => {
     setPendingScan(null);
+    setIsUnauthorized(false);
+    setAutorizadaData(null);
   };
 
   return (
@@ -110,6 +178,9 @@ const Scanner = () => {
                     onConfirm={handleConfirmCedulaScan}
                     onCancel={handleCancelCedulaScan}
                     isLoading={createCedulaMutation.isPending}
+                    isUnauthorized={isUnauthorized}
+                    autorizadaData={autorizadaData}
+                    requireWhitelist={whitelistConfig?.requireWhitelist}
                   />
                 ) : (
                   <CedulaScanner
