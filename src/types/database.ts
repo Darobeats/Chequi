@@ -117,13 +117,6 @@ export interface TicketTemplate {
   use_visual_editor?: boolean;
 }
 
-export interface AdminUser {
-  id: string;
-  user_id: string;
-  email: string;
-  role: string;
-  created_at: string;
-}
 
 export interface QRTemplate {
   id: string;
