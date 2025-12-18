@@ -1,22 +1,73 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, User, Calendar, MapPin, Droplet } from 'lucide-react';
-import type { CedulaData } from '@/types/cedula';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CheckCircle, User, Calendar, MapPin, Droplet, XCircle, ShieldCheck, Building, Tag } from 'lucide-react';
+import type { CedulaData, CedulaAutorizada } from '@/types/cedula';
 
 interface CedulaScanResultProps {
   data: CedulaData;
   onConfirm: () => void;
   onCancel: () => void;
   isLoading?: boolean;
+  isUnauthorized?: boolean;
+  autorizadaData?: CedulaAutorizada | null;
+  requireWhitelist?: boolean;
 }
 
-export function CedulaScanResult({ data, onConfirm, onCancel, isLoading }: CedulaScanResultProps) {
+export function CedulaScanResult({ 
+  data, 
+  onConfirm, 
+  onCancel, 
+  isLoading, 
+  isUnauthorized = false,
+  autorizadaData,
+  requireWhitelist
+}: CedulaScanResultProps) {
   return (
-    <Card className="p-6 border-primary/50 bg-primary/5">
+    <Card className={`p-6 ${isUnauthorized ? 'border-destructive/50 bg-destructive/5' : 'border-primary/50 bg-primary/5'}`}>
       <div className="space-y-4">
+        {/* Authorization Status Alert */}
+        {isUnauthorized && (
+          <Alert variant="destructive" className="border-destructive bg-destructive/10">
+            <XCircle className="h-5 w-5" />
+            <AlertTitle className="font-bold">ACCESO DENEGADO</AlertTitle>
+            <AlertDescription>
+              Esta cédula NO está en la lista de acceso autorizado para este evento.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!isUnauthorized && requireWhitelist && autorizadaData && (
+          <Alert className="border-green-500 bg-green-500/10">
+            <ShieldCheck className="h-5 w-5 text-green-500" />
+            <AlertTitle className="font-bold text-green-600">ACCESO AUTORIZADO</AlertTitle>
+            <AlertDescription className="text-green-600">
+              Cédula verificada en la lista de acceso.
+              {autorizadaData.categoria && (
+                <span className="block mt-1">
+                  <Tag className="h-3 w-3 inline mr-1" />
+                  Categoría: {autorizadaData.categoria}
+                </span>
+              )}
+              {autorizadaData.empresa && (
+                <span className="block">
+                  <Building className="h-3 w-3 inline mr-1" />
+                  Empresa: {autorizadaData.empresa}
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex items-center gap-2 mb-4">
-          <CheckCircle className="h-6 w-6 text-primary" />
-          <h3 className="text-lg font-semibold">Cédula Escaneada</h3>
+          {isUnauthorized ? (
+            <XCircle className="h-6 w-6 text-destructive" />
+          ) : (
+            <CheckCircle className="h-6 w-6 text-primary" />
+          )}
+          <h3 className="text-lg font-semibold">
+            {isUnauthorized ? 'Cédula No Autorizada' : 'Cédula Escaneada'}
+          </h3>
         </div>
 
         <div className="space-y-3">
@@ -74,21 +125,33 @@ export function CedulaScanResult({ data, onConfirm, onCancel, isLoading }: Cedul
         </div>
 
         <div className="flex gap-3 pt-4">
-          <Button 
-            onClick={onConfirm} 
-            className="flex-1"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Guardando...' : 'Confirmar y Guardar'}
-          </Button>
-          <Button 
-            onClick={onCancel} 
-            variant="outline" 
-            className="flex-1"
-            disabled={isLoading}
-          >
-            Cancelar
-          </Button>
+          {isUnauthorized ? (
+            <Button 
+              onClick={onCancel} 
+              variant="destructive"
+              className="flex-1"
+            >
+              Cerrar y Escanear Otra
+            </Button>
+          ) : (
+            <>
+              <Button 
+                onClick={onConfirm} 
+                className="flex-1"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Guardando...' : 'Confirmar y Guardar'}
+              </Button>
+              <Button 
+                onClick={onCancel} 
+                variant="outline" 
+                className="flex-1"
+                disabled={isLoading}
+              >
+                Cancelar
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </Card>
