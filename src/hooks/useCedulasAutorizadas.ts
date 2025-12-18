@@ -13,7 +13,8 @@ export function useCedulasAutorizadas(eventId: string | null) {
         .from('cedulas_autorizadas')
         .select('*')
         .eq('event_id', eventId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10000);
       
       if (error) throw error;
       return data as CedulaAutorizada[];
@@ -174,7 +175,8 @@ export function useCedulaAccessLogs(eventId: string | null) {
         .from('cedula_access_logs')
         .select('*')
         .eq('event_id', eventId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10000);
       
       if (error) throw error;
       return data;

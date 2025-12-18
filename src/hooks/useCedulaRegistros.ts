@@ -13,7 +13,8 @@ export function useCedulaRegistros(eventId: string | null) {
         .from('cedula_registros')
         .select('*')
         .eq('event_id', eventId)
-        .order('scanned_at', { ascending: false });
+        .order('scanned_at', { ascending: false })
+        .limit(10000);
       
       if (error) throw error;
       return data;
