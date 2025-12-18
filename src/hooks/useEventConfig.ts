@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { EventConfig, AdminUser } from '@/types/database';
+import { EventConfig } from '@/types/database';
 
 export const useActiveEventConfig = () => {
   return useQuery({
@@ -34,21 +34,6 @@ export const useEventConfigs = () => {
 
 // Alias for useEventConfigs
 export const useAllEventConfigs = useEventConfigs;
-
-export const useAdminUser = () => {
-  return useQuery({
-    queryKey: ['admin_user'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .single();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      return data as AdminUser | null;
-    }
-  });
-};
 
 export const useUpdateEventConfig = () => {
   const queryClient = useQueryClient();
