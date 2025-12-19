@@ -33,7 +33,7 @@ const convertDateToISO = (dateStr: string | null | undefined): string | undefine
 
 const Scanner = () => {
   const { user } = useSupabaseAuth();
-  const { selectedEvent } = useEventContext();
+  const { selectedEvent, userEvents, isLoadingEvents, selectEvent } = useEventContext();
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [pendingScan, setPendingScan] = useState<CedulaData | null>(null);
   const [selectedControlType, setSelectedControlType] = useState<string>("");
@@ -57,17 +57,44 @@ const Scanner = () => {
   const checkControlLimit = useCheckCedulaControlLimit(selectedEvent?.id || null);
   const createAccessLog = useCreateAccessLog();
 
+  // URGENT FIX: Force auto-select single event
+  useEffect(() => {
+    if (!selectedEvent && !isLoadingEvents && userEvents.length === 1) {
+      console.log('[Scanner] FORCE auto-selecting single event:', userEvents[0].event_id, userEvents[0].event_name);
+      selectEvent(userEvents[0].event_id);
+    }
+  }, [selectedEvent, isLoadingEvents, userEvents, selectEvent]);
+
   // Debug logging for whitelist config
   useEffect(() => {
-    console.log('[Scanner] Whitelist config state:', {
+    console.log('[Scanner] State:', {
       selectedEventId: selectedEvent?.id,
-      whitelistConfigById,
-      activeWhitelistConfig,
-      effectiveConfig: whitelistConfig,
+      selectedEventName: selectedEvent?.event_name,
+      userEventsCount: userEvents.length,
+      isLoadingEvents,
+      controlTypesCount: controlTypes.length,
+      controlTypesLoading,
       requireWhitelist: whitelistConfig?.requireWhitelist,
-      isLoading: whitelistLoading,
     });
-  }, [selectedEvent?.id, whitelistConfigById, activeWhitelistConfig, whitelistConfig, whitelistLoading]);
+  }, [selectedEvent, userEvents, isLoadingEvents, controlTypes, controlTypesLoading, whitelistConfig]);
+
+  // URGENT FIX: Show loading while event is not ready
+  if (isLoadingEvents || !selectedEvent) {
+    return (
+      <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation">
+        <Header title="SCANNER DE ACCESO" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4 p-6">
+            <div className="animate-spin h-10 w-10 border-4 border-dorado border-t-transparent rounded-full mx-auto" />
+            <p className="text-hueso text-lg font-medium">Cargando evento...</p>
+            <p className="text-gray-400 text-sm">
+              {isLoadingEvents ? 'Obteniendo eventos asignados...' : 'Seleccionando evento...'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleCedulaScanSuccess = async (data: CedulaData) => {
     // Reset states
