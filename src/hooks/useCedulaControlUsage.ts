@@ -52,6 +52,7 @@ export function useCedulaControlUsage(eventId: string | null) {
 }
 
 // Check control limit for a specific cédula
+// CRITICAL FIX: Enforce limit even when category is not configured
 export function useCheckCedulaControlLimit(eventId: string | null) {
   const queryClient = useQueryClient();
   
@@ -62,7 +63,18 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
 
     console.log('[useCedulaControlLimit] Checking:', { eventId, numeroCedula, controlTypeId });
 
-    // Use the database function
+    // CRITICAL: Always count current usage FIRST to enforce limits
+    const { count: currentCount, error: countError } = await supabase
+      .from('cedula_control_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('numero_cedula', numeroCedula)
+      .eq('control_type_id', controlTypeId);
+    
+    const currentUses = currentCount || 0;
+    console.log('[useCedulaControlLimit] Current usage count:', currentUses);
+
+    // Try to get configured limit from database function
     const { data, error } = await supabase
       .rpc('check_cedula_control_limit', {
         p_event_id: eventId,
@@ -70,39 +82,33 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
         p_control_type_id: controlTypeId,
       });
 
-    if (error) {
-      console.error('[useCedulaControlLimit] Error:', error);
-      // Fallback: count usage directly if function fails
-      const { count } = await supabase
-        .from('cedula_control_usage')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', eventId)
-        .eq('numero_cedula', numeroCedula)
-        .eq('control_type_id', controlTypeId);
-      
-      console.log('[useCedulaControlLimit] Fallback count:', count);
-      
-      // Default behavior: allow but warn
-      return {
-        can_access: true,
-        current_uses: count || 0,
-        max_uses: 0,
-        error_message: 'Sin límite configurado (usando conteo directo)',
-      };
-    }
-
-    console.log('[useCedulaControlLimit] Result:', data);
+    let maxUses = 1; // DEFAULT: 1 use per control type (STRICT)
     
-    if (data && data.length > 0) {
+    if (!error && data && data.length > 0 && data[0].max_uses > 0) {
+      maxUses = data[0].max_uses;
+      console.log('[useCedulaControlLimit] Got configured limit:', maxUses);
+    } else {
+      console.log('[useCedulaControlLimit] No configured limit, using DEFAULT of 1');
+    }
+
+    // STRICT ENFORCEMENT: Block if already used
+    if (currentUses >= maxUses) {
+      console.log('[useCedulaControlLimit] BLOCKED - Limit exceeded:', currentUses, '>=', maxUses);
       return {
-        can_access: data[0].can_access,
-        current_uses: Number(data[0].current_uses),
-        max_uses: data[0].max_uses,
-        error_message: data[0].error_message,
+        can_access: false,
+        current_uses: currentUses,
+        max_uses: maxUses,
+        error_message: `LÍMITE ALCANZADO (${currentUses}/${maxUses})`,
       };
     }
 
-    return { can_access: true, current_uses: 0, max_uses: 0, error_message: 'Sin límite configurado' };
+    console.log('[useCedulaControlLimit] ALLOWED:', currentUses, '/', maxUses);
+    return {
+      can_access: true,
+      current_uses: currentUses,
+      max_uses: maxUses,
+      error_message: `Acceso permitido (${currentUses}/${maxUses})`,
+    };
   };
 }
 
