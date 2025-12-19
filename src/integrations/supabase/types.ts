@@ -221,6 +221,7 @@ export type Database = {
           scanned_by: string | null
           segundo_apellido: string | null
           sexo: string | null
+          was_on_whitelist: boolean | null
         }
         Insert: {
           created_at?: string
@@ -240,6 +241,7 @@ export type Database = {
           scanned_by?: string | null
           segundo_apellido?: string | null
           sexo?: string | null
+          was_on_whitelist?: boolean | null
         }
         Update: {
           created_at?: string
@@ -259,6 +261,7 @@ export type Database = {
           scanned_by?: string | null
           segundo_apellido?: string | null
           sexo?: string | null
+          was_on_whitelist?: boolean | null
         }
         Relationships: [
           {
