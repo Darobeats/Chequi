@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useEventConfigs, useUpdateEventConfig, useCreateEventConfig, useActivateEventConfig } from '@/hooks/useEventConfig';
+import { useEventConfigs, useUpdateEventConfig, useCreateEventConfig } from '@/hooks/useEventConfig';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EventConfig as EventConfigType, Attendee } from '@/types/database';
-import { Palette, Type, Image, Settings, Save, Plus, Check, UserPlus, QrCode, Tag, Users, RefreshCw, Ticket, Shield, UsersRound } from 'lucide-react';
+import { Palette, Type, Image, Settings, Save, Plus, UserPlus, QrCode, Tag, Users, RefreshCw, Ticket, Shield, UsersRound, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import AttendeesManager from '@/components/AttendeesManager';
@@ -41,9 +42,9 @@ const FONT_OPTIONS = [
 const EventConfig = () => {
   const { data: eventConfigs = [], isLoading } = useEventConfigs();
   const { isAdmin, loading: roleLoading } = useUserRole();
+  const { selectedEvent, userEvents, selectEvent } = useEventContext();
   const updateEventConfig = useUpdateEventConfig();
   const createEventConfig = useCreateEventConfig();
-  const activateEventConfig = useActivateEventConfig();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -153,21 +154,6 @@ const EventConfig = () => {
     }
   };
 
-  const handleActivateConfig = async (configId: string) => {
-    try {
-      await activateEventConfig.mutateAsync(configId);
-      toast({
-        title: "Configuración activada",
-        description: "La configuración del evento está ahora activa.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo activar la configuración.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleApplyChanges = async () => {
     setIsRefreshing(true);
@@ -205,28 +191,47 @@ const EventConfig = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-2">
           <Settings className="h-6 w-6 text-dorado" />
           <h2 className="text-2xl font-bold text-dorado">Configuración de Eventos</h2>
         </div>
-        <Button
-          onClick={handleApplyChanges}
-          disabled={isRefreshing}
-          className="bg-dorado text-empresarial hover:bg-dorado/90 font-semibold"
-        >
-          {isRefreshing ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Actualizando...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Aplicar Cambios
-            </>
+        <div className="flex items-center gap-4">
+          {userEvents.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-hueso/60" />
+              <Select value={selectedEvent?.id || ''} onValueChange={selectEvent}>
+                <SelectTrigger className="w-[200px] bg-gray-800 border-gray-700 text-hueso">
+                  <SelectValue placeholder="Seleccionar evento" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {userEvents.map((event) => (
+                    <SelectItem key={event.event_id} value={event.event_id} className="text-hueso">
+                      {event.event_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
-        </Button>
+          <Button
+            onClick={handleApplyChanges}
+            disabled={isRefreshing}
+            className="bg-dorado text-empresarial hover:bg-dorado/90 font-semibold"
+          >
+            {isRefreshing ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Actualizando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Aplicar Cambios
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -294,29 +299,28 @@ const EventConfig = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-dorado">Configuraciones Existentes</h3>
             {eventConfigs.map((config) => (
-              <Card key={config.id} className="bg-gray-900/50 border border-gray-800">
+              <Card key={config.id} className={`bg-gray-900/50 border ${selectedEvent?.id === config.id ? 'border-dorado' : 'border-gray-800'}`}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-dorado flex items-center gap-2">
                         {config.event_name}
-                        {config.is_active && <Badge className="bg-green-600">Activo</Badge>}
+                        {selectedEvent?.id === config.id && <Badge className="bg-dorado text-empresarial">Seleccionado</Badge>}
+                        <Badge variant="outline" className={
+                          config.event_status === 'active' ? 'border-green-500 text-green-500' :
+                          config.event_status === 'draft' ? 'border-yellow-500 text-yellow-500' :
+                          'border-gray-500 text-gray-500'
+                        }>
+                          {config.event_status === 'active' ? 'Activo' : 
+                           config.event_status === 'draft' ? 'Borrador' : 'Finalizado'}
+                        </Badge>
                       </CardTitle>
                       <CardDescription>
                         Creado: {new Date(config.created_at).toLocaleDateString()}
+                        {config.event_date && ` | Fecha: ${new Date(config.event_date).toLocaleDateString()}`}
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      {!config.is_active && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleActivateConfig(config.id)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Check className="h-4 w-4 mr-1" />
-                          Activar
-                        </Button>
-                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -729,31 +733,31 @@ const EventConfig = () => {
         </TabsContent>
 
         <TabsContent value="whitelist" className="space-y-6">
-          {eventConfigs.find(c => c.is_active)?.id ? (
-            <CedulasAutorizadasManager eventId={eventConfigs.find(c => c.is_active)!.id} />
+          {selectedEvent?.id ? (
+            <CedulasAutorizadasManager eventId={selectedEvent.id} />
           ) : (
             <Card className="bg-gray-900/50 border border-gray-800">
               <CardContent className="p-8 text-center">
                 <Shield className="h-12 w-12 mx-auto text-hueso/30 mb-4" />
-                <p className="text-hueso/60">No hay un evento activo seleccionado.</p>
-                <p className="text-hueso/40 text-sm">Activa un evento para gestionar la lista de acceso.</p>
+                <p className="text-hueso/60">No hay un evento seleccionado.</p>
+                <p className="text-hueso/40 text-sm">Selecciona un evento para gestionar la lista de acceso.</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
         <TabsContent value="team" className="space-y-6">
-          {eventConfigs.find(c => c.is_active)?.id ? (
+          {selectedEvent?.id ? (
             <EventTeamManager 
-              eventId={eventConfigs.find(c => c.is_active)!.id} 
-              eventName={eventConfigs.find(c => c.is_active)!.event_name}
+              eventId={selectedEvent.id} 
+              eventName={selectedEvent.event_name}
             />
           ) : (
             <Card className="bg-gray-900/50 border border-gray-800">
               <CardContent className="p-8 text-center">
                 <UsersRound className="h-12 w-12 mx-auto text-hueso/30 mb-4" />
-                <p className="text-hueso/60">No hay un evento activo seleccionado.</p>
-                <p className="text-hueso/40 text-sm">Activa un evento para gestionar el equipo.</p>
+                <p className="text-hueso/60">No hay un evento seleccionado.</p>
+                <p className="text-hueso/40 text-sm">Selecciona un evento para gestionar el equipo.</p>
               </CardContent>
             </Card>
           )}

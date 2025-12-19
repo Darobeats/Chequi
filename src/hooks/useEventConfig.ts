@@ -1,5 +1,4 @@
 
-import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { EventConfig } from '@/types/database';
@@ -53,6 +52,8 @@ export const useUpdateEventConfig = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event_configs'] });
       queryClient.invalidateQueries({ queryKey: ['active_event_config'] });
+      queryClient.invalidateQueries({ queryKey: ['selected_event'] });
+      queryClient.invalidateQueries({ queryKey: ['user_events'] });
     }
   });
 };
@@ -62,47 +63,19 @@ export const useCreateEventConfig = () => {
   
   return useMutation({
     mutationFn: async (config: Omit<EventConfig, 'id' | 'created_at' | 'updated_at'>) => {
-      // First deactivate all other configs
-      await supabase
+      const { data, error } = await supabase
         .from('event_configs')
-        .update({ is_active: false })
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      const { error } = await supabase
-        .from('event_configs')
-        .insert(config);
+        .insert(config)
+        .select()
+        .single();
 
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event_configs'] });
       queryClient.invalidateQueries({ queryKey: ['active_event_config'] });
-    }
-  });
-};
-
-export const useActivateEventConfig = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (configId: string) => {
-      // First deactivate all configs
-      await supabase
-        .from('event_configs')
-        .update({ is_active: false })
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      // Then activate the selected one
-      const { error } = await supabase
-        .from('event_configs')
-        .update({ is_active: true })
-        .eq('id', configId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['event_configs'] });
-      queryClient.invalidateQueries({ queryKey: ['active_event_config'] });
+      queryClient.invalidateQueries({ queryKey: ['user_events'] });
     }
   });
 };
