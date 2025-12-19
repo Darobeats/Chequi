@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useEventContext } from '@/context/EventContext';
 import Header from '@/components/Header';
 import AttendeeList from '@/components/AttendeeList';
 import AttendeesManager from '@/components/AttendeesManager';
@@ -15,7 +16,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
-import { BarChart3, Users, FileText, Settings, UserPlus, ClipboardCheck } from 'lucide-react';
+import { useCedulaStats } from '@/hooks/useCedulaRegistros';
+import { useCedulaControlStats } from '@/hooks/useCedulaControlUsage';
+import { BarChart3, Users, FileText, Settings, ClipboardCheck, IdCard, Utensils } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading } = useSupabaseAuth();
@@ -23,10 +26,15 @@ const Admin = () => {
   const navigate = useNavigate();
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   
+  const { selectedEvent } = useEventContext();
   const { data: attendees = [] } = useAttendees();
   const { data: controlUsage = [] } = useControlUsage();
   const { data: controlTypes = [] } = useControlTypes();
   const { data: ticketCategories = [] } = useTicketCategories();
+  
+  // Cédula statistics - for events using cedula scanning
+  const { data: cedulaStats } = useCedulaStats(selectedEvent?.id || null);
+  const { data: cedulaControlStats } = useCedulaControlStats(selectedEvent?.id || null);
 
   useEffect(() => {
     if (!user && !loading) {
@@ -125,6 +133,46 @@ const Admin = () => {
             <p className="text-2xl md:text-3xl font-bold text-dorado">{totalAttendees - attendeesWithUsage}</p>
           </div>
         </div>
+
+        {/* Cédula Statistics - Only show if there's cedula activity */}
+        {(cedulaStats?.total > 0 || cedulaControlStats?.total > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+            <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-amber-800/50 shadow card-hover">
+              <h3 className="text-hueso text-base md:text-lg font-medium mb-1 flex items-center gap-2">
+                <IdCard className="h-4 w-4 text-amber-400" />
+                Cédulas Escaneadas
+              </h3>
+              <p className="text-2xl md:text-3xl font-bold text-amber-400">{cedulaStats?.total || 0}</p>
+              <p className="text-xs text-hueso/60 mt-1">Hoy: {cedulaStats?.today || 0}</p>
+            </div>
+            
+            <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-green-800/50 shadow card-hover">
+              <h3 className="text-hueso text-base md:text-lg font-medium mb-1 flex items-center gap-2">
+                <Utensils className="h-4 w-4 text-green-400" />
+                Consumos Registrados
+              </h3>
+              <p className="text-2xl md:text-3xl font-bold text-green-400">{cedulaControlStats?.total || 0}</p>
+              <p className="text-xs text-hueso/60 mt-1">Hoy: {cedulaControlStats?.today || 0}</p>
+            </div>
+            
+            {/* Stats by control type from cedula */}
+            {(cedulaControlStats?.byControl || []).slice(0, 2).map((item) => {
+              const controlType = controlTypes.find(ct => ct.id === item.controlTypeId);
+              return (
+                <div key={item.controlTypeId} className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-blue-800/50 shadow card-hover">
+                  <h3 className="text-hueso text-base md:text-lg font-medium mb-1 flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: controlType?.color || '#3b82f6' }}
+                    />
+                    {controlType?.name || 'Control'}
+                  </h3>
+                  <p className="text-2xl md:text-3xl font-bold text-blue-400">{item.count}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Tabs Navigation */}
         <Tabs defaultValue="analytics" className="space-y-6">
