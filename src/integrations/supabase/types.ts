@@ -151,6 +151,57 @@ export type Database = {
           },
         ]
       }
+      cedula_control_usage: {
+        Row: {
+          control_type_id: string
+          created_at: string
+          device: string | null
+          event_id: string
+          id: string
+          notes: string | null
+          numero_cedula: string
+          scanned_by: string | null
+          used_at: string
+        }
+        Insert: {
+          control_type_id: string
+          created_at?: string
+          device?: string | null
+          event_id: string
+          id?: string
+          notes?: string | null
+          numero_cedula: string
+          scanned_by?: string | null
+          used_at?: string
+        }
+        Update: {
+          control_type_id?: string
+          created_at?: string
+          device?: string | null
+          event_id?: string
+          id?: string
+          notes?: string | null
+          numero_cedula?: string
+          scanned_by?: string | null
+          used_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cedula_control_usage_control_type_id_fkey"
+            columns: ["control_type_id"]
+            isOneToOne: false
+            referencedRelation: "control_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cedula_control_usage_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cedula_registros: {
         Row: {
           created_at: string
@@ -829,6 +880,19 @@ export type Database = {
         Returns: boolean
       }
       can_modify_data: { Args: { check_user_id?: string }; Returns: boolean }
+      check_cedula_control_limit: {
+        Args: {
+          p_control_type_id: string
+          p_event_id: string
+          p_numero_cedula: string
+        }
+        Returns: {
+          can_access: boolean
+          current_uses: number
+          error_message: string
+          max_uses: number
+        }[]
+      }
       find_attendee_by_ticket: {
         Args: { ticket_id: string }
         Returns: {

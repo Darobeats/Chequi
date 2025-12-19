@@ -10,6 +10,7 @@ import ExportButton from '@/components/ExportButton';
 import EventConfig from '@/components/EventConfig';
 import ScannerSetup from '@/components/scanner/ScannerSetup';
 import { CedulaDashboardMonitor } from '@/components/cedula/CedulaDashboardMonitor';
+import CedulaControlAnalytics from '@/components/analytics/CedulaControlAnalytics';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -165,6 +166,11 @@ const Admin = () => {
 
           <TabsContent value="analytics" className="space-y-6">
             <ControlAnalytics />
+            
+            <div className="mt-6">
+              <h2 className="text-xl font-semibold text-dorado mb-4">Control de Consumibles por Cédula</h2>
+              <CedulaControlAnalytics />
+            </div>
             
             <div className="mt-6">
               <CedulaDashboardMonitor />
