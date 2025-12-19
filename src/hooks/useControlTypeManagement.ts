@@ -6,13 +6,14 @@ export const useCreateControlType = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (controlType: Omit<ControlType, 'id' | 'created_at' | 'event_id'>) => {
-      // Get active event ID
-      const { data: eventId, error: eventError } = await supabase
-        .rpc('get_active_event_id');
-      
-      if (eventError) throw eventError;
-      if (!eventId) throw new Error('No hay evento activo');
+    mutationFn: async ({ 
+      controlType, 
+      eventId 
+    }: { 
+      controlType: Omit<ControlType, 'id' | 'created_at' | 'event_id'>; 
+      eventId: string;
+    }) => {
+      if (!eventId) throw new Error('No hay evento seleccionado');
 
       const { data, error } = await supabase
         .from('control_types')

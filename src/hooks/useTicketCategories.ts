@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { TicketCategory, ControlType } from '@/types/database';
+import { TicketCategory } from '@/types/database';
 
 export const useTicketCategories = () => {
   return useQuery({
@@ -21,13 +21,14 @@ export const useCreateTicketCategory = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (category: Omit<TicketCategory, 'id' | 'created_at' | 'event_id'>) => {
-      // Get active event ID
-      const { data: eventId, error: eventError } = await supabase
-        .rpc('get_active_event_id');
-      
-      if (eventError) throw eventError;
-      if (!eventId) throw new Error('No hay evento activo');
+    mutationFn: async ({ 
+      category, 
+      eventId 
+    }: { 
+      category: Omit<TicketCategory, 'id' | 'created_at' | 'event_id'>; 
+      eventId: string;
+    }) => {
+      if (!eventId) throw new Error('No hay evento seleccionado');
 
       const { data, error } = await supabase
         .from('ticket_categories')
