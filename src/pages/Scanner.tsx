@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import QRScanner from "@/components/QRScanner";
 import { CedulaScanner } from "@/components/cedula/CedulaScanner";
@@ -8,11 +8,14 @@ import { useCreateCedulaRegistro } from "@/hooks/useCedulaRegistros";
 import { useEventContext } from "@/context/EventContext";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
 import { useControlTypes } from "@/hooks/useSupabaseData";
-import { useEventWhitelistConfigById } from "@/hooks/useEventWhitelistConfig";
+import { useEventWhitelistConfig, useEventWhitelistConfigById } from "@/hooks/useEventWhitelistConfig";
 import { useCheckCedulaAuthorization, useCreateAccessLog } from "@/hooks/useCedulasAutorizadas";
+import { useCheckCedulaControlLimit, useCreateCedulaControlUsage } from "@/hooks/useCedulaControlUsage";
 import ControlTypeSelector from "@/components/scanner/ControlTypeSelector";
 import type { CedulaData, CedulaAutorizada, InsertCedulaRegistro } from "@/types/cedula";
-import { QrCode, IdCard } from "lucide-react";
+import { QrCode, IdCard, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
@@ -36,26 +39,64 @@ const Scanner = () => {
   const [selectedControlType, setSelectedControlType] = useState<string>("");
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [autorizadaData, setAutorizadaData] = useState<CedulaAutorizada | null>(null);
+  const [controlLimitInfo, setControlLimitInfo] = useState<{ current: number; max: number } | null>(null);
   
   const createCedulaMutation = useCreateCedulaRegistro();
+  const createControlUsage = useCreateCedulaControlUsage();
   const { data: controlTypes = [], isLoading: controlTypesLoading } = useControlTypes();
-  const { data: whitelistConfig } = useEventWhitelistConfigById(selectedEvent?.id || null);
+  
+  // Use both hooks - by ID and active event as fallback
+  const { data: whitelistConfigById, isLoading: whitelistLoadingById } = useEventWhitelistConfigById(selectedEvent?.id || null);
+  const { data: activeWhitelistConfig, isLoading: activeWhitelistLoading } = useEventWhitelistConfig();
+  
+  // Use the event-specific config if available, otherwise fallback to active event config
+  const whitelistConfig = whitelistConfigById || activeWhitelistConfig;
+  const whitelistLoading = whitelistLoadingById && activeWhitelistLoading;
+  
   const checkAuthorization = useCheckCedulaAuthorization(selectedEvent?.id || null);
+  const checkControlLimit = useCheckCedulaControlLimit(selectedEvent?.id || null);
   const createAccessLog = useCreateAccessLog();
 
+  // Debug logging for whitelist config
+  useEffect(() => {
+    console.log('[Scanner] Whitelist config state:', {
+      selectedEventId: selectedEvent?.id,
+      whitelistConfigById,
+      activeWhitelistConfig,
+      effectiveConfig: whitelistConfig,
+      requireWhitelist: whitelistConfig?.requireWhitelist,
+      isLoading: whitelistLoading,
+    });
+  }, [selectedEvent?.id, whitelistConfigById, activeWhitelistConfig, whitelistConfig, whitelistLoading]);
+
   const handleCedulaScanSuccess = async (data: CedulaData) => {
-    // Reset authorization state
+    // Reset states
     setIsUnauthorized(false);
     setAutorizadaData(null);
+    setControlLimitInfo(null);
+    
+    const eventId = selectedEvent?.id;
+    const requireWhitelist = whitelistConfig?.requireWhitelist === true;
+    
+    console.log('[Scanner] handleCedulaScanSuccess:', {
+      numeroCedula: data.numeroCedula,
+      eventId,
+      requireWhitelist,
+      selectedControlType,
+    });
     
     // Check whitelist if enabled
-    if (whitelistConfig?.requireWhitelist && selectedEvent?.id) {
+    if (requireWhitelist && eventId) {
+      console.log('[Scanner] Checking whitelist authorization...');
       const autorizada = await checkAuthorization(data.numeroCedula);
+      
+      console.log('[Scanner] Authorization result:', autorizada);
       
       if (!autorizada) {
         // Log denied attempt
+        console.log('[Scanner] Access DENIED - cédula not in whitelist');
         await createAccessLog.mutateAsync({
-          event_id: selectedEvent.id,
+          event_id: eventId,
           numero_cedula: data.numeroCedula,
           nombre_detectado: data.nombreCompleto,
           access_result: 'denied',
@@ -64,13 +105,31 @@ const Scanner = () => {
           device_info: navigator.userAgent,
         });
         
+        toast.error('Cédula NO AUTORIZADA - No está en la lista blanca');
         setIsUnauthorized(true);
         setPendingScan(data);
         return;
       }
       
       // Store authorized data for display
+      console.log('[Scanner] Access AUTHORIZED');
       setAutorizadaData(autorizada);
+    }
+    
+    // Check control limit if a control type is selected
+    if (selectedControlType && eventId) {
+      const limitResult = await checkControlLimit(data.numeroCedula, selectedControlType);
+      console.log('[Scanner] Control limit result:', limitResult);
+      
+      setControlLimitInfo({ current: limitResult.current_uses, max: limitResult.max_uses });
+      
+      if (!limitResult.can_access && limitResult.max_uses > 0) {
+        toast.error(`Límite alcanzado: ${limitResult.current_uses}/${limitResult.max_uses} usos`);
+        // Still show the scan result but disable confirm
+        setIsUnauthorized(true);
+        setPendingScan(data);
+        return;
+      }
     }
     
     setPendingScan(data);
@@ -79,46 +138,73 @@ const Scanner = () => {
   const handleConfirmCedulaScan = async () => {
     if (!pendingScan || !selectedEvent?.id || isUnauthorized) return;
 
-    const registro: InsertCedulaRegistro = {
-      event_id: selectedEvent.id,
-      numero_cedula: pendingScan.numeroCedula,
-      primer_apellido: pendingScan.primerApellido,
-      segundo_apellido: pendingScan.segundoApellido,
-      nombres: pendingScan.nombres,
-      fecha_nacimiento: convertDateToISO(pendingScan.fechaNacimiento),
-      sexo: pendingScan.sexo || undefined,
-      rh: pendingScan.rh || undefined,
-      lugar_expedicion: pendingScan.lugarExpedicion || undefined,
-      fecha_expedicion: convertDateToISO(pendingScan.fechaExpedicion),
-      raw_data: pendingScan.rawData,
-      scanned_by: user?.id,
-      device_info: navigator.userAgent,
-    };
-
-    await createCedulaMutation.mutateAsync(registro);
-    
-    // Log successful access if whitelist is enabled
-    if (whitelistConfig?.requireWhitelist) {
-      await createAccessLog.mutateAsync({
+    try {
+      const registro: InsertCedulaRegistro = {
         event_id: selectedEvent.id,
         numero_cedula: pendingScan.numeroCedula,
-        nombre_detectado: pendingScan.nombreCompleto,
-        access_result: 'authorized',
+        primer_apellido: pendingScan.primerApellido,
+        segundo_apellido: pendingScan.segundoApellido,
+        nombres: pendingScan.nombres,
+        fecha_nacimiento: convertDateToISO(pendingScan.fechaNacimiento),
+        sexo: pendingScan.sexo || undefined,
+        rh: pendingScan.rh || undefined,
+        lugar_expedicion: pendingScan.lugarExpedicion || undefined,
+        fecha_expedicion: convertDateToISO(pendingScan.fechaExpedicion),
+        raw_data: pendingScan.rawData,
         scanned_by: user?.id,
         device_info: navigator.userAgent,
-      });
+      };
+
+      await createCedulaMutation.mutateAsync(registro);
+      
+      // Register control usage if control type is selected
+      if (selectedControlType) {
+        console.log('[Scanner] Registering control usage:', {
+          event_id: selectedEvent.id,
+          numero_cedula: pendingScan.numeroCedula,
+          control_type_id: selectedControlType,
+        });
+        
+        await createControlUsage.mutateAsync({
+          event_id: selectedEvent.id,
+          numero_cedula: pendingScan.numeroCedula,
+          control_type_id: selectedControlType,
+          device: navigator.userAgent,
+          scanned_by: user?.id,
+        });
+      }
+      
+      // Log successful access if whitelist is enabled
+      if (whitelistConfig?.requireWhitelist) {
+        await createAccessLog.mutateAsync({
+          event_id: selectedEvent.id,
+          numero_cedula: pendingScan.numeroCedula,
+          nombre_detectado: pendingScan.nombreCompleto,
+          access_result: 'authorized',
+          scanned_by: user?.id,
+          device_info: navigator.userAgent,
+        });
+      }
+      
+      toast.success('Registro guardado exitosamente');
+      setPendingScan(null);
+      setIsUnauthorized(false);
+      setAutorizadaData(null);
+      setControlLimitInfo(null);
+    } catch (error) {
+      console.error('[Scanner] Error saving:', error);
+      toast.error('Error al guardar el registro');
     }
-    
-    setPendingScan(null);
-    setIsUnauthorized(false);
-    setAutorizadaData(null);
   };
 
   const handleCancelCedulaScan = () => {
     setPendingScan(null);
     setIsUnauthorized(false);
     setAutorizadaData(null);
+    setControlLimitInfo(null);
   };
+
+  const selectedControlName = controlTypes.find(c => c.id === selectedControlType)?.name;
 
   return (
     <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation">
@@ -126,6 +212,16 @@ const Scanner = () => {
 
       <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto">
         <div className="w-full max-w-4xl space-y-4">
+          {/* Whitelist status indicator */}
+          {whitelistConfig?.requireWhitelist && (
+            <Alert className="bg-yellow-900/30 border-yellow-600">
+              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+              <AlertDescription className="text-yellow-200">
+                <strong>Lista Blanca ACTIVA</strong> - Solo cédulas autorizadas serán aceptadas
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Tabs defaultValue="tickets" className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-gray-900/50 border border-gray-800 p-2 gap-2 mb-4">
               <TabsTrigger 
@@ -177,21 +273,29 @@ const Scanner = () => {
                     data={pendingScan}
                     onConfirm={handleConfirmCedulaScan}
                     onCancel={handleCancelCedulaScan}
-                    isLoading={createCedulaMutation.isPending}
+                    isLoading={createCedulaMutation.isPending || createControlUsage.isPending}
                     isUnauthorized={isUnauthorized}
                     autorizadaData={autorizadaData}
                     requireWhitelist={whitelistConfig?.requireWhitelist}
+                    controlLimitInfo={controlLimitInfo}
+                    controlName={selectedControlName}
                   />
                 ) : (
                   <CedulaScanner
                     onScanSuccess={handleCedulaScanSuccess}
-                    isActive={!pendingScan && !!selectedControlType}
+                    isActive={!pendingScan && !!selectedControlType && !whitelistLoading}
                   />
                 )}
 
                 {!selectedControlType && !pendingScan && (
                   <p className="text-center text-yellow-500 text-sm">
                     Seleccione un tipo de control para habilitar el escáner
+                  </p>
+                )}
+                
+                {whitelistLoading && (
+                  <p className="text-center text-gray-400 text-sm">
+                    Cargando configuración de lista blanca...
                   </p>
                 )}
               </div>
