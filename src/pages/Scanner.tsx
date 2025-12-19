@@ -13,9 +13,13 @@ import { useCheckCedulaAuthorization, useCreateAccessLog } from "@/hooks/useCedu
 import { useCheckCedulaControlLimit, useCreateCedulaControlUsage } from "@/hooks/useCedulaControlUsage";
 import ControlTypeSelector from "@/components/scanner/ControlTypeSelector";
 import type { CedulaData, CedulaAutorizada, InsertCedulaRegistro } from "@/types/cedula";
-import { QrCode, IdCard, AlertTriangle } from "lucide-react";
+import { QrCode, IdCard, AlertTriangle, Keyboard } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
@@ -40,6 +44,12 @@ const Scanner = () => {
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [autorizadaData, setAutorizadaData] = useState<CedulaAutorizada | null>(null);
   const [controlLimitInfo, setControlLimitInfo] = useState<{ current: number; max: number } | null>(null);
+  
+  // Manual entry states
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [manualCedula, setManualCedula] = useState("");
+  const [manualNombre, setManualNombre] = useState("");
+  const [isManualSubmitting, setIsManualSubmitting] = useState(false);
   
   const createCedulaMutation = useCreateCedulaRegistro();
   const createControlUsage = useCreateCedulaControlUsage();
@@ -295,6 +305,117 @@ const Scanner = () => {
     setControlLimitInfo(null);
   };
 
+  // Handle manual entry submission
+  const handleManualSubmit = async () => {
+    const cedulaTrimmed = manualCedula.trim().replace(/\D/g, '');
+    const nombreTrimmed = manualNombre.trim();
+    
+    if (cedulaTrimmed.length < 6 || cedulaTrimmed.length > 15) {
+      toast.error('La cédula debe tener entre 6 y 15 dígitos');
+      return;
+    }
+    
+    if (nombreTrimmed.length < 3) {
+      toast.error('El nombre debe tener al menos 3 caracteres');
+      return;
+    }
+
+    if (!selectedControlType) {
+      toast.error('Seleccione un tipo de control');
+      return;
+    }
+
+    setIsManualSubmitting(true);
+    
+    try {
+      const eventId = selectedEvent?.id;
+      if (!eventId) throw new Error('No event selected');
+      
+      const requireWhitelist = whitelistConfig?.requireWhitelist === true;
+      let wasAuthorized = true;
+      
+      // Check whitelist if enabled
+      if (requireWhitelist) {
+        const autorizada = await checkAuthorization(cedulaTrimmed);
+        if (!autorizada) {
+          await createAccessLog.mutateAsync({
+            event_id: eventId,
+            numero_cedula: cedulaTrimmed,
+            nombre_detectado: nombreTrimmed,
+            access_result: 'denied',
+            denial_reason: 'Cédula no está en la lista (entrada manual)',
+            scanned_by: user?.id,
+            device_info: 'MANUAL_ENTRY',
+          });
+          toast.error('NO ESTÁ EN LISTA', { description: 'Cédula no autorizada' });
+          wasAuthorized = false;
+        }
+      }
+      
+      // Check control limit
+      if (wasAuthorized && selectedControlType) {
+        const limitResult = await checkControlLimit(cedulaTrimmed, selectedControlType);
+        if (!limitResult.can_access && limitResult.max_uses > 0) {
+          toast.error(`Límite alcanzado: ${limitResult.current_uses}/${limitResult.max_uses}`);
+          wasAuthorized = false;
+        }
+      }
+
+      if (!wasAuthorized) {
+        setIsManualSubmitting(false);
+        return;
+      }
+
+      // Parse name
+      const parts = nombreTrimmed.split(' ').filter(p => p.length > 0);
+      let primerApellido = parts.length > 0 ? parts[parts.length - 1] : nombreTrimmed;
+      let nombres = parts.length > 1 ? parts.slice(0, -1).join(' ') : nombreTrimmed;
+
+      // Create registro
+      await createCedulaMutation.mutateAsync({
+        event_id: eventId,
+        numero_cedula: cedulaTrimmed,
+        primer_apellido: primerApellido,
+        nombres: nombres,
+        raw_data: 'MANUAL_ENTRY',
+        scanned_by: user?.id,
+        device_info: 'MANUAL_ENTRY',
+        was_on_whitelist: requireWhitelist ? true : undefined,
+      });
+      
+      // Register control usage
+      await createControlUsage.mutateAsync({
+        event_id: eventId,
+        numero_cedula: cedulaTrimmed,
+        control_type_id: selectedControlType,
+        device: 'MANUAL_ENTRY',
+        scanned_by: user?.id,
+      });
+      
+      // Log access if whitelist
+      if (requireWhitelist) {
+        await createAccessLog.mutateAsync({
+          event_id: eventId,
+          numero_cedula: cedulaTrimmed,
+          nombre_detectado: nombreTrimmed,
+          access_result: 'authorized',
+          scanned_by: user?.id,
+          device_info: 'MANUAL_ENTRY',
+        });
+      }
+      
+      toast.success('✓ ACCESO REGISTRADO', { description: nombreTrimmed });
+      setManualCedula('');
+      setManualNombre('');
+      setManualDialogOpen(false);
+    } catch (error) {
+      console.error('Manual entry error:', error);
+      toast.error('Error al registrar');
+    } finally {
+      setIsManualSubmitting(false);
+    }
+  };
+
   const selectedControlName = controlTypes.find(c => c.id === selectedControlType)?.name;
 
   return (
@@ -348,8 +469,8 @@ const Scanner = () => {
             <TabsContent value="cedulas">
               <div className="max-w-lg mx-auto p-4 md:p-8 space-y-4 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
                 <div className="text-center mb-4">
-                  <h1 className="text-xl md:text-2xl font-bold text-dorado mb-2">Escáner de Cédulas</h1>
-                  <p className="text-sm md:text-base text-gray-400">Escanee el código PDF417 en el reverso de la cédula</p>
+                  <h1 className="text-xl md:text-2xl font-bold text-dorado mb-2">Control de Cédulas</h1>
+                  <p className="text-sm md:text-base text-gray-400">Escanee o ingrese manualmente la cédula</p>
                 </div>
 
                 <ControlTypeSelector
@@ -358,6 +479,72 @@ const Scanner = () => {
                   onControlTypeChange={setSelectedControlType}
                   isLoading={controlTypesLoading}
                 />
+
+                {/* ENTRADA MANUAL RÁPIDA - Prominente para emergencias */}
+                <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 text-lg"
+                      disabled={!selectedControlType}
+                    >
+                      <Keyboard className="h-5 w-5 mr-2" />
+                      ENTRADA MANUAL RÁPIDA
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-empresarial border-gray-700 sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="text-dorado text-xl">Entrada Manual de Cédula</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="manual-cedula" className="text-hueso font-medium">
+                          Número de Cédula <span className="text-red-400">*</span>
+                        </Label>
+                        <Input
+                          id="manual-cedula"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Ej: 1234567890"
+                          value={manualCedula}
+                          onChange={(e) => setManualCedula(e.target.value.replace(/\D/g, ''))}
+                          className="bg-gray-900 border-gray-600 text-hueso text-lg h-12 font-mono"
+                          maxLength={15}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="manual-nombre" className="text-hueso font-medium">
+                          Nombre Completo <span className="text-red-400">*</span>
+                        </Label>
+                        <Input
+                          id="manual-nombre"
+                          type="text"
+                          placeholder="Ej: Juan Pérez García"
+                          value={manualNombre}
+                          onChange={(e) => setManualNombre(e.target.value)}
+                          className="bg-gray-900 border-gray-600 text-hueso text-lg h-12"
+                          maxLength={100}
+                        />
+                      </div>
+                      <div className="flex gap-3 pt-4">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setManualDialogOpen(false)}
+                          className="flex-1 border-gray-600 text-hueso"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button 
+                          onClick={handleManualSubmit}
+                          disabled={isManualSubmitting || !manualCedula || !manualNombre}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
+                        >
+                          {isManualSubmitting ? 'Registrando...' : '✓ REGISTRAR'}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
                 {pendingScan ? (
                   <CedulaScanResult
