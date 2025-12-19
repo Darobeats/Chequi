@@ -75,15 +75,15 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
     const { selectedEvent, userEvents, selectEvent, hasMultipleEvents, roleInSelectedEvent } = eventContext;
     
     if (!hasMultipleEvents && selectedEvent) {
-      // Single event - show compact info
+      // Single event - show compact info (VISIBLE ON ALL DEVICES)
       return (
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-900/50 rounded-lg border border-gray-700">
-          <Calendar className="h-3.5 w-3.5 text-dorado" />
-          <span className="text-hueso text-sm font-medium truncate max-w-[150px]">
+        <div className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 bg-gray-900/50 rounded-lg border border-gray-700">
+          <Calendar className="h-3 md:h-3.5 w-3 md:w-3.5 text-dorado flex-shrink-0" />
+          <span className="text-hueso text-xs md:text-sm font-medium truncate max-w-[100px] md:max-w-[150px]">
             {selectedEvent.event_name}
           </span>
           {roleInSelectedEvent && (
-            <Badge variant="outline" className={`${getRoleBadgeClass(roleInSelectedEvent)} text-xs py-0`}>
+            <Badge variant="outline" className={`${getRoleBadgeClass(roleInSelectedEvent)} text-[10px] md:text-xs py-0 hidden sm:flex`}>
               {getRoleIcon(roleInSelectedEvent)}
               <span className="ml-1">{roleInSelectedEvent === 'admin' ? 'Admin' : roleInSelectedEvent === 'control' ? 'Control' : 'Scanner'}</span>
             </Badge>
@@ -93,12 +93,12 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
     }
     
     if (hasMultipleEvents) {
-      // Multiple events - show selector
+      // Multiple events - show selector (VISIBLE ON ALL DEVICES)
       return (
-        <div className="hidden md:flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-dorado" />
+        <div className="flex items-center gap-1.5 md:gap-2">
+          <Calendar className="h-3.5 md:h-4 w-3.5 md:w-4 text-dorado flex-shrink-0" />
           <Select value={selectedEvent?.id || ''} onValueChange={selectEvent}>
-            <SelectTrigger className="w-[180px] bg-gray-900/50 border-gray-700 text-hueso h-9">
+            <SelectTrigger className="w-[120px] md:w-[180px] bg-gray-900/50 border-gray-700 text-hueso h-9 touch-manipulation text-xs md:text-sm">
               <SelectValue placeholder="Seleccionar evento" />
             </SelectTrigger>
             <SelectContent className="bg-gray-950 border-gray-700 z-[9999]">
@@ -106,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                 <SelectItem 
                   key={event.event_id} 
                   value={event.event_id}
-                  className="text-hueso hover:bg-gray-800 focus:bg-gray-800"
+                  className="text-hueso hover:bg-gray-800 focus:bg-gray-800 touch-manipulation min-h-[44px]"
                 >
                   <div className="flex items-center gap-2">
                     <span className="truncate">{event.event_name}</span>
@@ -121,7 +121,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
             </SelectContent>
           </Select>
           {roleInSelectedEvent && (
-            <Badge variant="outline" className={`${getRoleBadgeClass(roleInSelectedEvent)} text-xs`}>
+            <Badge variant="outline" className={`${getRoleBadgeClass(roleInSelectedEvent)} text-xs hidden sm:flex`}>
               {getRoleIcon(roleInSelectedEvent)}
               <span className="ml-1">{roleInSelectedEvent === 'admin' ? 'Admin' : roleInSelectedEvent === 'control' ? 'Control' : 'Scanner'}</span>
             </Badge>
