@@ -4,14 +4,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro } from '@/hooks/useCedulaRegistros';
+import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro, useClearAllCedulaRegistros } from '@/hooks/useCedulaRegistros';
 import { useCedulasAutorizadasStats } from '@/hooks/useCedulasAutorizadas';
 import { useEventWhitelistConfigById } from '@/hooks/useEventWhitelistConfig';
 import { useEventContext } from '@/context/EventContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { CedulaExportButton } from './CedulaExportButton';
 import { CedulaManualRegistro } from './CedulaManualRegistro';
-import { IdCard, TrendingUp, Clock, Trash2, Search, Users, ShieldCheck, ShieldX, CheckCircle2 } from 'lucide-react';
+import { IdCard, TrendingUp, Clock, Trash2, Search, Users, ShieldCheck, ShieldX, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -23,8 +23,10 @@ export function CedulaDashboardMonitor() {
   const { data: whitelistStats } = useCedulasAutorizadasStats(selectedEvent?.id || null);
   const { isAdmin } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
+  const clearAllRegistros = useClearAllCedulaRegistros();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const isWhitelistActive = whitelistConfig?.requireWhitelist ?? false;
 
@@ -176,6 +178,61 @@ export function CedulaDashboardMonitor() {
                 registros={filteredRegistros} 
                 eventName={selectedEvent?.event_name || 'Evento'}
               />
+              
+              {/* Botón eliminar todos - solo admin */}
+              {isAdmin && registros.length > 0 && selectedEvent?.id && (
+                <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Eliminar Todos ({registros.length})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-empresarial border-gray-800">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-red-400 flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5" />
+                        ¡ADVERTENCIA! Eliminar Todos los Registros
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-hueso/80 space-y-3">
+                        <p>
+                          Estás a punto de eliminar <strong className="text-red-400">{registros.length} registros</strong> del evento <strong className="text-dorado">{selectedEvent.event_name}</strong>.
+                        </p>
+                        <p className="text-amber-400">
+                          Esto también eliminará:
+                        </p>
+                        <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                          <li>Todos los registros de control de uso de cédulas</li>
+                          <li>Todos los logs de acceso</li>
+                          <li>Todos los registros de cédulas escaneadas</li>
+                        </ul>
+                        <p className="text-red-400 font-semibold mt-4">
+                          Esta acción NO se puede deshacer.
+                        </p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="border-gray-700 text-hueso hover:bg-gray-800">
+                        Cancelar
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          clearAllRegistros.mutate(selectedEvent.id);
+                          setShowClearConfirm(false);
+                        }}
+                        disabled={clearAllRegistros.isPending}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        {clearAllRegistros.isPending ? 'Eliminando...' : 'Sí, Eliminar Todo'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
         </div>

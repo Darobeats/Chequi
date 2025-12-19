@@ -145,3 +145,45 @@ export function useCedulaStats(eventId: string | null) {
     enabled: !!eventId
   });
 }
+
+export function useClearAllCedulaRegistros() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      // Eliminar en orden: primero las tablas dependientes
+      const { error: errorUsage } = await supabase
+        .from('cedula_control_usage')
+        .delete()
+        .eq('event_id', eventId);
+      
+      if (errorUsage) throw errorUsage;
+
+      const { error: errorLogs } = await supabase
+        .from('cedula_access_logs')
+        .delete()
+        .eq('event_id', eventId);
+      
+      if (errorLogs) throw errorLogs;
+
+      const { error: errorRegistros } = await supabase
+        .from('cedula_registros')
+        .delete()
+        .eq('event_id', eventId);
+      
+      if (errorRegistros) throw errorRegistros;
+
+      return eventId;
+    },
+    onSuccess: (eventId) => {
+      queryClient.invalidateQueries({ queryKey: ['cedula_registros', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedula_stats', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedula_control_usage', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedula_access_logs', eventId] });
+      toast.success('Todos los registros han sido eliminados');
+    },
+    onError: (error: any) => {
+      toast.error('Error al eliminar registros: ' + error.message);
+    }
+  });
+}
