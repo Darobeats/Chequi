@@ -235,62 +235,41 @@ const EventConfig = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-4 md:grid-cols-8 bg-gray-900/50 border border-gray-800 gap-1">
-          <TabsTrigger value="configuration" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
-            <Settings className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
-              <span className="hidden md:inline">Configuración de Evento</span>
-              <span className="md:hidden">Config</span>
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 bg-gray-900/50 border border-gray-800 gap-1 h-auto">
+          <TabsTrigger value="configuration" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <Settings className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">
+              <span className="hidden lg:inline">Config</span>
+              <span className="lg:hidden">Config</span>
             </span>
           </TabsTrigger>
-          <TabsTrigger value="ticket-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
-            <Tag className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
-              <span className="hidden md:inline">Gestión de Tickets</span>
-              <span className="md:hidden">Tickets</span>
-            </span>
+          <TabsTrigger value="ticket-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <Tag className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">Tickets</span>
           </TabsTrigger>
-          <TabsTrigger value="attendee-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
-            <Users className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
-              <span className="hidden md:inline">Gestión de Asistentes</span>
-              <span className="md:hidden">Asistentes</span>
-            </span>
+          <TabsTrigger value="attendee-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <Users className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">Asistentes</span>
           </TabsTrigger>
-          <TabsTrigger value="ticket-assignment" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
-            <UserPlus className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
-              <span className="hidden md:inline">Asignación de Tickets</span>
-              <span className="md:hidden">Asignar</span>
-            </span>
+          <TabsTrigger value="ticket-assignment" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <UserPlus className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">Asignar</span>
           </TabsTrigger>
-          <TabsTrigger value="ticket-templates" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
-            <Ticket className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
-              <span className="hidden md:inline">Plantillas de Tickets</span>
-              <span className="md:hidden">Plantillas</span>
-            </span>
+          <TabsTrigger value="ticket-templates" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <Ticket className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">Plantillas</span>
           </TabsTrigger>
-          <TabsTrigger value="qr-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
-            <QrCode className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
-              <span className="hidden md:inline">Gestión de QR</span>
-              <span className="md:hidden">QR</span>
-            </span>
+          <TabsTrigger value="qr-management" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <QrCode className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">QR</span>
           </TabsTrigger>
-          <TabsTrigger value="whitelist" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
-            <Shield className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
-              <span className="hidden md:inline">Lista de Acceso</span>
-              <span className="md:hidden">Acceso</span>
-            </span>
+          <TabsTrigger value="whitelist" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <Shield className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">Acceso</span>
           </TabsTrigger>
-          <TabsTrigger value="team" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 min-h-[48px] px-2 sm:px-3">
-            <UsersRound className="h-5 w-5 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="text-[10px] sm:text-sm md:text-base leading-tight text-center sm:text-left">
-              <span className="hidden md:inline">Equipo del Evento</span>
-              <span className="md:hidden">Equipo</span>
-            </span>
+          <TabsTrigger value="team" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <UsersRound className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">Equipo</span>
           </TabsTrigger>
         </TabsList>
 

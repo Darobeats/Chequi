@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, User, Calendar, MapPin, Droplet, XCircle, ShieldCheck, Building, Tag, Beer } from 'lucide-react';
+import { CheckCircle, User, Calendar, MapPin, Droplet, XCircle, ShieldCheck, Building, Tag, Beer, AlertTriangle } from 'lucide-react';
 import type { CedulaData, CedulaAutorizada } from '@/types/cedula';
 
 interface CedulaScanResultProps {
@@ -14,6 +14,8 @@ interface CedulaScanResultProps {
   requireWhitelist?: boolean;
   controlLimitInfo?: { current: number; max: number } | null;
   controlName?: string;
+  allowSaveUnauthorized?: boolean;
+  onSaveUnauthorized?: () => void;
 }
 
 export function CedulaScanResult({ 
@@ -25,22 +27,29 @@ export function CedulaScanResult({
   autorizadaData,
   requireWhitelist,
   controlLimitInfo,
-  controlName
+  controlName,
+  allowSaveUnauthorized = false,
+  onSaveUnauthorized
 }: CedulaScanResultProps) {
   // Check if limit is exceeded
   const isLimitExceeded = controlLimitInfo && controlLimitInfo.max > 0 && controlLimitInfo.current >= controlLimitInfo.max;
-  const shouldBlockConfirm = isUnauthorized || isLimitExceeded;
+  const shouldBlockConfirm = isLimitExceeded || (isUnauthorized && !allowSaveUnauthorized);
 
   return (
-    <Card className={`p-6 ${shouldBlockConfirm ? 'border-destructive/50 bg-destructive/5' : 'border-primary/50 bg-primary/5'}`}>
+    <Card className={`p-6 ${isUnauthorized || isLimitExceeded ? 'border-destructive/50 bg-destructive/5' : 'border-primary/50 bg-primary/5'}`}>
       <div className="space-y-4">
-        {/* Authorization Status Alert */}
+        {/* Not on list Alert - new friendly message */}
         {isUnauthorized && !isLimitExceeded && (
-          <Alert variant="destructive" className="border-destructive bg-destructive/10">
-            <XCircle className="h-5 w-5" />
-            <AlertTitle className="font-bold">ACCESO DENEGADO</AlertTitle>
-            <AlertDescription>
-              Esta cédula NO está en la lista de acceso autorizado para este evento.
+          <Alert variant="destructive" className="border-orange-500 bg-orange-500/10">
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <AlertTitle className="font-bold text-orange-600">NO ESTÁ EN LISTA</AlertTitle>
+            <AlertDescription className="text-orange-600">
+              Esta cédula no se encuentra en la lista de acceso autorizado para este evento.
+              {allowSaveUnauthorized && (
+                <span className="block mt-1 text-sm">
+                  Puede registrar el intento de acceso para reportes.
+                </span>
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -58,7 +67,7 @@ export function CedulaScanResult({
         )}
 
         {/* Show usage info when not exceeded */}
-        {controlLimitInfo && controlLimitInfo.max > 0 && !isLimitExceeded && (
+        {controlLimitInfo && controlLimitInfo.max > 0 && !isLimitExceeded && !isUnauthorized && (
           <Alert className="border-blue-500 bg-blue-500/10">
             <Beer className="h-5 w-5 text-blue-500" />
             <AlertTitle className="font-bold text-blue-600">USO DE CONTROL</AlertTitle>
@@ -69,7 +78,7 @@ export function CedulaScanResult({
           </Alert>
         )}
 
-        {!shouldBlockConfirm && requireWhitelist && autorizadaData && (
+        {!isUnauthorized && !isLimitExceeded && requireWhitelist && autorizadaData && (
           <Alert className="border-green-500 bg-green-500/10">
             <ShieldCheck className="h-5 w-5 text-green-500" />
             <AlertTitle className="font-bold text-green-600">ACCESO AUTORIZADO</AlertTitle>
@@ -92,13 +101,13 @@ export function CedulaScanResult({
         )}
 
         <div className="flex items-center gap-2 mb-4">
-          {shouldBlockConfirm ? (
+          {isUnauthorized || isLimitExceeded ? (
             <XCircle className="h-6 w-6 text-destructive" />
           ) : (
             <CheckCircle className="h-6 w-6 text-primary" />
           )}
           <h3 className="text-lg font-semibold">
-            {isLimitExceeded ? 'Límite de Uso Alcanzado' : isUnauthorized ? 'Cédula No Autorizada' : 'Cédula Escaneada'}
+            {isLimitExceeded ? 'Límite de Uso Alcanzado' : isUnauthorized ? 'No Está en Lista' : 'Cédula Escaneada'}
           </h3>
         </div>
 
@@ -156,17 +165,44 @@ export function CedulaScanResult({
           </div>
         </div>
 
-        <div className="flex gap-3 pt-4">
-          {shouldBlockConfirm ? (
+        <div className="flex flex-col gap-3 pt-4">
+          {isLimitExceeded ? (
             <Button 
               onClick={onCancel} 
               variant="destructive"
-              className="flex-1"
+              className="w-full"
+            >
+              Cerrar y Escanear Otra
+            </Button>
+          ) : isUnauthorized && allowSaveUnauthorized ? (
+            <>
+              <Button 
+                onClick={onSaveUnauthorized} 
+                variant="outline"
+                className="w-full border-orange-500 text-orange-600 hover:bg-orange-500/10"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Guardando...' : 'Registrar para Reporte'}
+              </Button>
+              <Button 
+                onClick={onCancel} 
+                variant="ghost" 
+                className="w-full"
+                disabled={isLoading}
+              >
+                Escanear Otra Cédula
+              </Button>
+            </>
+          ) : isUnauthorized ? (
+            <Button 
+              onClick={onCancel} 
+              variant="destructive"
+              className="w-full"
             >
               Cerrar y Escanear Otra
             </Button>
           ) : (
-            <>
+            <div className="flex gap-3">
               <Button 
                 onClick={onConfirm} 
                 className="flex-1"
@@ -182,7 +218,7 @@ export function CedulaScanResult({
               >
                 Cancelar
               </Button>
-            </>
+            </div>
           )}
         </div>
       </div>

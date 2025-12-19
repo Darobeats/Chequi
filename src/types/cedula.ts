@@ -46,6 +46,7 @@ export interface InsertCedulaRegistro {
   raw_data: string;
   scanned_by?: string;
   device_info?: string;
+  was_on_whitelist?: boolean;
 }
 
 // Tipos para lista blanca

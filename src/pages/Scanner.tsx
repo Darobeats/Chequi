@@ -105,7 +105,9 @@ const Scanner = () => {
           device_info: navigator.userAgent,
         });
         
-        toast.error('Cédula NO AUTORIZADA - No está en la lista blanca');
+        toast.error('NO ESTÁ EN LISTA', {
+          description: 'Esta cédula no se encuentra en la lista de acceso',
+        });
         setIsUnauthorized(true);
         setPendingScan(data);
         return;
@@ -135,6 +137,7 @@ const Scanner = () => {
     setPendingScan(data);
   };
 
+  // Save authorized cedula with full control usage
   const handleConfirmCedulaScan = async () => {
     if (!pendingScan || !selectedEvent?.id || isUnauthorized) return;
 
@@ -155,7 +158,12 @@ const Scanner = () => {
         device_info: navigator.userAgent,
       };
 
-      await createCedulaMutation.mutateAsync(registro);
+      // Add was_on_whitelist flag if whitelist is enabled
+      const registroWithWhitelist = whitelistConfig?.requireWhitelist 
+        ? { ...registro, was_on_whitelist: true }
+        : registro;
+
+      await createCedulaMutation.mutateAsync(registroWithWhitelist as InsertCedulaRegistro);
       
       // Register control usage if control type is selected
       if (selectedControlType) {
@@ -197,6 +205,46 @@ const Scanner = () => {
     }
   };
 
+  // Save unauthorized cedula for reporting purposes
+  const handleSaveUnauthorized = async () => {
+    if (!pendingScan || !selectedEvent?.id) return;
+
+    try {
+      const registro: InsertCedulaRegistro = {
+        event_id: selectedEvent.id,
+        numero_cedula: pendingScan.numeroCedula,
+        primer_apellido: pendingScan.primerApellido,
+        segundo_apellido: pendingScan.segundoApellido,
+        nombres: pendingScan.nombres,
+        fecha_nacimiento: convertDateToISO(pendingScan.fechaNacimiento),
+        sexo: pendingScan.sexo || undefined,
+        rh: pendingScan.rh || undefined,
+        lugar_expedicion: pendingScan.lugarExpedicion || undefined,
+        fecha_expedicion: convertDateToISO(pendingScan.fechaExpedicion),
+        raw_data: pendingScan.rawData,
+        scanned_by: user?.id,
+        device_info: navigator.userAgent,
+      };
+
+      // Mark as NOT on whitelist for reporting
+      const registroWithWhitelist = { ...registro, was_on_whitelist: false };
+
+      await createCedulaMutation.mutateAsync(registroWithWhitelist as InsertCedulaRegistro);
+      
+      toast.success('Registro guardado para reporte', {
+        description: 'Cédula registrada como "no en lista"',
+      });
+      
+      setPendingScan(null);
+      setIsUnauthorized(false);
+      setAutorizadaData(null);
+      setControlLimitInfo(null);
+    } catch (error) {
+      console.error('[Scanner] Error saving unauthorized:', error);
+      toast.error('Error al guardar el registro');
+    }
+  };
+
   const handleCancelCedulaScan = () => {
     setPendingScan(null);
     setIsUnauthorized(false);
@@ -217,7 +265,7 @@ const Scanner = () => {
             <Alert className="bg-yellow-900/30 border-yellow-600">
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
               <AlertDescription className="text-yellow-200">
-                <strong>Lista Blanca ACTIVA</strong> - Solo cédulas autorizadas serán aceptadas
+                <strong>Lista de Acceso ACTIVA</strong> - Solo cédulas autorizadas tendrán acceso completo
               </AlertDescription>
             </Alert>
           )}
@@ -279,6 +327,8 @@ const Scanner = () => {
                     requireWhitelist={whitelistConfig?.requireWhitelist}
                     controlLimitInfo={controlLimitInfo}
                     controlName={selectedControlName}
+                    allowSaveUnauthorized={whitelistConfig?.requireWhitelist === true}
+                    onSaveUnauthorized={handleSaveUnauthorized}
                   />
                 ) : (
                   <CedulaScanner
