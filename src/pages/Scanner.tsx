@@ -65,6 +65,22 @@ const Scanner = () => {
     }
   }, [selectedEvent, isLoadingEvents, userEvents, selectEvent]);
 
+  // URGENT FIX: Auto-select "Ingreso" control type to block duplicates
+  useEffect(() => {
+    if (controlTypes.length > 0 && !selectedControlType) {
+      // Prefer "Ingreso" control type, fallback to first available
+      const ingresoControl = controlTypes.find(ct => 
+        ct.name.toLowerCase() === 'ingreso' || 
+        ct.name.toLowerCase().includes('entrada') ||
+        ct.name.toLowerCase().includes('acceso')
+      );
+      const defaultControl = ingresoControl || controlTypes[0];
+      console.log('[Scanner] AUTO-SELECTING control type:', defaultControl.name, defaultControl.id);
+      setSelectedControlType(defaultControl.id);
+      toast.info(`Control seleccionado: ${defaultControl.name}`);
+    }
+  }, [controlTypes, selectedControlType]);
+
   // Debug logging for whitelist config
   useEffect(() => {
     console.log('[Scanner] State:', {
