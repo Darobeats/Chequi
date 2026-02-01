@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuthorizeUserManagement } from '@/hooks/useAuthorizeUserManagement';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Shield, Users, Scan } from 'lucide-react';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 interface HeaderProps {
   title?: string;
@@ -38,6 +40,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
   const { canManageUsers } = useAuthorizeUserManagement();
   const eventContext = useOptionalEventContext();
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -49,13 +52,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
   };
 
   const getRoleText = (role: string) => {
-    switch (role) {
-      case 'admin': return 'Admin';
-      case 'control': return 'Control';
-      case 'attendee': return 'Asistente';
-      case 'viewer': return 'Observador';
-      default: return '';
-    }
+    return t(`roles.${role}`) || role;
   };
 
   const getRoleColor = (role: string) => {
@@ -168,7 +165,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                   }
                 }}
               >
-                Características
+                {t('nav.features')}
               </Button>
               <Button
                 variant="ghost"
@@ -181,8 +178,12 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                   }
                 }}
               >
-                Cómo Funciona
+                {t('nav.howItWorks')}
               </Button>
+              
+              {/* Language Switcher - always visible on landing */}
+              <LanguageSwitcher />
+              
               {user ? (
                 <Button
                   variant="default"
@@ -190,7 +191,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                   className="bg-dorado hover:bg-dorado/90 text-empresarial font-medium touch-manipulation min-h-[44px] px-4"
                   onClick={() => handleNavigation('/dashboard')}
                 >
-                  Dashboard
+                  {t('nav.dashboard')}
                 </Button>
               ) : (
                 <Button
@@ -199,7 +200,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                   className="bg-dorado hover:bg-dorado/90 text-empresarial font-medium touch-manipulation min-h-[44px] px-4"
                   onClick={() => handleNavigation('/auth')}
                 >
-                  Iniciar Sesión
+                  {t('nav.login')}
                 </Button>
               )}
             </>
@@ -213,7 +214,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                   className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4"
                   onClick={() => handleNavigation('/scanner')}
                 >
-                  <span className="hidden sm:inline">Scanner</span>
+                  <span className="hidden sm:inline">{t('nav.scanner')}</span>
                   <span className="sm:hidden">Scan</span>
                 </Button>
               )}
@@ -224,7 +225,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                   className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4"
                   onClick={() => handleNavigation('/admin')}
                 >
-                  Admin
+                  {t('nav.admin')}
                 </Button>
               )}
               {canManageUsers && (
@@ -234,7 +235,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                   className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4 hidden md:inline-flex"
                   onClick={() => handleNavigation('/users')}
                 >
-                  Usuarios
+                  {t('nav.users')}
                 </Button>
               )}
               {profile.role === 'attendee' && (
@@ -244,20 +245,27 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
                   className="text-hueso hover:text-dorado hover:bg-empresarial touch-manipulation min-h-[44px] px-2 md:px-4 hidden md:inline-flex"
                   onClick={() => handleNavigation('/profile')}
                 >
-                  Mi Perfil
+                  {t('nav.profile')}
                 </Button>
               )}
+              
+              {/* Language Switcher for authenticated users */}
+              <LanguageSwitcher />
+              
               <Button
                 variant="outline"
                 size="sm"
                 className="border-dorado text-dorado hover:bg-dorado/10 touch-manipulation min-h-[44px] px-2 md:px-4"
                 onClick={handleSignOut}
               >
-                <span className="hidden sm:inline">Cerrar Sesión</span>
+                <span className="hidden sm:inline">{t('nav.logout')}</span>
                 <span className="sm:hidden">Salir</span>
               </Button>
             </>
-          ) : null}
+          ) : (
+            // Show language switcher even when not authenticated
+            <LanguageSwitcher />
+          )}
         </nav>
       </div>
     </header>

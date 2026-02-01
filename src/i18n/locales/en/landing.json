@@ -1,0 +1,366 @@
+{
+  "hero": {
+    "title": "Professional Access Control for High-Impact Events",
+    "subtitle": "Manage from 100 to 50,000+ attendees with real-time QR technology",
+    "ctaDemo": "Request Demo",
+    "ctaDashboard": "Go to Dashboard",
+    "ctaLearn": "See How It Works",
+    "bullet1": "Real-time control from any device",
+    "bullet2": "0% fraud with unique, non-transferable QR codes",
+    "bullet3": "Instant exportable enterprise reports",
+    "mockup": {
+      "dashboard": "Dashboard",
+      "attendees": "Attendees",
+      "controls": "Controls",
+      "live": "Live"
+    }
+  },
+  "problemSolution": {
+    "title": "The Challenge of Corporate Events",
+    "subtitle": "Traditional methods leave your event vulnerable. Chequi eliminates these risks.",
+    "traditionalMethods": "Traditional Methods",
+    "withChequi": "With Chequi",
+    "problems": [
+      "Paper or Excel lists prone to fraud and duplicates",
+      "Resellers and fake tickets impossible to detect",
+      "Manual reports that take days to prepare",
+      "Lack of attendance visibility during the event",
+      "Difficulty managing multiple simultaneous access points"
+    ],
+    "solutions": [
+      "Unique QR codes per attendee, impossible to duplicate",
+      "Instant validation with real-time fraud alerts",
+      "Automatic Excel reports with detailed metrics",
+      "Live dashboard with statistics updated every second",
+      "Centralized management from any mobile device"
+    ]
+  },
+  "features": {
+    "title": "Everything You Need for Total Event Control",
+    "subtitle": "Enterprise features designed for events of any scale",
+    "items": [
+      {
+        "title": "Custom QR Tickets",
+        "description": "Generate unique QR codes per attendee with your logo and colors. Prevents fraud and resale. Bulk export in PNG and PDF."
+      },
+      {
+        "title": "Multi-Device Scanner",
+        "description": "Works on any smartphone without installation. Offline mode with automatic sync. Multiple simultaneous control points."
+      },
+      {
+        "title": "Real-Time Dashboard",
+        "description": "Live attendance metrics. Hourly activity graphs. Arrival and occupancy rates. Aggregated view of all controls."
+      },
+      {
+        "title": "Attendee Management",
+        "description": "Bulk import from Excel. Automatic ticket assignment. Categorization by type/company. Advanced search and filters."
+      },
+      {
+        "title": "Security Control",
+        "description": "Differentiated roles (Admin/Control/Scanner). Complete access audit. Data protection with RLS policies. Regulatory compliance."
+      },
+      {
+        "title": "Enterprise Reports",
+        "description": "Excel export with 5 detailed sheets. Analysis by ticket category. Hourly activity with peaks. Basis for service billing."
+      }
+    ]
+  },
+  "useCases": {
+    "title": "Chequi Adapts to Any Event",
+    "subtitle": "From small meetings to mega events. The same technology, infinite possibilities.",
+    "capacity": "Capacity",
+    "controls": "Controls",
+    "eventTypes": "Event types:",
+    "featuredFunctions": "Featured functionalities:",
+    "tabs": {
+      "corporate": {
+        "label": "Corporate",
+        "title": "Corporate Events",
+        "capacity": "50 - 5,000 attendees",
+        "controls": "2-10 simultaneous points",
+        "types": [
+          "Business conferences and congresses",
+          "Corporate trainings and workshops",
+          "Networking and team building events",
+          "Product launches and presentations",
+          "Annual shareholder meetings"
+        ],
+        "features": [
+          "Reports by company for billing",
+          "Differentiated credentials by position",
+          "VIP room access control",
+          "Integration with corporate systems"
+        ]
+      },
+      "concerts": {
+        "label": "Concerts",
+        "title": "Concerts and Shows",
+        "capacity": "500 - 50,000+ attendees",
+        "controls": "5-30 simultaneous points",
+        "types": [
+          "Live music concerts",
+          "Festivals and massive events",
+          "Theater plays and shows",
+          "Comedy and stand-up shows",
+          "Sports entertainment events"
+        ],
+        "features": [
+          "VIP and backstage zone control",
+          "Re-entry for multi-day events",
+          "Zone capacity management",
+          "Resale and fraud prevention"
+        ]
+      },
+      "education": {
+        "label": "Education",
+        "title": "Academic Events",
+        "capacity": "100 - 10,000 attendees",
+        "controls": "3-15 simultaneous points",
+        "types": [
+          "Graduations and degree ceremonies",
+          "Academic conferences and symposiums",
+          "Scientific and cultural events",
+          "Student and sports events",
+          "In-person workshops and courses"
+        ],
+        "features": [
+          "Reports by faculty and degree",
+          "Guest control per graduate",
+          "Automatic attendance certificates",
+          "Protocol and VIP management"
+        ]
+      },
+      "sports": {
+        "label": "Sports",
+        "title": "Sports Events",
+        "capacity": "1,000 - 100,000 attendees",
+        "controls": "10-50 simultaneous points",
+        "types": [
+          "Soccer and team sports matches",
+          "Tournaments and sports competitions",
+          "Marathons and athletic races",
+          "Extreme sports events",
+          "Olympics and championships"
+        ],
+        "features": [
+          "Control by stand and sector",
+          "Season ticket management",
+          "Re-entry for long events",
+          "Live occupancy reports"
+        ]
+      },
+      "fairs": {
+        "label": "Fairs",
+        "title": "Fairs and Exhibitions",
+        "capacity": "1,000 - 20,000 attendees",
+        "controls": "5-20 simultaneous points",
+        "types": [
+          "Trade fairs and expos",
+          "Conventions and trade shows",
+          "Art and culture exhibitions",
+          "Markets and food events",
+          "Science and technology fairs"
+        ],
+        "features": [
+          "Credentials by type (exhibitors, visitors, press)",
+          "Stand and zone access control",
+          "Unlimited re-entry during the event",
+          "Statistics by day and time slot"
+        ]
+      }
+    }
+  },
+  "benefits": {
+    "title": "Measurable Results from Your First Event",
+    "subtitle": "Numbers that demonstrate the real impact of Chequi on your operation",
+    "cta": "Join hundreds of organizers who have already optimized their events with Chequi.",
+    "ctaHighlight": "Start seeing results from the first use.",
+    "mainBenefits": [
+      { "value": "95%", "label": "Fraud reduction", "description": "vs traditional methods" },
+      { "value": "-70%", "label": "Registration time", "description": "compared to paper" },
+      { "value": "100%", "label": "Visibility", "description": "in real time" },
+      { "value": "<2min", "label": "Setup", "description": "per control point" }
+    ],
+    "additionalBenefits": [
+      { "title": "Speed", "description": "3x faster registration than traditional methods" },
+      { "title": "Savings", "description": "Eliminates physical ticket printing costs" },
+      { "title": "Accessibility", "description": "No apps - works on any browser" },
+      { "title": "Anti-fraud", "description": "Unique QR codes impossible to duplicate" },
+      { "title": "Insights", "description": "Actionable data to improve future events" },
+      { "title": "Scalability", "description": "From 10 to 50,000+ attendees without changes" }
+    ]
+  },
+  "howItWorks": {
+    "title": "Three Steps to Your Successful Event",
+    "subtitle": "Implement Chequi in minutes. No technical complications or extensive training.",
+    "bottomCta": "The entire process takes less than 20 minutes",
+    "bottomCtaDescription": "from initial setup to having the first QR scanned.",
+    "bottomNote": "No learning curve. No technical complications. Just results.",
+    "steps": [
+      {
+        "title": "Configure",
+        "time": "15 minutes",
+        "description": "Create your event, define ticket categories and upload your attendee list from Excel. Customize colors and logo.",
+        "tasks": [
+          "Create event and configuration",
+          "Define ticket categories",
+          "Bulk upload attendees",
+          "Automatically assign tickets"
+        ]
+      },
+      {
+        "title": "Distribute",
+        "time": "Automatic",
+        "description": "Generate unique QR codes for each attendee. Export in PNG or PDF and send by email, or print physical tickets.",
+        "tasks": [
+          "Generate custom QR codes",
+          "Export tickets in PNG/PDF",
+          "Send by bulk email",
+          "Print if needed"
+        ]
+      },
+      {
+        "title": "Control",
+        "time": "During the event",
+        "description": "Scan QR with any smartphone. Real-time dashboard with metrics. Multiple simultaneous controls.",
+        "tasks": [
+          "Scan QR at entrance",
+          "Instant validation",
+          "Live dashboard",
+          "Automatic reports"
+        ]
+      }
+    ]
+  },
+  "testimonials": {
+    "title": "What Our Clients Say",
+    "subtitle": "Event organizers trust Chequi for their most critical operations",
+    "bottomNote": "Over",
+    "eventsCount": "500+ events",
+    "bottomNoteSuffix": "successfully managed.",
+    "nextSuccessQuestion": "Want to be the next success story?",
+    "items": [
+      {
+        "quote": "Chequi allowed us to control 5,000 attendees at our annual conference without setbacks. The reports were key to justifying the event ROI to the board.",
+        "author": "María González",
+        "role": "Events Director",
+        "company": "TechCorp LATAM",
+        "eventType": "Corporate Event",
+        "attendees": "5,000 people"
+      },
+      {
+        "quote": "We implemented Chequi for our festival and completely eliminated ticket fraud. The live dashboard allowed us to make operational decisions in real time.",
+        "author": "Carlos Ramírez",
+        "role": "Producer",
+        "company": "Live Events Co",
+        "eventType": "Music Festival",
+        "attendees": "15,000 people"
+      },
+      {
+        "quote": "The graduation of 3,000 students was organized stress-free thanks to Chequi. Each family had their QR code and we were able to control the ceremony capacity with precision.",
+        "author": "Ana Martínez",
+        "role": "Events Coordinator",
+        "company": "National University",
+        "eventType": "University Graduation",
+        "attendees": "3,000 people"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about Chequi",
+    "contactCta": "Have more questions?",
+    "contactLink": "Contact us directly",
+    "items": [
+      {
+        "question": "Do I need to install any app?",
+        "answer": "No. Chequi works entirely in the web browser, for both administrators and scanners. You just need internet access and a smartphone or computer with a camera to scan QR codes."
+      },
+      {
+        "question": "Does it work without internet connection?",
+        "answer": "Yes. The scanner module has offline mode that stores scans locally and syncs them automatically when you regain connection. Ideal for events in places with limited connectivity."
+      },
+      {
+        "question": "How many devices can I connect simultaneously?",
+        "answer": "Unlimited. You can have as many control points as you need, all synced in real time. Each device can work independently and data is consolidated in the central dashboard."
+      },
+      {
+        "question": "Are QR codes secure?",
+        "answer": "Absolutely. Each QR code is unique and non-transferable, generated with a 128-bit random token. Additionally, the system validates in real time and detects reuse or duplication attempts."
+      },
+      {
+        "question": "Can I customize tickets?",
+        "answer": "Yes. You can fully customize ticket design: add your logo, change colors, select fonts, adjust sizes and element positions. It also supports custom background images."
+      },
+      {
+        "question": "Is there an attendee limit?",
+        "answer": "There is no technical limit. Chequi scales from small 10-person events to mega events with over 50,000 attendees without performance degradation."
+      },
+      {
+        "question": "What reports are included?",
+        "answer": "Excel export with 5 sheets: list of all attendees, scans per attendee, hourly activity, summary by category, and detailed usage analysis. It also includes real-time dashboard charts."
+      },
+      {
+        "question": "What is the technical support like?",
+        "answer": "We offer email support with response in less than 24 hours. For enterprise clients, there are priority support options and live event technical assistance."
+      },
+      {
+        "question": "Can I import my attendee list?",
+        "answer": "Yes. You can import complete lists from Excel files (.xlsx) with columns for name, email, category, and other data. The system automatically assigns tickets and generates QR codes."
+      },
+      {
+        "question": "What if I need to make last-minute changes?",
+        "answer": "You can add, edit, or delete attendees at any time before and during the event. Changes are reflected instantly on all connected devices."
+      }
+    ]
+  },
+  "finalCta": {
+    "title": "Ready to Revolutionize Your Events?",
+    "subtitle": "Join hundreds of organizers who already trust Chequi to manage their events with professionalism and efficiency",
+    "ctaButton": "Get Started",
+    "ctaDashboard": "Go to Dashboard",
+    "ctaSales": "Talk to Sales",
+    "stats": [
+      { "value": "500+", "label": "Successful events" },
+      { "value": "50K+", "label": "Attendees managed" },
+      { "value": "95%", "label": "Satisfaction" },
+      { "value": "<2min", "label": "Average setup" }
+    ],
+    "trustBadges": [
+      "No lock-in contracts",
+      "Technical support included",
+      "Immediate implementation"
+    ],
+    "bottomNote": "Used by companies, universities and event producers throughout Colombia 🇨🇴"
+  },
+  "footer": {
+    "brandDescription": "Professional access control system for corporate and massive events",
+    "location": "Bogotá, Colombia",
+    "sections": {
+      "product": "Product",
+      "resources": "Resources",
+      "company": "Company",
+      "legal": "Legal"
+    },
+    "links": {
+      "features": "Features",
+      "howItWorks": "How It Works",
+      "useCases": "Use Cases",
+      "pricing": "Pricing",
+      "documentation": "Documentation",
+      "support": "Support",
+      "faq": "FAQ",
+      "contact": "Contact",
+      "about": "About Us",
+      "blog": "Blog",
+      "successCases": "Success Cases",
+      "careers": "Careers",
+      "terms": "Terms and Conditions",
+      "privacy": "Privacy Policy",
+      "cookies": "Cookie Policy",
+      "gdpr": "GDPR"
+    },
+    "copyright": "All rights reserved.",
+    "madeWith": "Made in Colombia with ❤️ by Daro"
+  }
+}

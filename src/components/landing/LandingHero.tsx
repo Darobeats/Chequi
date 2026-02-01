@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, QrCode, BarChart3, Shield } from "lucide-react";
@@ -7,6 +8,7 @@ import { CheckCircle, QrCode, BarChart3, Shield } from "lucide-react";
 const LandingHero = () => {
   const navigate = useNavigate();
   const { user } = useSupabaseAuth();
+  const { t } = useTranslation("landing");
 
   const handleGetStarted = () => {
     if (user) {
@@ -19,6 +21,12 @@ const LandingHero = () => {
   const handleLearnMore = () => {
     document.getElementById("como-funciona")?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const bullets = [
+    t("hero.bullet1"),
+    t("hero.bullet2"),
+    t("hero.bullet3"),
+  ];
 
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center px-4 py-12 md:py-20 overflow-hidden">
@@ -34,20 +42,16 @@ const LandingHero = () => {
           <div className="space-y-6 text-center md:text-left">
             <div className="space-y-4">
               <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-dorado leading-tight">
-                Control de Acceso Profesional para Eventos de Alto Impacto
+                {t("hero.title")}
               </h1>
               <p className="text-lg md:text-xl text-gray-300 max-w-2xl">
-                Gestiona desde 100 hasta 50,000+ asistentes con tecnología QR en tiempo real
+                {t("hero.subtitle")}
               </p>
             </div>
 
             {/* Bullet points */}
             <div className="space-y-3">
-              {[
-                "Control en tiempo real desde cualquier dispositivo",
-                "0% fraude con códigos QR únicos e intransferibles",
-                "Reportes empresariales instantáneos y exportables"
-              ].map((point, index) => (
+              {bullets.map((point, index) => (
                 <div key={index} className="flex items-start gap-3 justify-center md:justify-start">
                   <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-dorado flex-shrink-0 mt-0.5" />
                   <span className="text-sm md:text-base text-gray-200">{point}</span>
@@ -62,7 +66,7 @@ const LandingHero = () => {
                 className="bg-dorado hover:bg-dorado/90 text-empresarial font-semibold text-base md:text-lg px-8 py-6 touch-manipulation"
                 size="lg"
               >
-                {user ? "Ir al Dashboard" : "Solicitar Demo"}
+                {user ? t("hero.ctaDashboard") : t("hero.ctaDemo")}
               </Button>
               <Button
                 onClick={handleLearnMore}
@@ -70,7 +74,7 @@ const LandingHero = () => {
                 className="border-dorado/50 text-dorado hover:bg-dorado/10 font-semibold text-base md:text-lg px-8 py-6 touch-manipulation"
                 size="lg"
               >
-                Ver Cómo Funciona
+                {t("hero.ctaLearn")}
               </Button>
             </div>
           </div>
@@ -86,7 +90,7 @@ const LandingHero = () => {
                     <div className="w-8 h-8 rounded-full bg-dorado/20 flex items-center justify-center">
                       <QrCode className="h-4 w-4 text-dorado" />
                     </div>
-                    <span className="text-sm font-semibold text-gray-300">Dashboard</span>
+                    <span className="text-sm font-semibold text-gray-300">{t("hero.mockup.dashboard")}</span>
                   </div>
                   <div className="flex gap-2">
                     <div className="w-2 h-2 rounded-full bg-red-500"></div>
@@ -98,8 +102,8 @@ const LandingHero = () => {
                 {/* Stats cards */}
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { icon: BarChart3, label: "Asistentes", value: "2,847" },
-                    { icon: Shield, label: "Controles", value: "12" }
+                    { icon: BarChart3, label: t("hero.mockup.attendees"), value: "2,847" },
+                    { icon: Shield, label: t("hero.mockup.controls"), value: "12" }
                   ].map((stat, index) => (
                     <div key={index} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
                       <stat.icon className="h-5 w-5 text-dorado mb-2" />
@@ -130,7 +134,7 @@ const LandingHero = () => {
 
               {/* Floating badge */}
               <div className="absolute -top-4 -right-4 bg-dorado text-empresarial px-4 py-2 rounded-full font-bold text-sm shadow-lg">
-                En Vivo ●
+                {t("hero.mockup.live")} ●
               </div>
             </div>
 
