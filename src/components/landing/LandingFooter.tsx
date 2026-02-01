@@ -1,32 +1,35 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/ui/separator";
 import { QrCode, Mail, MapPin, Phone } from "lucide-react";
 
 const LandingFooter = () => {
+  const { t } = useTranslation("landing");
+
   const footerLinks = {
     producto: [
-      { label: "Características", href: "#caracteristicas" },
-      { label: "Cómo Funciona", href: "#como-funciona" },
-      { label: "Casos de Uso", href: "#casos-uso" },
-      { label: "Precios", href: "#precios" },
+      { label: t("footer.links.features"), href: "#caracteristicas" },
+      { label: t("footer.links.howItWorks"), href: "#como-funciona" },
+      { label: t("footer.links.useCases"), href: "#casos-uso" },
+      { label: t("footer.links.pricing"), href: "#precios" },
     ],
     recursos: [
-      { label: "Documentación", href: "#docs" },
-      { label: "Soporte", href: "#soporte" },
-      { label: "Preguntas Frecuentes", href: "#faq" },
-      { label: "Contacto", href: "#contacto" },
+      { label: t("footer.links.documentation"), href: "#docs" },
+      { label: t("footer.links.support"), href: "#soporte" },
+      { label: t("footer.links.faq"), href: "#faq" },
+      { label: t("footer.links.contact"), href: "#contacto" },
     ],
     empresa: [
-      { label: "Sobre Nosotros", href: "#nosotros" },
-      { label: "Blog", href: "#blog" },
-      { label: "Casos de Éxito", href: "#casos-exito" },
-      { label: "Trabaja con Nosotros", href: "#careers" },
+      { label: t("footer.links.about"), href: "#nosotros" },
+      { label: t("footer.links.blog"), href: "#blog" },
+      { label: t("footer.links.successCases"), href: "#casos-exito" },
+      { label: t("footer.links.careers"), href: "#careers" },
     ],
     legal: [
-      { label: "Términos y Condiciones", href: "#terminos" },
-      { label: "Política de Privacidad", href: "#privacidad" },
-      { label: "Política de Cookies", href: "#cookies" },
-      { label: "GDPR", href: "#gdpr" },
+      { label: t("footer.links.terms"), href: "#terminos" },
+      { label: t("footer.links.privacy"), href: "#privacidad" },
+      { label: t("footer.links.cookies"), href: "#cookies" },
+      { label: t("footer.links.gdpr"), href: "#gdpr" },
     ],
   };
 
@@ -54,14 +57,14 @@ const LandingFooter = () => {
                 <h3 className="text-2xl font-bold text-dorado">CHEQUI</h3>
               </div>
               <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-                Sistema profesional de control de acceso para eventos empresariales y masivos
+                {t("footer.brandDescription")}
               </p>
 
               {/* Contact Info */}
               <div className="space-y-3 text-sm text-gray-400">
                 <div className="flex items-start gap-2">
                   <MapPin className="h-4 w-4 text-dorado flex-shrink-0 mt-0.5" />
-                  <span>Bogotá, Colombia</span>
+                  <span>{t("footer.location")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-dorado flex-shrink-0" />
@@ -85,7 +88,7 @@ const LandingFooter = () => {
 
             {/* Producto */}
             <div>
-              <h4 className="font-semibold text-gray-200 mb-4">Producto</h4>
+              <h4 className="font-semibold text-gray-200 mb-4">{t("footer.sections.product")}</h4>
               <ul className="space-y-3">
                 {footerLinks.producto.map((link, index) => (
                   <li key={index}>
@@ -102,7 +105,7 @@ const LandingFooter = () => {
 
             {/* Recursos */}
             <div>
-              <h4 className="font-semibold text-gray-200 mb-4">Recursos</h4>
+              <h4 className="font-semibold text-gray-200 mb-4">{t("footer.sections.resources")}</h4>
               <ul className="space-y-3">
                 {footerLinks.recursos.map((link, index) => (
                   <li key={index}>
@@ -119,7 +122,7 @@ const LandingFooter = () => {
 
             {/* Empresa */}
             <div>
-              <h4 className="font-semibold text-gray-200 mb-4">Empresa</h4>
+              <h4 className="font-semibold text-gray-200 mb-4">{t("footer.sections.company")}</h4>
               <ul className="space-y-3">
                 {footerLinks.empresa.map((link, index) => (
                   <li key={index}>
@@ -136,7 +139,7 @@ const LandingFooter = () => {
 
             {/* Legal */}
             <div>
-              <h4 className="font-semibold text-gray-200 mb-4">Legal</h4>
+              <h4 className="font-semibold text-gray-200 mb-4">{t("footer.sections.legal")}</h4>
               <ul className="space-y-3">
                 {footerLinks.legal.map((link, index) => (
                   <li key={index}>
@@ -160,8 +163,8 @@ const LandingFooter = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             {/* Copyright */}
             <p className="text-sm text-gray-500 text-center md:text-left">
-              &copy; {new Date().getFullYear()} Chequi. Todos los derechos reservados.
-              <span className="hidden sm:inline"> Hecho en Colombia con ❤️ by Daro</span>
+              &copy; {new Date().getFullYear()} Chequi. {t("footer.copyright")}
+              <span className="hidden sm:inline"> {t("footer.madeWith")}</span>
             </p>
 
             {/* Social Links */}

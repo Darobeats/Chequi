@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageCircle } from "lucide-react";
@@ -7,6 +8,7 @@ import { ArrowRight, MessageCircle } from "lucide-react";
 const FinalCTA = () => {
   const navigate = useNavigate();
   const { user } = useSupabaseAuth();
+  const { t } = useTranslation("landing");
 
   const handleGetStarted = () => {
     if (user) {
@@ -15,6 +17,13 @@ const FinalCTA = () => {
       navigate("/auth?demo=true");
     }
   };
+
+  const stats = t("finalCta.stats", { returnObjects: true }) as Array<{
+    value: string;
+    label: string;
+  }>;
+
+  const trustBadges = t("finalCta.trustBadges", { returnObjects: true }) as string[];
 
   return (
     <section className="py-16 md:py-24 px-4 relative overflow-hidden">
@@ -29,23 +38,17 @@ const FinalCTA = () => {
         <div className="max-w-4xl mx-auto text-center">
           {/* Main heading */}
           <h2 className="text-2xl md:text-3xl lg:text-5xl font-bold text-dorado mb-6">
-            ¿Listo para Revolucionar tus Eventos?
+            {t("finalCta.title")}
           </h2>
 
           {/* Subheading */}
           <p className="text-base md:text-xl text-gray-300 mb-8 md:mb-12 max-w-2xl mx-auto">
-            Únete a cientos de organizadores que ya confían en Chequi para gestionar sus eventos con profesionalismo y
-            eficiencia
+            {t("finalCta.subtitle")}
           </p>
 
           {/* Stats bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 md:mb-12">
-            {[
-              { value: "500+", label: "Eventos exitosos" },
-              { value: "50K+", label: "Asistentes gestionados" },
-              { value: "95%", label: "Satisfacción" },
-              { value: "<2min", label: "Setup promedio" },
-            ].map((stat, index) => (
+            {stats.map((stat, index) => (
               <div key={index} className="bg-gray-900/60 backdrop-blur-sm border border-gray-800 rounded-lg p-4">
                 <div className="text-2xl md:text-3xl font-bold text-dorado mb-1">{stat.value}</div>
                 <div className="text-xs md:text-sm text-gray-400">{stat.label}</div>
@@ -60,7 +63,7 @@ const FinalCTA = () => {
               className="bg-dorado hover:bg-dorado/90 text-empresarial font-bold text-lg px-10 py-7 touch-manipulation group"
               size="lg"
             >
-              {user ? "Ir al Dashboard" : "Empezar Ahora"}
+              {user ? t("finalCta.ctaDashboard") : t("finalCta.ctaButton")}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
 
@@ -76,32 +79,29 @@ const FinalCTA = () => {
               size="lg"
             >
               <MessageCircle className="mr-2 h-5 w-5" />
-              Hablar con Ventas
+              {t("finalCta.ctaSales")}
             </Button>
           </div>
 
           {/* Trust badge */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm md:text-base text-gray-400">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span>Sin contratos de permanencia</span>
-            </div>
-            <div className="hidden sm:block text-gray-600">•</div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span>Soporte técnico incluido</span>
-            </div>
-            <div className="hidden sm:block text-gray-600">•</div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span>Implementación inmediata</span>
-            </div>
+            {trustBadges.map((badge, index) => (
+              <React.Fragment key={index}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span>{badge}</span>
+                </div>
+                {index < trustBadges.length - 1 && (
+                  <div className="hidden sm:block text-gray-600">•</div>
+                )}
+              </React.Fragment>
+            ))}
           </div>
 
           {/* Bottom text */}
           <div className="mt-10 md:mt-12 pt-8 border-t border-gray-800">
             <p className="text-sm md:text-base text-gray-400">
-              Utilizado por empresas, universidades y productores de eventos en toda Colombia 🇨🇴
+              {t("finalCta.bottomNote")}
             </p>
           </div>
         </div>

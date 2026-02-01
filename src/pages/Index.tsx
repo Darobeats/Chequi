@@ -1,5 +1,4 @@
 import React from "react";
-import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
 import Header from "@/components/Header";
 import LandingHero from "@/components/landing/LandingHero";
 import ProblemSolution from "@/components/landing/ProblemSolution";
@@ -11,6 +10,7 @@ import Testimonials from "@/components/landing/Testimonials";
 import FAQ from "@/components/landing/FAQ";
 import FinalCTA from "@/components/landing/FinalCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
+import LanguagePrompt from "@/components/LanguagePrompt";
 
 const Index = () => {
   return (
@@ -28,6 +28,9 @@ const Index = () => {
       <FinalCTA />
       
       <LandingFooter />
+      
+      {/* Language detection prompt for English browsers */}
+      <LanguagePrompt />
     </div>
   );
 };

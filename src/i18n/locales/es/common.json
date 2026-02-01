@@ -1,0 +1,45 @@
+{
+  "nav": {
+    "features": "Características",
+    "howItWorks": "Cómo Funciona",
+    "dashboard": "Dashboard",
+    "login": "Iniciar Sesión",
+    "logout": "Cerrar Sesión",
+    "scanner": "Scanner",
+    "admin": "Admin",
+    "users": "Usuarios",
+    "profile": "Mi Perfil"
+  },
+  "roles": {
+    "admin": "Admin",
+    "control": "Control",
+    "attendee": "Asistente",
+    "viewer": "Observador",
+    "scanner": "Scanner"
+  },
+  "auth": {
+    "title": "Chequi",
+    "subtitle": "Sistema de control de acceso para eventos",
+    "demoRequest": "🎯 Solicitud de Demo",
+    "demoDescription": "Ingresa tus credenciales o contáctanos para una demostración personalizada",
+    "email": "Email",
+    "emailPlaceholder": "admin@ejemplo.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "••••••••",
+    "submit": "Iniciar Sesión",
+    "processing": "Procesando...",
+    "footer": "Sistema de acceso a eventos premium",
+    "copyright": "Todos los derechos reservados - Hecho en Colombia con ❤️ by Daro"
+  },
+  "languagePrompt": {
+    "title": "Switch to English?",
+    "message": "We detected your browser is in English. Would you like to view this page in English?",
+    "yes": "Yes, switch to English",
+    "no": "No, keep Spanish",
+    "dontAsk": "Don't ask again"
+  },
+  "language": {
+    "es": "Español",
+    "en": "English"
+  }
+}

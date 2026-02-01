@@ -1,23 +1,13 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { X, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const ProblemSolution = () => {
-  const problems = [
-    "Listas en papel o Excel propensas a fraude y duplicados",
-    "Revendedores y entradas falsas imposibles de detectar",
-    "Reportes manuales que tardan días en prepararse",
-    "Falta de visibilidad de asistencia durante el evento",
-    "Dificultad para gestionar múltiples puntos de acceso simultáneos"
-  ];
+  const { t } = useTranslation("landing");
 
-  const solutions = [
-    "Códigos QR únicos por asistente, imposibles de duplicar",
-    "Validación instantánea con alertas de fraude en tiempo real",
-    "Reportes automáticos en Excel con métricas detalladas",
-    "Dashboard en vivo con estadísticas actualizadas cada segundo",
-    "Gestión centralizada desde cualquier dispositivo móvil"
-  ];
+  const problems = t("problemSolution.problems", { returnObjects: true }) as string[];
+  const solutions = t("problemSolution.solutions", { returnObjects: true }) as string[];
 
   return (
     <section className="py-16 md:py-24 px-4 relative">
@@ -25,10 +15,10 @@ const ProblemSolution = () => {
         {/* Header */}
         <div className="text-center mb-12 md:mb-16">
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-dorado mb-4">
-            El Desafío de los Eventos Empresariales
+            {t("problemSolution.title")}
           </h2>
           <p className="text-base md:text-lg text-gray-400 max-w-2xl mx-auto">
-            Los métodos tradicionales dejan tu evento vulnerable. Chequi elimina estos riesgos.
+            {t("problemSolution.subtitle")}
           </p>
         </div>
 
@@ -41,7 +31,7 @@ const ProblemSolution = () => {
                 <X className="h-6 w-6 text-red-400" />
               </div>
               <h3 className="text-xl md:text-2xl font-semibold text-gray-200">
-                Métodos Tradicionales
+                {t("problemSolution.traditionalMethods")}
               </h3>
             </div>
             
@@ -64,7 +54,7 @@ const ProblemSolution = () => {
                 <CheckCircle className="h-6 w-6 text-dorado" />
               </div>
               <h3 className="text-xl md:text-2xl font-semibold text-dorado">
-                Con Chequi
+                {t("problemSolution.withChequi")}
               </h3>
             </div>
             
