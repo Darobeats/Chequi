@@ -138,8 +138,19 @@ export function useCreateCedulaControlUsage() {
       queryClient.invalidateQueries({ queryKey: ['cedulaControlUsage', variables.event_id] });
       queryClient.invalidateQueries({ queryKey: ['cedulaControlStats'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('[useCreateCedulaControlUsage] Mutation error:', error);
+      // Detect unique constraint violation (duplicate)
+      if (error?.code === '23505' || error?.message?.includes('unique') || error?.message?.includes('duplicate')) {
+        toast.error('🚫 YA REGISTRADO', {
+          description: 'Esta cédula ya fue registrada para este control',
+          duration: 6000,
+        });
+        if (navigator.vibrate) {
+          navigator.vibrate([200, 100, 200, 100, 200]);
+        }
+        return;
+      }
       toast.error('Error al registrar uso de control');
     },
   });

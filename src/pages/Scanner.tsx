@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import Header from "@/components/Header";
 import QRScanner from "@/components/QRScanner";
 import { CedulaScanner } from "@/components/cedula/CedulaScanner";
@@ -36,6 +37,7 @@ const convertDateToISO = (dateStr: string | null | undefined): string | undefine
 };
 
 const Scanner = () => {
+  const { t } = useTranslation('common');
   const { user } = useSupabaseAuth();
   const { selectedEvent, userEvents, isLoadingEvents, selectEvent } = useEventContext();
   const [selectedEventId, setSelectedEventId] = useState<string>("");
@@ -108,13 +110,13 @@ const Scanner = () => {
   if (isLoadingEvents || !selectedEvent) {
     return (
       <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation">
-        <Header title="SCANNER DE ACCESO" />
+        <Header title={t('scanner.title')} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4 p-6">
             <div className="animate-spin h-10 w-10 border-4 border-dorado border-t-transparent rounded-full mx-auto" />
-            <p className="text-hueso text-lg font-medium">Cargando evento...</p>
+            <p className="text-hueso text-lg font-medium">{t('scanner.loadingEvent')}</p>
             <p className="text-gray-400 text-sm">
-              {isLoadingEvents ? 'Obteniendo eventos asignados...' : 'Seleccionando evento...'}
+              {isLoadingEvents ? t('scanner.fetchingEvents') : t('scanner.selectingEvent')}
             </p>
           </div>
         </div>
@@ -158,8 +160,8 @@ const Scanner = () => {
           device_info: navigator.userAgent,
         });
         
-        toast.error('NO ESTÁ EN LISTA', {
-          description: 'Esta cédula no se encuentra en la lista de acceso',
+        toast.error(t('scanner.notOnList'), {
+          description: t('scanner.notAuthorized'),
         });
         setIsUnauthorized(true);
         setPendingScan(data);
@@ -179,7 +181,7 @@ const Scanner = () => {
       setControlLimitInfo({ current: limitResult.current_uses, max: limitResult.max_uses });
       
       if (!limitResult.can_access && limitResult.max_uses > 0) {
-        toast.error(`Límite alcanzado: ${limitResult.current_uses}/${limitResult.max_uses} usos`);
+        toast.error(`${t('scanner.limitReached')}: ${limitResult.current_uses}/${limitResult.max_uses}`);
         // Still show the scan result but disable confirm
         setIsUnauthorized(true);
         setPendingScan(data);
@@ -247,14 +249,23 @@ const Scanner = () => {
         });
       }
       
-      toast.success('Registro guardado exitosamente');
+      toast.success(t('scanner.savedSuccess'));
       setPendingScan(null);
       setIsUnauthorized(false);
       setAutorizadaData(null);
       setControlLimitInfo(null);
     } catch (error) {
       console.error('[Scanner] Error saving:', error);
-      toast.error('Error al guardar el registro');
+      const err = error as any;
+      if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+        toast.error(t('scanner.alreadyRegistered'), {
+          description: t('scanner.alreadyRegisteredDesc'),
+          duration: 6000,
+        });
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+      } else {
+        toast.error(t('scanner.errorSaving'));
+      }
     }
   };
 
@@ -284,8 +295,8 @@ const Scanner = () => {
 
       await createCedulaMutation.mutateAsync(registroWithWhitelist as InsertCedulaRegistro);
       
-      toast.success('Registro guardado para reporte', {
-        description: 'Cédula registrada como "no en lista"',
+      toast.success(t('scanner.savedForReport'), {
+        description: t('scanner.savedForReportDesc'),
       });
       
       setPendingScan(null);
@@ -294,7 +305,7 @@ const Scanner = () => {
       setControlLimitInfo(null);
     } catch (error) {
       console.error('[Scanner] Error saving unauthorized:', error);
-      toast.error('Error al guardar el registro');
+      toast.error(t('scanner.errorSaving'));
     }
   };
 
@@ -311,17 +322,17 @@ const Scanner = () => {
     const nombreTrimmed = manualNombre.trim();
     
     if (cedulaTrimmed.length < 6 || cedulaTrimmed.length > 15) {
-      toast.error('La cédula debe tener entre 6 y 15 dígitos');
+      toast.error(t('scanner.cedulaMinLength'));
       return;
     }
     
     if (nombreTrimmed.length < 3) {
-      toast.error('El nombre debe tener al menos 3 caracteres');
+      toast.error(t('scanner.nameMinLength'));
       return;
     }
 
     if (!selectedControlType) {
-      toast.error('Seleccione un tipo de control');
+      toast.error(t('scanner.selectControlType'));
       return;
     }
 
@@ -347,7 +358,7 @@ const Scanner = () => {
             scanned_by: user?.id,
             device_info: 'MANUAL_ENTRY',
           });
-          toast.error('NO ESTÁ EN LISTA', { description: 'Cédula no autorizada' });
+          toast.error(t('scanner.notOnList'), { description: t('scanner.notAuthorized') });
           wasAuthorized = false;
         }
       }
@@ -356,7 +367,7 @@ const Scanner = () => {
       if (wasAuthorized && selectedControlType) {
         const limitResult = await checkControlLimit(cedulaTrimmed, selectedControlType);
         if (!limitResult.can_access && limitResult.max_uses > 0) {
-          toast.error(`Límite alcanzado: ${limitResult.current_uses}/${limitResult.max_uses}`);
+          toast.error(`${t('scanner.limitReached')}: ${limitResult.current_uses}/${limitResult.max_uses}`);
           wasAuthorized = false;
         }
       }
@@ -404,13 +415,22 @@ const Scanner = () => {
         });
       }
       
-      toast.success('✓ ACCESO REGISTRADO', { description: nombreTrimmed });
+      toast.success(t('scanner.accessRegistered'), { description: nombreTrimmed });
       setManualCedula('');
       setManualNombre('');
       setManualDialogOpen(false);
     } catch (error) {
       console.error('Manual entry error:', error);
-      toast.error('Error al registrar');
+      const err = error as any;
+      if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+        toast.error(t('scanner.alreadyRegistered'), {
+          description: t('scanner.alreadyRegisteredDesc'),
+          duration: 6000,
+        });
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+      } else {
+        toast.error(t('scanner.errorRegistering'));
+      }
     } finally {
       setIsManualSubmitting(false);
     }
@@ -420,7 +440,7 @@ const Scanner = () => {
 
   return (
     <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation">
-      <Header title="SCANNER DE ACCESO" />
+      <Header title={t('scanner.title')} />
 
       <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto">
         <div className="w-full max-w-4xl space-y-4">
@@ -429,10 +449,12 @@ const Scanner = () => {
             <Alert className="bg-yellow-900/30 border-yellow-600">
               <AlertTriangle className="h-4 w-4 text-yellow-500" />
               <AlertDescription className="text-yellow-200">
-                <strong>Lista de Acceso ACTIVA</strong> - Solo cédulas autorizadas tendrán acceso completo
+                <strong>{t('scanner.whitelistActive')}</strong> - {t('scanner.whitelistActiveDesc')}
               </AlertDescription>
             </Alert>
           )}
+
+
 
           <Tabs defaultValue="tickets" className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-gray-900/50 border border-gray-800 p-2 gap-2 mb-4">
@@ -441,23 +463,25 @@ const Scanner = () => {
                 className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
               >
                 <QrCode className="h-4 w-4 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">QR Tickets</span>
+                <span className="text-xs sm:text-sm">{t('scanner.qrTickets')}</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="cedulas" 
                 className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial"
               >
                 <IdCard className="h-4 w-4 flex-shrink-0" />
-                <span className="text-xs sm:text-sm">Cédulas</span>
+                <span className="text-xs sm:text-sm">{t('scanner.cedulas')}</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="tickets">
               <div className="max-w-lg mx-auto p-4 md:p-8 space-y-4 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
                 <div className="text-center mb-4">
-                  <h1 className="text-xl md:text-2xl font-bold text-dorado mb-2">Escáner QR de Tickets</h1>
-                  <p className="text-sm md:text-base text-gray-400">Escanee el código QR del ticket del asistente</p>
+                  <h1 className="text-xl md:text-2xl font-bold text-dorado mb-2">{t('scanner.qrScanner')}</h1>
+                  <p className="text-sm md:text-base text-gray-400">{t('scanner.qrScannerDesc')}</p>
                 </div>
+
+
 
                 <QRScanner 
                   selectedEventId={selectedEventId}
@@ -469,8 +493,8 @@ const Scanner = () => {
             <TabsContent value="cedulas">
               <div className="max-w-lg mx-auto p-4 md:p-8 space-y-4 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
                 <div className="text-center mb-4">
-                  <h1 className="text-xl md:text-2xl font-bold text-dorado mb-2">Control de Cédulas</h1>
-                  <p className="text-sm md:text-base text-gray-400">Escanee o ingrese manualmente la cédula</p>
+                  <h1 className="text-xl md:text-2xl font-bold text-dorado mb-2">{t('scanner.cedulaControl')}</h1>
+                  <p className="text-sm md:text-base text-gray-400">{t('scanner.cedulaScanOrManual')}</p>
                 </div>
 
                 <ControlTypeSelector
@@ -480,7 +504,6 @@ const Scanner = () => {
                   isLoading={controlTypesLoading}
                 />
 
-                {/* ENTRADA MANUAL RÁPIDA - Prominente para emergencias */}
                 <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
                   <DialogTrigger asChild>
                     <Button 
@@ -488,17 +511,17 @@ const Scanner = () => {
                       disabled={!selectedControlType}
                     >
                       <Keyboard className="h-5 w-5 mr-2" />
-                      ENTRADA MANUAL RÁPIDA
+                      {t('scanner.manualEntry')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="bg-empresarial border-gray-700 sm:max-w-md">
                     <DialogHeader>
-                      <DialogTitle className="text-dorado text-xl">Entrada Manual de Cédula</DialogTitle>
+                      <DialogTitle className="text-dorado text-xl">{t('scanner.manualEntryTitle')}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 mt-4">
                       <div className="space-y-2">
                         <Label htmlFor="manual-cedula" className="text-hueso font-medium">
-                          Número de Cédula <span className="text-red-400">*</span>
+                          {t('scanner.cedulaNumber')} <span className="text-red-400">*</span>
                         </Label>
                         <Input
                           id="manual-cedula"
@@ -514,7 +537,7 @@ const Scanner = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="manual-nombre" className="text-hueso font-medium">
-                          Nombre Completo <span className="text-red-400">*</span>
+                          {t('scanner.fullName')} <span className="text-red-400">*</span>
                         </Label>
                         <Input
                           id="manual-nombre"
@@ -532,14 +555,14 @@ const Scanner = () => {
                           onClick={() => setManualDialogOpen(false)}
                           className="flex-1 border-gray-600 text-hueso"
                         >
-                          Cancelar
+                          {t('scanner.cancel')}
                         </Button>
                         <Button 
                           onClick={handleManualSubmit}
                           disabled={isManualSubmitting || !manualCedula || !manualNombre}
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold"
                         >
-                          {isManualSubmitting ? 'Registrando...' : '✓ REGISTRAR'}
+                          {isManualSubmitting ? t('scanner.registering') : t('scanner.register')}
                         </Button>
                       </div>
                     </div>
@@ -569,13 +592,13 @@ const Scanner = () => {
 
                 {!selectedControlType && !pendingScan && (
                   <p className="text-center text-yellow-500 text-sm">
-                    Seleccione un tipo de control para habilitar el escáner
+                    {t('scanner.selectControl')}
                   </p>
                 )}
                 
                 {whitelistLoading && (
                   <p className="text-center text-gray-400 text-sm">
-                    Cargando configuración de lista blanca...
+                    {t('scanner.loadingWhitelist')}
                   </p>
                 )}
               </div>
