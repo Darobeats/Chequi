@@ -5,6 +5,7 @@ import type { CedulaData } from '@/types/cedula';
 
 interface CedulaAIResponse {
   success: boolean;
+  errorCode?: string;
   data?: {
     numero_cedula: string;
     nombres: string;
@@ -17,6 +18,7 @@ interface CedulaAIResponse {
 
 export const useCedulaAI = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiUnavailable, setAiUnavailable] = useState(false);
 
   const analyzeCedula = async (imageBase64: string): Promise<CedulaData | null> => {
     setIsAnalyzing(true);
@@ -32,13 +34,31 @@ export const useCedulaAI = () => {
         throw new Error(error.message || 'Error al analizar la cédula');
       }
 
+      // Handle specific AI error codes
+      if (data?.errorCode === 'AI_CREDITS_EXHAUSTED') {
+        console.warn('AI credits exhausted');
+        setAiUnavailable(true);
+        toast.error('⚠️ Créditos de IA agotados', {
+          description: 'Use la entrada manual para continuar',
+          duration: 8000,
+        });
+        return null;
+      }
+
+      if (data?.errorCode === 'AI_RATE_LIMITED') {
+        toast.error('⏳ Demasiadas solicitudes', {
+          description: 'Intente de nuevo en unos segundos o use la entrada manual',
+          duration: 5000,
+        });
+        return null;
+      }
+
       if (!data?.success || !data.data) {
         throw new Error(data?.error || 'No se pudieron extraer los datos');
       }
 
       console.log('Datos extraídos por IA:', data.data);
 
-      // Convertir al formato CedulaData
       const cedulaData: CedulaData = {
         numeroCedula: data.data.numero_cedula,
         nombres: data.data.nombres,
@@ -67,6 +87,7 @@ export const useCedulaAI = () => {
 
   return {
     analyzeCedula,
-    isAnalyzing
+    isAnalyzing,
+    aiUnavailable
   };
 };

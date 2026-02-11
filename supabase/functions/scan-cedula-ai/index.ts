@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -80,6 +80,36 @@ IMPORTANTE:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Error de Lovable AI:', response.status, errorText);
+      
+      // Return specific error codes for credit/rate limit issues
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            errorCode: 'AI_CREDITS_EXHAUSTED',
+            error: 'Créditos de IA agotados'
+          }),
+          {
+            status: 200, // Return 200 so supabase.functions.invoke doesn't throw
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            errorCode: 'AI_RATE_LIMITED',
+            error: 'Demasiadas solicitudes, intente de nuevo'
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      
       throw new Error(`Error del servicio de IA: ${response.status}`);
     }
 
@@ -92,10 +122,8 @@ IMPORTANTE:
 
     console.log('Respuesta de IA:', aiResponse);
 
-    // Extraer JSON de la respuesta
     let extractedData;
     try {
-      // Buscar JSON en la respuesta
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         extractedData = JSON.parse(jsonMatch[0]);
@@ -107,12 +135,10 @@ IMPORTANTE:
       throw new Error('La IA no retornó un formato válido');
     }
 
-    // Validar que tenga al menos el número de cédula
     if (!extractedData.numero_cedula) {
       throw new Error('No se pudo extraer el número de cédula');
     }
 
-    // Limpiar número de cédula (eliminar puntos, espacios, guiones)
     extractedData.numero_cedula = extractedData.numero_cedula.toString().replace(/[.\s-]/g, '');
 
     console.log('Datos extraídos:', extractedData);
