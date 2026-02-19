@@ -12,12 +12,15 @@ const SponsorLogosBar: React.FC<SponsorLogosBarProps> = ({ sponsors, showPowered
   if (validSponsors.length === 0 && !showPoweredBy) return null;
 
   return (
-    <div className="w-full py-3 px-4 border-t border-border/50 bg-background/50 backdrop-blur-sm">
-      <div className="container mx-auto flex items-center justify-center gap-6 flex-wrap">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[90vw]">
+      <div className="flex items-center gap-5 px-6 py-3 rounded-full border border-primary/30 bg-card/90 backdrop-blur-md shadow-lg shadow-black/30">
         {validSponsors.length > 0 && (
           <>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Patrocinadores</span>
-            <div className="flex items-center gap-4 flex-wrap justify-center">
+            <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
+              Patrocinadores
+            </span>
+            <div className="w-px h-5 bg-border/60" />
+            <div className="flex items-center gap-5 flex-wrap justify-center">
               {validSponsors.map((sponsor, i) => {
                 const img = (
                   <img
@@ -25,7 +28,7 @@ const SponsorLogosBar: React.FC<SponsorLogosBarProps> = ({ sponsors, showPowered
                     src={sponsor.url}
                     alt={sponsor.name}
                     title={sponsor.name}
-                    className="h-8 max-w-[100px] object-contain opacity-80 hover:opacity-100 transition-opacity"
+                    className="h-10 max-w-[120px] object-contain opacity-90 hover:opacity-100 transition-opacity"
                   />
                 );
                 return sponsor.link ? (
@@ -40,9 +43,12 @@ const SponsorLogosBar: React.FC<SponsorLogosBarProps> = ({ sponsors, showPowered
           </>
         )}
         {showPoweredBy && (
-          <span className="text-[10px] text-muted-foreground">
-            Powered by <span className="text-primary font-semibold">Chequi</span>
-          </span>
+          <>
+            {validSponsors.length > 0 && <div className="w-px h-5 bg-border/60" />}
+            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+              Powered by <span className="text-primary font-semibold">Chequi</span>
+            </span>
+          </>
         )}
       </div>
     </div>
