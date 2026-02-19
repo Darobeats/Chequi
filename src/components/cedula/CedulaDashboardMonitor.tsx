@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro, useClearAllCedulaRegistros } from '@/hooks/useCedulaRegistros';
-import { useCedulasAutorizadasStats, useCedulasAutorizadas, useCedulaAccessLogs } from '@/hooks/useCedulasAutorizadas';
+import { useCedulasAutorizadasStats, useCedulasAutorizadas, useCedulaAccessLogs, useClearAccessLogs } from '@/hooks/useCedulasAutorizadas';
 import type { CedulaAccessLog } from '@/types/cedula';
 import { useEventWhitelistConfigById } from '@/hooks/useEventWhitelistConfig';
 import { useEventContext } from '@/context/EventContext';
@@ -31,9 +31,11 @@ export function CedulaDashboardMonitor() {
   const { isAdmin } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
   const clearAllRegistros = useClearAllCedulaRegistros();
+  const clearAccessLogs = useClearAccessLogs();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showClearLogsConfirm, setShowClearLogsConfirm] = useState(false);
 
   const isWhitelistActive = whitelistConfig?.requireWhitelist ?? false;
 
@@ -217,6 +219,40 @@ export function CedulaDashboardMonitor() {
                         className="bg-red-600 hover:bg-red-700 text-white"
                       >
                         {clearAllRegistros.isPending ? 'Eliminando...' : 'Sí, Eliminar Todo'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+
+              {isAdmin && accessLogs.length > 0 && selectedEvent?.id && (
+                <AlertDialog open={showClearLogsConfirm} onOpenChange={setShowClearLogsConfirm}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="bg-orange-600 hover:bg-orange-700">
+                      <ShieldX className="h-4 w-4 mr-2" />
+                      Limpiar Logs ({accessLogs.length})
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="bg-empresarial border-gray-800">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-orange-400 flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5" />
+                        Eliminar Logs de Acceso
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-hueso/80 space-y-3">
+                        <p>Estás a punto de eliminar <strong className="text-orange-400">{accessLogs.length} logs de acceso</strong> del evento <strong className="text-dorado">{selectedEvent.event_name}</strong>.</p>
+                        <p>Esto incluye registros de accesos autorizados, rechazados y duplicados.</p>
+                        <p className="text-red-400 font-semibold mt-4">Esta acción NO se puede deshacer.</p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="border-gray-700 text-hueso hover:bg-gray-800">Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => { clearAccessLogs.mutate(selectedEvent.id); setShowClearLogsConfirm(false); }}
+                        disabled={clearAccessLogs.isPending}
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                      >
+                        {clearAccessLogs.isPending ? 'Eliminando...' : 'Sí, Eliminar Logs'}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

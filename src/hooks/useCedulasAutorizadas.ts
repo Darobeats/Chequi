@@ -223,6 +223,31 @@ export function useCedulaAccessLogs(eventId: string | null) {
   });
 }
 
+// Eliminar todos los logs de acceso de un evento
+export function useClearAccessLogs() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      const { error } = await supabase
+        .from('cedula_access_logs')
+        .delete()
+        .eq('event_id', eventId);
+      
+      if (error) throw error;
+      return eventId;
+    },
+    onSuccess: (eventId) => {
+      queryClient.invalidateQueries({ queryKey: ['cedula_access_logs', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedulas_autorizadas_stats', eventId] });
+      toast.success('Logs de acceso eliminados');
+    },
+    onError: () => {
+      toast.error('Error al eliminar logs de acceso');
+    },
+  });
+}
+
 // Crear log de acceso
 export function useCreateAccessLog() {
   const queryClient = useQueryClient();
