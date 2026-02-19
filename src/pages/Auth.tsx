@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
+import { useActiveEventConfig } from "@/hooks/useEventConfig";
 import Header from "@/components/Header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { toast } from "@/components/ui/sonner";
 
 const Auth = () => {
   const { user, signIn, loading } = useSupabaseAuth();
+  const { data: activeEvent } = useActiveEventConfig();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -70,8 +72,18 @@ const Auth = () => {
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md p-8 space-y-8 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-dorado mb-2">{t('auth.title')}</h1>
-            <p className="text-gray-400">{t('auth.subtitle')}</p>
+            {activeEvent?.logo_url || activeEvent?.event_image_url ? (
+              <div className="flex justify-center mb-4">
+                <img
+                  src={activeEvent.logo_url || activeEvent.event_image_url || ''}
+                  alt={activeEvent.event_name || 'Evento'}
+                  className="h-20 max-w-[200px] object-contain"
+                />
+              </div>
+            ) : (
+              <h1 className="text-3xl font-bold text-primary mb-2">{t('auth.title')}</h1>
+            )}
+            <p className="text-muted-foreground">{activeEvent?.event_name || t('auth.subtitle')}</p>
             {isDemo && (
               <div className="mt-4 p-3 bg-dorado/10 border border-dorado/30 rounded-lg">
                 <p className="text-sm text-dorado font-semibold">
