@@ -22,8 +22,9 @@ import BulkTicketAssignment from '@/components/BulkTicketAssignment';
 import TicketTemplateEditor from '@/components/TicketTemplateEditor';
 import { useTicketTemplates, useDeleteTicketTemplate, TicketTemplate } from '@/hooks/useTicketTemplates';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Download } from 'lucide-react';
 import { ExportTicketsPNG } from '@/components/ExportTicketsPNG';
+import ExportTicketsPrint from '@/components/ExportTicketsPrint';
 import { CedulasAutorizadasManager } from '@/components/cedula/CedulasAutorizadasManager';
 import { EventTeamManager } from '@/components/EventTeamManager';
 import { supabase } from '@/integrations/supabase/client';
@@ -503,8 +504,10 @@ const EventConfig = () => {
                               <p className="text-hueso mt-1">{template.canvas_width || 800}x{template.canvas_height || 600}</p>
                             </div>
                           </div>
-                          {template.use_visual_editor && template.elements && template.elements.length > 0 && (
+                          {template.use_visual_editor && template.elements && template.elements.length > 0 ? (
                             <ExportTicketsPNG template={template} attendees={attendees || []} />
+                          ) : (
+                            <ExportTicketsPrint />
                           )}
                         </div>
                       </CardContent>
