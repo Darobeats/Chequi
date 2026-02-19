@@ -72,20 +72,20 @@ const Auth = () => {
       <div className="flex-1 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md p-8 space-y-8 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
           <div className="text-center">
-            {activeEvent?.logo_url || activeEvent?.event_image_url ? (
-              <div className="flex justify-center mb-4">
+            {activeEvent?.logo_url || activeEvent?.event_image_url ?
+            <div className="flex justify-center mb-4">
                 <img
-                  src={activeEvent.logo_url || activeEvent.event_image_url || ''}
-                  alt={activeEvent.event_name || 'Evento'}
-                  className="h-20 max-w-[200px] object-contain"
-                />
-              </div>
-            ) : (
-              <h1 className="text-3xl font-bold text-primary mb-2">{t('auth.title')}</h1>
-            )}
-            <p className="text-muted-foreground">{activeEvent?.event_name || t('auth.subtitle')}</p>
-            {isDemo && (
-              <div className="mt-4 p-3 bg-dorado/10 border border-dorado/30 rounded-lg">
+                src={activeEvent.logo_url || activeEvent.event_image_url || ''}
+                alt={activeEvent.event_name || 'Evento'}
+                className="h-20 max-w-[200px] object-contain" />
+
+              </div> :
+
+            <h1 className="text-3xl font-bold text-primary mb-2">{t('auth.title')}</h1>
+            }
+            
+            {isDemo &&
+            <div className="mt-4 p-3 bg-dorado/10 border border-dorado/30 rounded-lg">
                 <p className="text-sm text-dorado font-semibold">
                   {t('auth.demoRequest')}
                 </p>
@@ -93,7 +93,7 @@ const Auth = () => {
                   {t('auth.demoDescription')}
                 </p>
               </div>
-            )}
+            }
           </div>
 
           <form className="space-y-6" onSubmit={handleSignIn}>
@@ -108,8 +108,8 @@ const Auth = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-gray-800 border-gray-700 text-hueso"
-                required
-              />
+                required />
+
             </div>
 
             <div className="space-y-2">
@@ -123,15 +123,15 @@ const Auth = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-gray-800 border-gray-700 text-hueso"
-                required
-              />
+                required />
+
             </div>
 
             <Button
               type="submit"
               className="w-full bg-dorado hover:bg-dorado/90 text-empresarial font-medium"
-              disabled={submitting}
-            >
+              disabled={submitting}>
+
               {submitting ? t('auth.processing') : t('auth.submit')}
             </Button>
           </form>
@@ -145,8 +145,8 @@ const Auth = () => {
       <footer className="py-4 text-center text-gray-500 text-xs">
         &copy; {new Date().getFullYear()} Chequi - {t('auth.copyright')}
       </footer>
-    </div>
-  );
+    </div>);
+
 };
 
 export default Auth;
