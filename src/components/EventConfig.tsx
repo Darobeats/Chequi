@@ -504,11 +504,7 @@ const EventConfig = () => {
                               <p className="text-hueso mt-1">{template.canvas_width || 800}x{template.canvas_height || 600}</p>
                             </div>
                           </div>
-                          {template.use_visual_editor && template.elements && template.elements.length > 0 ? (
-                            <ExportTicketsPNG template={template} attendees={attendees || []} />
-                          ) : (
-                            <ExportTicketsPrint />
-                          )}
+                          <ExportTicketsPNG template={template} attendees={attendees || []} />
                         </div>
                       </CardContent>
                     </Card>
