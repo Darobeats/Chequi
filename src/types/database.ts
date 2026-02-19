@@ -69,6 +69,10 @@ export interface EventConfig {
   is_active: boolean;
   event_date: string | null;
   event_status: 'draft' | 'active' | 'finished';
+  background_url: string | null;
+  sponsor_logos: any;
+  welcome_message: string | null;
+  background_opacity: number;
 }
 
 export interface TicketElement {

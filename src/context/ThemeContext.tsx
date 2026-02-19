@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect } from 'react';
-import { useActiveEventConfig } from '@/hooks/useEventConfig';
+import { useOptionalEventContext } from '@/context/EventContext';
 
 interface ThemeContextType {
   eventConfig: any;
@@ -9,32 +9,82 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// Convert hex to HSL string for CSS variables
+const hexToHSL = (hex: string): string | null => {
+  if (!hex || !hex.startsWith('#')) return null;
+  let r = parseInt(hex.slice(1, 3), 16) / 255;
+  let g = parseInt(hex.slice(3, 5), 16) / 255;
+  let b = parseInt(hex.slice(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0, l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+};
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { data: eventConfig, isLoading } = useActiveEventConfig();
+  const eventContext = useOptionalEventContext();
+  const selectedEvent = eventContext?.selectedEvent;
+  const isLoading = eventContext?.isLoadingEvents ?? false;
 
   useEffect(() => {
-    if (eventConfig) {
-      // Apply custom CSS variables
-      const root = document.documentElement;
-      root.style.setProperty('--primary-color', eventConfig.primary_color || '#D4AF37');
-      root.style.setProperty('--secondary-color', eventConfig.secondary_color || '#0A0A0A');
-      root.style.setProperty('--accent-color', eventConfig.accent_color || '#F8F9FA');
-      
+    const root = document.documentElement;
+
+    if (selectedEvent) {
+      // Apply primary color as CSS variable
+      const primaryHSL = hexToHSL(selectedEvent.primary_color || '#D4AF37');
+      if (primaryHSL) {
+        root.style.setProperty('--primary', primaryHSL);
+        root.style.setProperty('--accent', primaryHSL);
+        root.style.setProperty('--ring', primaryHSL);
+      }
+
       // Apply font family
-      if (eventConfig.font_family) {
-        root.style.setProperty('--font-family', eventConfig.font_family);
-        document.body.style.fontFamily = eventConfig.font_family;
+      if (selectedEvent.font_family) {
+        root.style.setProperty('--font-family', selectedEvent.font_family);
+        document.body.style.fontFamily = selectedEvent.font_family;
       }
 
       // Update document title
-      if (eventConfig.event_name) {
-        document.title = `${eventConfig.event_name} - Control de Acceso`;
+      if (selectedEvent.event_name) {
+        document.title = `${selectedEvent.event_name} - Chequi`;
       }
+
+      // Set event-specific CSS custom properties for background
+      const bgUrl = (selectedEvent as any).background_url;
+      if (bgUrl) {
+        root.style.setProperty('--event-bg-url', `url(${bgUrl})`);
+      } else {
+        root.style.removeProperty('--event-bg-url');
+      }
+
+      const bgOpacity = (selectedEvent as any).background_opacity;
+      root.style.setProperty('--event-bg-opacity', String(bgOpacity ?? 0.15));
+    } else {
+      // Reset to defaults
+      root.style.setProperty('--primary', '42 57% 52%');
+      root.style.setProperty('--accent', '42 57% 52%');
+      root.style.setProperty('--ring', '42 57% 52%');
+      root.style.removeProperty('--font-family');
+      root.style.removeProperty('--event-bg-url');
+      root.style.removeProperty('--event-bg-opacity');
+      document.body.style.fontFamily = '';
+      document.title = 'Chequi - Control de Acceso';
     }
-  }, [eventConfig]);
+  }, [selectedEvent]);
 
   return (
-    <ThemeContext.Provider value={{ eventConfig, isLoading }}>
+    <ThemeContext.Provider value={{ eventConfig: selectedEvent, isLoading }}>
       {children}
     </ThemeContext.Provider>
   );

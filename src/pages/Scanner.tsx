@@ -438,11 +438,21 @@ const Scanner = () => {
 
   const selectedControlName = controlTypes.find(c => c.id === selectedControlType)?.name;
 
+  const backgroundUrl = (selectedEvent as any)?.background_url;
+  const backgroundOpacity = (selectedEvent as any)?.background_opacity ?? 0.15;
+
   return (
-    <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation">
+    <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation relative">
+      {/* Event background */}
+      {backgroundUrl && (
+        <div
+          className="fixed inset-0 bg-cover bg-center pointer-events-none z-0"
+          style={{ backgroundImage: `url(${backgroundUrl})`, opacity: backgroundOpacity }}
+        />
+      )}
       <Header title={t('scanner.title')} />
 
-      <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto">
+      <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto relative z-10">
         <div className="w-full max-w-4xl space-y-4">
           {/* Whitelist status indicator */}
           {whitelistConfig?.requireWhitelist && (

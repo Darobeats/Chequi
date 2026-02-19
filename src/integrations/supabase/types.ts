@@ -417,6 +417,8 @@ export type Database = {
       event_configs: {
         Row: {
           accent_color: string | null
+          background_opacity: number | null
+          background_url: string | null
           created_at: string
           event_date: string | null
           event_image_url: string | null
@@ -429,10 +431,14 @@ export type Database = {
           primary_color: string | null
           require_whitelist: boolean | null
           secondary_color: string | null
+          sponsor_logos: Json | null
           updated_at: string
+          welcome_message: string | null
         }
         Insert: {
           accent_color?: string | null
+          background_opacity?: number | null
+          background_url?: string | null
           created_at?: string
           event_date?: string | null
           event_image_url?: string | null
@@ -445,10 +451,14 @@ export type Database = {
           primary_color?: string | null
           require_whitelist?: boolean | null
           secondary_color?: string | null
+          sponsor_logos?: Json | null
           updated_at?: string
+          welcome_message?: string | null
         }
         Update: {
           accent_color?: string | null
+          background_opacity?: number | null
+          background_url?: string | null
           created_at?: string
           event_date?: string | null
           event_image_url?: string | null
@@ -461,7 +471,9 @@ export type Database = {
           primary_color?: string | null
           require_whitelist?: boolean | null
           secondary_color?: string | null
+          sponsor_logos?: Json | null
           updated_at?: string
+          welcome_message?: string | null
         }
         Relationships: []
       }
