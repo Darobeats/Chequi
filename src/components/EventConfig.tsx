@@ -11,7 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EventConfig as EventConfigType, Attendee } from '@/types/database';
-import { Palette, Type, Image, Settings, Save, Plus, UserPlus, QrCode, Tag, Users, RefreshCw, Ticket, Shield, UsersRound, Calendar } from 'lucide-react';
+import { Palette, Type, Image, Settings, Save, Plus, UserPlus, QrCode, Tag, Users, RefreshCw, Ticket, Shield, UsersRound, Calendar, Power } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import AttendeesManager from '@/components/AttendeesManager';
@@ -265,7 +266,26 @@ const EventConfig = () => {
                         {config.event_date && ` | ${t('eventConfig.date')}: ${new Date(config.event_date).toLocaleDateString()}`}
                       </CardDescription>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={config.is_active ?? false}
+                          onCheckedChange={async (checked) => {
+                            try {
+                              await updateEventConfig.mutateAsync({ id: config.id, is_active: checked });
+                              toast({ 
+                                title: checked ? t('eventConfig.activated') : t('eventConfig.deactivated'),
+                                description: config.event_name
+                              });
+                            } catch (error) {
+                              toast({ title: t('eventConfig.error'), description: t('eventConfig.errorUpdate'), variant: "destructive" });
+                            }
+                          }}
+                        />
+                        <span className={`text-xs ${config.is_active ? 'text-green-400' : 'text-gray-500'}`}>
+                          {config.is_active ? t('eventConfig.active') : 'Off'}
+                        </span>
+                      </div>
                       <Button size="sm" variant="outline" onClick={() => setEditingConfig(config)} className="border-dorado text-dorado hover:bg-dorado hover:text-empresarial">
                         {t('eventConfig.edit')}
                       </Button>

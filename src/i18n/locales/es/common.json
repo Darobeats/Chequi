@@ -213,6 +213,8 @@
     "active": "Activo",
     "draft": "Borrador",
     "finished": "Finalizado",
+    "activated": "Evento activado",
+    "deactivated": "Evento desactivado",
     "created": "Creado",
     "date": "Fecha",
     "restrictedAccess": "Acceso Restringido",
