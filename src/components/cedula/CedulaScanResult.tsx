@@ -2,6 +2,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, User, Calendar, MapPin, Droplet, XCircle, ShieldCheck, Building, Tag, Beer, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { CedulaData, CedulaAutorizada } from '@/types/cedula';
 
 interface CedulaScanResultProps {
@@ -19,61 +20,48 @@ interface CedulaScanResultProps {
 }
 
 export function CedulaScanResult({ 
-  data, 
-  onConfirm, 
-  onCancel, 
-  isLoading, 
-  isUnauthorized = false,
-  autorizadaData,
-  requireWhitelist,
-  controlLimitInfo,
-  controlName,
-  allowSaveUnauthorized = false,
-  onSaveUnauthorized
+  data, onConfirm, onCancel, isLoading, 
+  isUnauthorized = false, autorizadaData, requireWhitelist,
+  controlLimitInfo, controlName, allowSaveUnauthorized = false, onSaveUnauthorized
 }: CedulaScanResultProps) {
-  // Check if limit is exceeded
+  const { t } = useTranslation('common');
   const isLimitExceeded = controlLimitInfo && controlLimitInfo.max > 0 && controlLimitInfo.current >= controlLimitInfo.max;
   const shouldBlockConfirm = isLimitExceeded || (isUnauthorized && !allowSaveUnauthorized);
 
   return (
     <Card className={`p-6 ${isUnauthorized || isLimitExceeded ? 'border-destructive/50 bg-destructive/5' : 'border-primary/50 bg-primary/5'}`}>
       <div className="space-y-4">
-        {/* Not on list Alert - new friendly message */}
         {isUnauthorized && !isLimitExceeded && (
           <Alert variant="destructive" className="border-orange-500 bg-orange-500/10">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
-            <AlertTitle className="font-bold text-orange-600">NO ESTÁ EN LISTA</AlertTitle>
+            <AlertTitle className="font-bold text-orange-600">{t('cedulaScanResult.notOnList')}</AlertTitle>
             <AlertDescription className="text-orange-600">
-              Esta cédula no se encuentra en la lista de acceso autorizado para este evento.
+              {t('cedulaScanResult.notOnListDesc')}
               {allowSaveUnauthorized && (
-                <span className="block mt-1 text-sm">
-                  Puede registrar el intento de acceso para reportes.
-                </span>
+                <span className="block mt-1 text-sm">{t('cedulaScanResult.canSaveForReport')}</span>
               )}
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Control Limit Exceeded Alert */}
         {isLimitExceeded && (
           <Alert variant="destructive" className="border-destructive bg-destructive/10">
             <Beer className="h-5 w-5" />
-            <AlertTitle className="font-bold">LÍMITE ALCANZADO</AlertTitle>
+            <AlertTitle className="font-bold">{t('cedulaScanResult.limitReached')}</AlertTitle>
             <AlertDescription>
               {controlName && <span className="font-semibold">{controlName}: </span>}
-              Esta persona ya ha utilizado {controlLimitInfo.current} de {controlLimitInfo.max} usos permitidos.
+              {t('cedulaScanResult.alreadyUsed')} {controlLimitInfo.current} {t('cedulaScanResult.of')} {controlLimitInfo.max}.
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Show usage info when not exceeded */}
         {controlLimitInfo && controlLimitInfo.max > 0 && !isLimitExceeded && !isUnauthorized && (
           <Alert className="border-blue-500 bg-blue-500/10">
             <Beer className="h-5 w-5 text-blue-500" />
-            <AlertTitle className="font-bold text-blue-600">USO DE CONTROL</AlertTitle>
+            <AlertTitle className="font-bold text-blue-600">{t('cedulaScanResult.usageInfo')}</AlertTitle>
             <AlertDescription className="text-blue-600">
               {controlName && <span className="font-semibold">{controlName}: </span>}
-              Uso {controlLimitInfo.current + 1} de {controlLimitInfo.max} permitidos
+              {t('cedulaScanResult.usage')} {controlLimitInfo.current + 1} {t('cedulaScanResult.of')} {controlLimitInfo.max} {t('cedulaScanResult.allowed')}
             </AlertDescription>
           </Alert>
         )}
@@ -81,20 +69,14 @@ export function CedulaScanResult({
         {!isUnauthorized && !isLimitExceeded && requireWhitelist && autorizadaData && (
           <Alert className="border-green-500 bg-green-500/10">
             <ShieldCheck className="h-5 w-5 text-green-500" />
-            <AlertTitle className="font-bold text-green-600">ACCESO AUTORIZADO</AlertTitle>
+            <AlertTitle className="font-bold text-green-600">{t('cedulaScanResult.accessAuthorized')}</AlertTitle>
             <AlertDescription className="text-green-600">
-              Cédula verificada en la lista de acceso.
+              {t('cedulaScanResult.verifiedOnList')}
               {autorizadaData.categoria && (
-                <span className="block mt-1">
-                  <Tag className="h-3 w-3 inline mr-1" />
-                  Categoría: {autorizadaData.categoria}
-                </span>
+                <span className="block mt-1"><Tag className="h-3 w-3 inline mr-1" />{t('cedulaScanResult.category')}: {autorizadaData.categoria}</span>
               )}
               {autorizadaData.empresa && (
-                <span className="block">
-                  <Building className="h-3 w-3 inline mr-1" />
-                  Empresa: {autorizadaData.empresa}
-                </span>
+                <span className="block"><Building className="h-3 w-3 inline mr-1" />{t('cedulaScanResult.company')}: {autorizadaData.empresa}</span>
               )}
             </AlertDescription>
           </Alert>
@@ -107,7 +89,7 @@ export function CedulaScanResult({
             <CheckCircle className="h-6 w-6 text-primary" />
           )}
           <h3 className="text-lg font-semibold">
-            {isLimitExceeded ? 'Límite de Uso Alcanzado' : isUnauthorized ? 'No Está en Lista' : 'Cédula Escaneada'}
+            {isLimitExceeded ? t('cedulaScanResult.limitReachedTitle') : isUnauthorized ? t('cedulaScanResult.notOnListTitle') : t('cedulaScanResult.scannedTitle')}
           </h3>
         </div>
 
@@ -115,14 +97,14 @@ export function CedulaScanResult({
           <div className="flex items-start gap-3">
             <User className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm text-muted-foreground">Nombre Completo</p>
+              <p className="text-sm text-muted-foreground">{t('cedulaScanResult.fullName')}</p>
               <p className="font-semibold text-lg">{data.nombreCompleto}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Número de Cédula</p>
+              <p className="text-sm text-muted-foreground">{t('cedulaScanResult.idNumber')}</p>
               <p className="font-medium">{data.numeroCedula}</p>
             </div>
             
@@ -130,7 +112,7 @@ export function CedulaScanResult({
               <div className="flex items-start gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Fecha de Nacimiento</p>
+                  <p className="text-sm text-muted-foreground">{t('cedulaScanResult.birthDate')}</p>
                   <p className="font-medium text-sm">{data.fechaNacimiento}</p>
                 </div>
               </div>
@@ -138,8 +120,8 @@ export function CedulaScanResult({
 
             {data.sexo && (
               <div>
-                <p className="text-sm text-muted-foreground">Sexo</p>
-                <p className="font-medium">{data.sexo === 'M' ? 'Masculino' : 'Femenino'}</p>
+                <p className="text-sm text-muted-foreground">{t('cedulaScanResult.sex')}</p>
+                <p className="font-medium">{data.sexo === 'M' ? t('cedulaScanResult.male') : t('cedulaScanResult.female')}</p>
               </div>
             )}
 
@@ -147,7 +129,7 @@ export function CedulaScanResult({
               <div className="flex items-start gap-2">
                 <Droplet className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm text-muted-foreground">RH</p>
+                  <p className="text-sm text-muted-foreground">{t('cedulaScanResult.rh')}</p>
                   <p className="font-medium">{data.rh}</p>
                 </div>
               </div>
@@ -157,7 +139,7 @@ export function CedulaScanResult({
               <div className="flex items-start gap-2 col-span-2">
                 <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Lugar de Expedición</p>
+                  <p className="text-sm text-muted-foreground">{t('cedulaScanResult.expeditionPlace')}</p>
                   <p className="font-medium">{data.lugarExpedicion}</p>
                 </div>
               </div>
@@ -167,56 +149,29 @@ export function CedulaScanResult({
 
         <div className="flex flex-col gap-3 pt-4">
           {isLimitExceeded ? (
-            <Button 
-              onClick={onCancel} 
-              variant="destructive"
-              className="w-full"
-            >
-              Cerrar y Escanear Otra
+            <Button onClick={onCancel} variant="destructive" className="w-full">
+              {t('cedulaScanResult.closeAndScanAnother')}
             </Button>
           ) : isUnauthorized && allowSaveUnauthorized ? (
             <>
-              <Button 
-                onClick={onSaveUnauthorized} 
-                variant="outline"
-                className="w-full border-orange-500 text-orange-600 hover:bg-orange-500/10"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Guardando...' : 'Registrar para Reporte'}
+              <Button onClick={onSaveUnauthorized} variant="outline" className="w-full border-orange-500 text-orange-600 hover:bg-orange-500/10" disabled={isLoading}>
+                {isLoading ? t('cedulaScanResult.saving') : t('cedulaScanResult.saveForReport')}
               </Button>
-              <Button 
-                onClick={onCancel} 
-                variant="ghost" 
-                className="w-full"
-                disabled={isLoading}
-              >
-                Escanear Otra Cédula
+              <Button onClick={onCancel} variant="ghost" className="w-full" disabled={isLoading}>
+                {t('cedulaScanResult.scanAnother')}
               </Button>
             </>
           ) : isUnauthorized ? (
-            <Button 
-              onClick={onCancel} 
-              variant="destructive"
-              className="w-full"
-            >
-              Cerrar y Escanear Otra
+            <Button onClick={onCancel} variant="destructive" className="w-full">
+              {t('cedulaScanResult.closeAndScanAnother')}
             </Button>
           ) : (
             <div className="flex gap-3">
-              <Button 
-                onClick={onConfirm} 
-                className="flex-1"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Guardando...' : 'Confirmar y Guardar'}
+              <Button onClick={onConfirm} className="flex-1" disabled={isLoading}>
+                {isLoading ? t('cedulaScanResult.saving') : t('cedulaScanResult.confirmSave')}
               </Button>
-              <Button 
-                onClick={onCancel} 
-                variant="outline" 
-                className="flex-1"
-                disabled={isLoading}
-              >
-                Cancelar
+              <Button onClick={onCancel} variant="outline" className="flex-1" disabled={isLoading}>
+                {t('cedulaScanResult.cancel')}
               </Button>
             </div>
           )}

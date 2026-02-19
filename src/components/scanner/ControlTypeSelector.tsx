@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Ticket, Utensils, Wine, Crown, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ControlType {
   id: string;
@@ -26,6 +27,7 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
   onControlTypeChange,
   isLoading,
 }) => {
+  const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
 
   const getControlIcon = (iconName: string | null) => {
@@ -42,7 +44,7 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
     return (
       <div className="w-full mb-6">
         <label className="block text-sm font-medium text-muted-foreground mb-2">
-          Tipo de Control
+          {t('controlTypeSelector.label')}
         </label>
         <div className="bg-input border border-border rounded-md h-10 animate-pulse"></div>
       </div>
@@ -52,7 +54,7 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
   return (
     <div className="w-full mb-4 md:mb-6">
       <label className="block text-sm font-medium text-muted-foreground mb-2">
-        Tipo de Control
+        {t('controlTypeSelector.label')}
       </label>
       <Select 
         value={selectedControlType} 
@@ -61,7 +63,7 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
         onOpenChange={setOpen}
       >
         <SelectTrigger className="bg-input border-border text-foreground min-h-[44px] touch-manipulation">
-          <SelectValue placeholder="Selecciona el tipo de control" />
+          <SelectValue placeholder={t('controlTypeSelector.placeholder')} />
         </SelectTrigger>
         <SelectContent className="bg-popover border-border z-[9999] max-h-[300px]">
           {controlTypes?.map((controlType) => {
@@ -91,7 +93,7 @@ const ControlTypeSelector: React.FC<ControlTypeSelectorProps> = ({
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="text-xs">Requiere: {requiredControl.name}</p>
+                          <p className="text-xs">{t('controlTypeSelector.requires')} {requiredControl.name}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

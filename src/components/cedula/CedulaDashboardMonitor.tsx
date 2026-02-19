@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro, useClearAllCedulaRegistros } from '@/hooks/useCedulaRegistros';
-import { useCedulasAutorizadasStats } from '@/hooks/useCedulasAutorizadas';
+import { useCedulasAutorizadasStats, useCedulasAutorizadas, useCedulaAccessLogs } from '@/hooks/useCedulasAutorizadas';
+import type { CedulaAccessLog } from '@/types/cedula';
 import { useEventWhitelistConfigById } from '@/hooks/useEventWhitelistConfig';
 import { useEventContext } from '@/context/EventContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useCedulaControlUsage } from '@/hooks/useCedulaControlUsage';
+import { useControlTypes } from '@/hooks/useSupabaseData';
 import { CedulaExportButton } from './CedulaExportButton';
 import { CedulaManualRegistro } from './CedulaManualRegistro';
 import { IdCard, TrendingUp, Clock, Trash2, Search, Users, ShieldCheck, ShieldX, CheckCircle2, AlertTriangle } from 'lucide-react';
@@ -21,6 +24,10 @@ export function CedulaDashboardMonitor() {
   const { data: stats } = useCedulaStats(selectedEvent?.id || null);
   const { data: whitelistConfig } = useEventWhitelistConfigById(selectedEvent?.id || null);
   const { data: whitelistStats } = useCedulasAutorizadasStats(selectedEvent?.id || null);
+  const { data: autorizadas = [] } = useCedulasAutorizadas(selectedEvent?.id || null);
+  const { data: accessLogs = [] } = useCedulaAccessLogs(selectedEvent?.id || null);
+  const { data: controlUsage = [] } = useCedulaControlUsage(selectedEvent?.id || null);
+  const { data: controlTypes = [] } = useControlTypes();
   const { isAdmin } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
   const clearAllRegistros = useClearAllCedulaRegistros();
@@ -30,7 +37,6 @@ export function CedulaDashboardMonitor() {
 
   const isWhitelistActive = whitelistConfig?.requireWhitelist ?? false;
 
-  // Filtrar registros por búsqueda de cédula
   const filteredRegistros = useMemo(() => {
     if (!searchTerm.trim()) return registros;
     return registros.filter(r => 
@@ -65,7 +71,6 @@ export function CedulaDashboardMonitor() {
 
   return (
     <div className="space-y-6">
-      {/* Badge de modo lista blanca */}
       {isWhitelistActive && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
           <ShieldCheck className="h-5 w-5 text-amber-500" />
@@ -75,8 +80,8 @@ export function CedulaDashboardMonitor() {
         </div>
       )}
 
-      {/* Estadísticas */}
       <div className={`grid grid-cols-2 ${isWhitelistActive ? 'md:grid-cols-6' : 'md:grid-cols-3'} gap-4`}>
+        {/* ... keep existing code (stat cards) */}
         <Card className="p-6 bg-gray-900/50 border-gray-800">
           <div className="flex items-center justify-between">
             <div>
@@ -112,7 +117,6 @@ export function CedulaDashboardMonitor() {
           </div>
         </Card>
 
-        {/* Estadísticas de lista blanca (solo si está activa) */}
         {isWhitelistActive && whitelistStats && (
           <>
             <Card className="p-6 bg-gray-900/50 border-gray-800">
@@ -148,7 +152,6 @@ export function CedulaDashboardMonitor() {
         )}
       </div>
 
-      {/* Tabla de Registros */}
       <Card className="p-6 bg-gray-900/50 border-gray-800">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <h3 className="text-xl font-semibold text-dorado flex items-center gap-2">
@@ -157,7 +160,6 @@ export function CedulaDashboardMonitor() {
           </h3>
           
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-            {/* Buscador */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-hueso/40" />
               <Input
@@ -169,7 +171,6 @@ export function CedulaDashboardMonitor() {
               />
             </div>
             
-            {/* Botones de acción */}
             <div className="flex gap-2">
               {selectedEvent?.id && (
                 <CedulaManualRegistro eventId={selectedEvent.id} />
@@ -177,17 +178,16 @@ export function CedulaDashboardMonitor() {
               <CedulaExportButton 
                 registros={filteredRegistros} 
                 eventName={selectedEvent?.event_name || 'Evento'}
+                autorizadas={autorizadas}
+                accessLogs={accessLogs as CedulaAccessLog[]}
+                controlUsage={controlUsage}
+                controlTypes={controlTypes}
               />
               
-              {/* Botón eliminar todos - solo admin */}
               {isAdmin && registros.length > 0 && selectedEvent?.id && (
                 <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
                   <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      className="bg-red-600 hover:bg-red-700"
-                    >
+                    <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700">
                       <Trash2 className="h-4 w-4 mr-2" />
                       Eliminar Todos ({registros.length})
                     </Button>
@@ -199,31 +199,20 @@ export function CedulaDashboardMonitor() {
                         ¡ADVERTENCIA! Eliminar Todos los Registros
                       </AlertDialogTitle>
                       <AlertDialogDescription className="text-hueso/80 space-y-3">
-                        <p>
-                          Estás a punto de eliminar <strong className="text-red-400">{registros.length} registros</strong> del evento <strong className="text-dorado">{selectedEvent.event_name}</strong>.
-                        </p>
-                        <p className="text-amber-400">
-                          Esto también eliminará:
-                        </p>
+                        <p>Estás a punto de eliminar <strong className="text-red-400">{registros.length} registros</strong> del evento <strong className="text-dorado">{selectedEvent.event_name}</strong>.</p>
+                        <p className="text-amber-400">Esto también eliminará:</p>
                         <ul className="list-disc list-inside text-sm space-y-1 ml-2">
                           <li>Todos los registros de control de uso de cédulas</li>
                           <li>Todos los logs de acceso</li>
                           <li>Todos los registros de cédulas escaneadas</li>
                         </ul>
-                        <p className="text-red-400 font-semibold mt-4">
-                          Esta acción NO se puede deshacer.
-                        </p>
+                        <p className="text-red-400 font-semibold mt-4">Esta acción NO se puede deshacer.</p>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel className="border-gray-700 text-hueso hover:bg-gray-800">
-                        Cancelar
-                      </AlertDialogCancel>
+                      <AlertDialogCancel className="border-gray-700 text-hueso hover:bg-gray-800">Cancelar</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={() => {
-                          clearAllRegistros.mutate(selectedEvent.id);
-                          setShowClearConfirm(false);
-                        }}
+                        onClick={() => { clearAllRegistros.mutate(selectedEvent.id); setShowClearConfirm(false); }}
                         disabled={clearAllRegistros.isPending}
                         className="bg-red-600 hover:bg-red-700 text-white"
                       >
@@ -266,12 +255,7 @@ export function CedulaDashboardMonitor() {
                       <TableCell>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                              disabled={deletingId === registro.id}
-                            >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20" disabled={deletingId === registro.id}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
@@ -280,20 +264,12 @@ export function CedulaDashboardMonitor() {
                               <AlertDialogTitle className="text-dorado">Eliminar Registro</AlertDialogTitle>
                               <AlertDialogDescription className="text-hueso/80">
                                 ¿Estás seguro de eliminar el registro de <span className="font-semibold text-hueso">{registro.nombre_completo}</span> (Cédula: {registro.numero_cedula})?
-                                <br /><br />
-                                Esta acción no se puede deshacer.
+                                <br /><br />Esta acción no se puede deshacer.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel className="border-gray-700 text-hueso hover:bg-gray-800">
-                                Cancelar
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDelete(registro.id)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
-                              >
-                                Eliminar
-                              </AlertDialogAction>
+                              <AlertDialogCancel className="border-gray-700 text-hueso hover:bg-gray-800">Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(registro.id)} className="bg-red-600 hover:bg-red-700 text-white">Eliminar</AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
