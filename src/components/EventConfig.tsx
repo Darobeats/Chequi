@@ -28,6 +28,11 @@ import { EventTeamManager } from '@/components/EventTeamManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useEventContext } from '@/context/EventContext';
+import EventImageUploader from '@/components/EventImageUploader';
+import SponsorLogosManager from '@/components/SponsorLogosManager';
+import EventBrandingPreview from '@/components/EventBrandingPreview';
+import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
 
 const FONT_OPTIONS = [
   { name: 'Inter', value: 'Inter, sans-serif' },
@@ -81,8 +86,12 @@ const EventConfig = () => {
     event_image_url: '',
     font_family: 'Inter, sans-serif',
     is_active: false,
-    event_date: null,
-    event_status: 'active' as const
+    event_date: null as string | null,
+    event_status: 'active' as const,
+    background_url: '',
+    welcome_message: '',
+    background_opacity: 0.15,
+    sponsor_logos: [] as any[]
   });
 
   if (roleLoading) {
@@ -125,7 +134,8 @@ const EventConfig = () => {
       toast({ title: t('eventConfig.configCreated'), description: t('eventConfig.configCreatedDesc') });
       setNewConfig({
         event_name: '', primary_color: '#D4AF37', secondary_color: '#0A0A0A', accent_color: '#F8F9FA',
-        logo_url: '', event_image_url: '', font_family: 'Inter, sans-serif', is_active: false, event_date: null, event_status: 'active' as const
+        logo_url: '', event_image_url: '', font_family: 'Inter, sans-serif', is_active: false, event_date: null, event_status: 'active' as const,
+        background_url: '', welcome_message: '', background_opacity: 0.15, sponsor_logos: []
       });
       setActiveTab('configuration');
     } catch (error) {
@@ -566,21 +576,95 @@ const EventConfig = () => {
                   {FONT_OPTIONS.map((font) => (<option key={font.value} value={font.value}>{font.name}</option>))}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm text-gray-400">{t('eventConfig.logoUrl')}</Label>
-                  <Input value={editingConfig.logo_url || ''} onChange={(e) => setEditingConfig({ ...editingConfig, logo_url: e.target.value })} className="bg-gray-800 border-gray-700 text-hueso" placeholder="https://ejemplo.com/logo.png" />
+              {/* Image Uploaders */}
+              {editingConfig.id && (
+                <div className="space-y-4">
+                  <Label className="text-foreground font-medium flex items-center gap-2"><Image className="h-4 w-4" />Imágenes del Evento</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <EventImageUploader
+                      eventId={editingConfig.id}
+                      label="Logo del Evento"
+                      currentUrl={editingConfig.logo_url}
+                      storagePath="logo"
+                      onUpload={(url) => setEditingConfig({ ...editingConfig, logo_url: url })}
+                      onRemove={() => setEditingConfig({ ...editingConfig, logo_url: null })}
+                    />
+                    <EventImageUploader
+                      eventId={editingConfig.id}
+                      label="Imagen del Evento"
+                      currentUrl={editingConfig.event_image_url}
+                      storagePath="event-image"
+                      onUpload={(url) => setEditingConfig({ ...editingConfig, event_image_url: url })}
+                      onRemove={() => setEditingConfig({ ...editingConfig, event_image_url: null })}
+                    />
+                    <EventImageUploader
+                      eventId={editingConfig.id}
+                      label="Fondo del HUB"
+                      currentUrl={editingConfig.background_url}
+                      storagePath="background"
+                      onUpload={(url) => setEditingConfig({ ...editingConfig, background_url: url })}
+                      onRemove={() => setEditingConfig({ ...editingConfig, background_url: null })}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm text-gray-400">{t('eventConfig.eventImageUrl')}</Label>
-                  <Input value={editingConfig.event_image_url || ''} onChange={(e) => setEditingConfig({ ...editingConfig, event_image_url: e.target.value })} className="bg-gray-800 border-gray-700 text-hueso" placeholder="https://ejemplo.com/evento.jpg" />
-                </div>
+              )}
+
+              {/* Background opacity */}
+              <div>
+                <Label className="text-sm text-muted-foreground">Opacidad del fondo: {Math.round((editingConfig.background_opacity || 0.15) * 100)}%</Label>
+                <Slider
+                  value={[(editingConfig.background_opacity || 0.15) * 100]}
+                  onValueChange={(v) => setEditingConfig({ ...editingConfig, background_opacity: v[0] / 100 })}
+                  min={5}
+                  max={50}
+                  step={5}
+                  className="mt-2"
+                />
               </div>
+
+              {/* Welcome message */}
+              <div>
+                <Label className="text-sm text-muted-foreground">Mensaje de bienvenida</Label>
+                <Textarea
+                  value={editingConfig.welcome_message || ''}
+                  onChange={(e) => setEditingConfig({ ...editingConfig, welcome_message: e.target.value })}
+                  placeholder="Ej: ¡Bienvenidos al evento! Disfruten la experiencia."
+                  className="bg-secondary border-border text-foreground mt-1"
+                  rows={2}
+                />
+              </div>
+
+              {/* Sponsor logos */}
+              {editingConfig.id && (
+                <SponsorLogosManager
+                  eventId={editingConfig.id}
+                  sponsors={editingConfig.sponsor_logos || []}
+                  onChange={(sponsors) => setEditingConfig({ ...editingConfig, sponsor_logos: sponsors })}
+                />
+              )}
+
+              {/* Branding Preview */}
+              <div>
+                <Label className="text-sm text-muted-foreground mb-2 block">Vista Previa</Label>
+                <EventBrandingPreview
+                  eventName={editingConfig.event_name}
+                  primaryColor={editingConfig.primary_color}
+                  secondaryColor={editingConfig.secondary_color}
+                  accentColor={editingConfig.accent_color}
+                  fontFamily={editingConfig.font_family}
+                  logoUrl={editingConfig.logo_url}
+                  backgroundUrl={editingConfig.background_url}
+                  backgroundOpacity={editingConfig.background_opacity}
+                  welcomeMessage={editingConfig.welcome_message}
+                  sponsors={editingConfig.sponsor_logos || []}
+                />
+              </div>
+
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setEditingConfig(null)} className="border-gray-700 text-hueso hover:bg-gray-800">
+                <Button variant="outline" onClick={() => setEditingConfig(null)} className="border-border text-foreground hover:bg-secondary">
                   {t('cedulaScanResult.cancel')}
                 </Button>
-                <Button onClick={handleUpdateConfig} className="bg-dorado text-empresarial hover:bg-dorado/90">
+                <Button onClick={handleUpdateConfig} className="bg-primary text-primary-foreground hover:bg-primary/90">
                   <Save className="h-4 w-4 mr-2" />{t('eventConfig.saveChanges')}
                 </Button>
               </div>

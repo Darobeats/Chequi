@@ -13,6 +13,7 @@ import EventConfig from '@/components/EventConfig';
 import ScannerSetup from '@/components/scanner/ScannerSetup';
 import { CedulaDashboardMonitor } from '@/components/cedula/CedulaDashboardMonitor';
 import CedulaControlAnalytics from '@/components/analytics/CedulaControlAnalytics';
+import SponsorLogosBar from '@/components/SponsorLogosBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -71,13 +72,32 @@ const Admin = () => {
     return { name: category.name, count, color: category.color };
   });
 
+  const backgroundUrl = (selectedEvent as any)?.background_url;
+  const backgroundOpacity = (selectedEvent as any)?.background_opacity ?? 0.15;
+  const welcomeMessage = (selectedEvent as any)?.welcome_message;
+  const sponsorLogos = (selectedEvent as any)?.sponsor_logos || [];
+
   return (
-    <div className="min-h-screen bg-empresarial flex flex-col">
+    <div className="min-h-screen bg-empresarial flex flex-col relative">
+      {/* Event background */}
+      {backgroundUrl && (
+        <div
+          className="fixed inset-0 bg-cover bg-center pointer-events-none z-0"
+          style={{ backgroundImage: `url(${backgroundUrl})`, opacity: backgroundOpacity }}
+        />
+      )}
+      
       <Header title={t('admin.title')} />
       
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        {welcomeMessage && (
+          <div className="mb-4 p-3 rounded-lg border border-primary/30 bg-primary/5">
+            <p className="text-foreground text-sm">{welcomeMessage}</p>
+          </div>
+        )}
+
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-dorado">{t('admin.controlPanel')}</h1>
+          <h1 className="text-2xl font-bold text-primary">{t('admin.controlPanel')}</h1>
           {isAdmin && (
             <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
               <DialogTrigger asChild>
@@ -235,6 +255,11 @@ const Admin = () => {
           )}
         </Tabs>
       </div>
+
+      {/* Sponsor bar at bottom */}
+      {sponsorLogos.length > 0 && (
+        <SponsorLogosBar sponsors={sponsorLogos} />
+      )}
     </div>
   );
 };

@@ -74,7 +74,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
         return null;
       }
       
-      return data as EventConfig;
+      return data as unknown as EventConfig;
     },
     enabled: !!selectedEventId,
   });

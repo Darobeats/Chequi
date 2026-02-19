@@ -130,12 +130,25 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
     return null;
   };
 
+  const eventLogoUrl = eventContext?.selectedEvent?.logo_url;
+  const eventPrimaryColor = eventContext?.selectedEvent?.primary_color;
+
   return (
-    <header className="bg-empresarial border-b border-dorado/30 p-3 md:p-4 sticky top-0 z-50">
+    <header 
+      className="bg-empresarial border-b p-3 md:p-4 sticky top-0 z-50"
+      style={{ borderBottomColor: eventPrimaryColor || undefined }}
+    >
       <div className="container mx-auto flex justify-between items-center gap-2">
         <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-shrink">
+          {eventLogoUrl && !showLandingNav && (
+            <img 
+              src={eventLogoUrl} 
+              alt="Event Logo" 
+              className="h-8 w-8 object-contain rounded flex-shrink-0"
+            />
+          )}
           <h1 
-            className="text-lg md:text-2xl font-bold text-dorado truncate cursor-pointer hover:text-dorado/80 transition-colors"
+            className="text-lg md:text-2xl font-bold text-primary truncate cursor-pointer hover:text-primary/80 transition-colors"
             onClick={() => handleNavigation('/')}
           >
             {title}

@@ -30,8 +30,8 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <SupabaseAuthProvider>
-        <ThemeProvider>
-          <EventProvider>
+        <EventProvider>
+          <ThemeProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -83,8 +83,8 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-          </EventProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </EventProvider>
       </SupabaseAuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>
