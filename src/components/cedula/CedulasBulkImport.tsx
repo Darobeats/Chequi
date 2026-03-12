@@ -50,10 +50,20 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
     
     try {
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(data);
+      const worksheet = workbook.worksheets[0];
+      
+      if (!worksheet) {
+        setError('No se encontró una hoja de cálculo en el archivo');
+        setParsing(false);
+        return;
+      }
+      
+      const jsonData: any[][] = [];
+      worksheet.eachRow((row, rowNumber) => {
+        jsonData.push(row.values as any[]);
+      });
       
       if (jsonData.length < 2) {
         setError('El archivo debe tener al menos una fila de encabezados y una de datos');
