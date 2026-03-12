@@ -61,8 +61,10 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
       }
       
       const jsonData: any[][] = [];
-      worksheet.eachRow((row, rowNumber) => {
-        jsonData.push(row.values as any[]);
+      worksheet.eachRow((row) => {
+        // ExcelJS row.values is 1-indexed, slice off index 0
+        const values = (row.values as any[]).slice(1);
+        jsonData.push(values);
       });
       
       if (jsonData.length < 2) {
