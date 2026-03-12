@@ -452,7 +452,7 @@ const Scanner = () => {
       )}
       <Header title={t('scanner.title')} />
 
-      <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto relative z-10">
+      <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto relative z-10" style={{ overflowAnchor: 'none' }}>
         <div className="w-full max-w-4xl space-y-4">
           {/* Whitelist status indicator */}
           {whitelistConfig?.requireWhitelist && (

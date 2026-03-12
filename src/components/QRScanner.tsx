@@ -262,29 +262,31 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
       />
 
 
-      {lastResult ? (
-        <ScanResult result={lastResult} onClose={handleCloseResult} />
-      ) : needsPermission ? (
-        <CameraPermissions
-          hasCamera={hasCamera}
-          permissionStatus={permissionStatus}
-          cameraError={cameraError}
-          isRequestingPermission={isRequestingPermission}
-          onRequestPermission={requestCameraPermission}
-        />
-      ) : (
-        <ScannerVideo
-          scanning={scanning}
-          selectedControlType={selectedControlType}
-          controlTypeName={selectedControlTypeName}
-          hasCamera={hasCamera}
-          permissionStatus={permissionStatus}
-          onStartScanning={startScanning}
-          onStopScanning={stopScanning}
-          onQRDetected={processQRCode}
-          isProcessing={processQRMutation.isPending}
-        />
-      )}
+      <div className="w-full min-h-[420px] flex flex-col items-center" style={{ overflowAnchor: 'none' }}>
+        {lastResult ? (
+          <ScanResult result={lastResult} onClose={handleCloseResult} />
+        ) : needsPermission ? (
+          <CameraPermissions
+            hasCamera={hasCamera}
+            permissionStatus={permissionStatus}
+            cameraError={cameraError}
+            isRequestingPermission={isRequestingPermission}
+            onRequestPermission={requestCameraPermission}
+          />
+        ) : (
+          <ScannerVideo
+            scanning={scanning}
+            selectedControlType={selectedControlType}
+            controlTypeName={selectedControlTypeName}
+            hasCamera={hasCamera}
+            permissionStatus={permissionStatus}
+            onStartScanning={startScanning}
+            onStopScanning={stopScanning}
+            onQRDetected={processQRCode}
+            isProcessing={processQRMutation.isPending}
+          />
+        )}
+      </div>
     </div>
   );
 };
