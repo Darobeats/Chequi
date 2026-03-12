@@ -1,141 +1,48 @@
 
-# Plan: Personalización Visual del HUB por Evento
 
-## Problema Actual
+## Analysis: Why Bots and AI Crawlers Can't Access chequi.online
 
-La configuración de eventos tiene campos para logo y colores, pero:
-1. Los campos `logo_url` y `event_image_url` solo aceptan URLs manuales (no se pueden subir archivos)
-2. El `ThemeContext` aplica colores y fuente globalmente usando `get_active_event_config()` (busca un evento "activo" global), no el evento seleccionado del usuario
-3. No existe campo para imagen de fondo (background) del dashboard/scanner
-4. No hay soporte para logos de patrocinadores/organizadores
-5. Los colores configurados no se reflejan visualmente en el Header, cards, ni botones de la app
-6. No hay vista previa real de cómo se verá el evento
+### Root Cause
 
-## Solución Propuesta
+The site is a **client-side rendered SPA** (Single Page Application built with React + Vite). This means:
 
-### 1. Migración de Base de Datos
+1. **The server returns a nearly empty HTML file** — just `<div id="root"></div>` with no visible content
+2. **All content is rendered by JavaScript** — bots that don't execute JS see nothing
+3. **No meta description, no OG tags** — crawlers have zero context about the page
+4. **403 errors** — some bot user-agents may be blocked at the hosting/CDN level (this is a Lovable platform behavior we cannot change from code)
+5. **Timeouts** — bots that try to wait for JS rendering may timeout on the heavy bundle (multiple fonts, large dependencies)
 
-Agregar nuevos campos a `event_configs`:
+### Current `index.html` Problems (line by line)
 
-| Campo | Tipo | Propósito |
-|-------|------|-----------|
-| `background_url` | text | Imagen de fondo del HUB |
-| `sponsor_logos` | jsonb | Array de logos de patrocinadores `[{name, url, link}]` |
-| `welcome_message` | text | Mensaje personalizado de bienvenida |
-| `background_opacity` | numeric | Opacidad del fondo (0.05 a 0.5) |
+- **Line 11**: `<title>Chequi</title>` — no `<meta name="description">`, no `<meta name="keywords">`
+- **Lines 34-39**: Only has basic `og:title` and `twitter:title` — missing `og:description`, `og:image`, `og:url`
+- **No structured data** (JSON-LD) for search engines
+- **No `<noscript>` fallback** — bots without JS see absolutely nothing
+- **14+ Google Fonts loaded upfront** (line 14) — can cause timeout for lightweight crawlers
 
-Crear un nuevo **storage bucket** `event-assets` (público) para subir logos, fondos e imágenes de patrocinadores directamente desde la app.
+### Proposed Solution
 
-### 2. Subida de Archivos (reemplazar URLs manuales)
+#### 1. Enrich `index.html` with complete SEO meta tags
+Add `description`, `og:description`, `og:image`, `og:url`, `twitter:description`, `twitter:image`, and canonical URL so crawlers get meaningful content from the raw HTML.
 
-Crear componente `EventImageUploader.tsx` que permita:
-- **Arrastrar y soltar** o **seleccionar archivo** para subir imágenes
-- Vista previa inmediata del archivo subido
-- Subida automática al bucket `event-assets` con path `{event_id}/logo.png`, `{event_id}/background.jpg`, etc.
-- Botón para eliminar imagen actual
+#### 2. Add `<noscript>` fallback content
+Insert a `<noscript>` block inside `<body>` with the key landing page text (title, description, features). This gives non-JS crawlers actual content to index and audit.
 
-Se usará en EventConfig para:
-- Logo del evento (reemplaza campo URL manual)
-- Imagen de fondo del HUB (nuevo)
-- Imagen del evento (reemplaza campo URL manual)
+#### 3. Add JSON-LD structured data
+Add a `<script type="application/ld+json">` block with Organization/SoftwareApplication schema so search engines and AI tools understand what the site is.
 
-### 3. Logos de Patrocinadores/Organizadores
+#### 4. Add a static `sitemap.xml`
+Create `public/sitemap.xml` listing the public routes (`/`, `/auth`) to help crawlers discover pages.
 
-Agregar sección en EventConfig tab "Config" para gestionar logos de patrocinadores:
-- Botón "Agregar Patrocinador"
-- Cada patrocinador: nombre, logo (subido), link opcional
-- Máximo 6 patrocinadores
-- Los logos se muestran en el footer del Header o en una barra inferior dedicada
+#### 5. Optimize font loading
+Change the Google Fonts link to use `font-display=swap` (already present) and reduce to only the fonts actually used, preventing timeout for lightweight clients.
 
-### 4. ThemeContext: Usar Evento Seleccionado
+### Important Limitation
 
-Refactorizar `ThemeContext.tsx` para:
-- Usar el `selectedEvent` del `EventContext` en vez de `get_active_event_config()`
-- Aplicar dinámicamente colores, fuente, logo y fondo según el evento del usuario
-- Actualizar las CSS variables `--primary`, `--accent`, etc. con los colores del evento
-- Esto hace que **cada usuario vea la app con el branding de SU evento**
+The **403 errors** from certain bot user-agents may be caused by Lovable's hosting infrastructure (CDN/firewall rules). This cannot be fixed from the application code. If 403 persists after these changes, it would need to be addressed at the hosting/domain configuration level.
 
-### 5. Aplicación Visual del Branding
+### Files to modify
+- `index.html` — add meta tags, noscript, JSON-LD
+- `public/sitemap.xml` — new file
+- `public/robots.txt` — add sitemap reference
 
-**Header.tsx:**
-- Mostrar el logo del evento (si existe) junto al título "CHEQUI"
-- Usar el `primary_color` del evento como color del borde inferior
-- Barra de logos de patrocinadores debajo del header (si existen)
-
-**Admin.tsx y Scanner.tsx:**
-- Fondo con la imagen configurada (con opacidad controlada)
-- Cards y badges usando los colores del evento
-- Mensaje de bienvenida personalizado visible en el dashboard
-
-**Footer de todas las páginas internas:**
-- Logos de patrocinadores en fila horizontal
-- "Powered by Chequi" junto con los logos
-
-### 6. Vista Previa en EventConfig
-
-Reemplazar la mini-preview actual (un rectángulo de 96px) por una vista previa más completa que muestre:
-- Header con logo
-- Card de ejemplo con los colores configurados
-- Fondo con la imagen subida
-- Logos de patrocinadores en la parte inferior
-
----
-
-## Archivos a Crear
-
-| Archivo | Descripción |
-|---------|-------------|
-| `src/components/EventImageUploader.tsx` | Componente de subida de imágenes con drag & drop |
-| `src/components/SponsorLogosManager.tsx` | CRUD de logos de patrocinadores |
-| `src/components/SponsorLogosBar.tsx` | Barra visual de logos de patrocinadores |
-| `src/components/EventBrandingPreview.tsx` | Vista previa del branding completo |
-
-## Archivos a Modificar
-
-| Archivo | Cambios |
-|---------|---------|
-| Migración SQL | Nuevos campos + bucket `event-assets` + RLS |
-| `src/types/database.ts` | Agregar campos nuevos a `EventConfig` |
-| `src/context/ThemeContext.tsx` | Usar `selectedEvent` del EventContext, aplicar fondo y logo |
-| `src/components/EventConfig.tsx` | Reemplazar inputs URL por uploaders, agregar sección patrocinadores, mejor preview |
-| `src/components/Header.tsx` | Mostrar logo del evento, borde con color del evento |
-| `src/pages/Admin.tsx` | Fondo personalizado, mensaje bienvenida |
-| `src/pages/Scanner.tsx` | Fondo personalizado del evento |
-| `src/index.css` | CSS variables para fondo y nuevas propiedades dinámicas |
-| `src/hooks/useEventConfig.ts` | Asegurar que los nuevos campos se incluyan en queries |
-
-## Detalle Técnico: ThemeContext Refactorizado
-
-```typescript
-// Antes: usa get_active_event_config() - un solo evento global
-const { data: eventConfig } = useActiveEventConfig();
-
-// Después: usa selectedEvent del contexto del usuario
-const { selectedEvent } = useEventContext();
-// Aplica colores, logo, fondo del evento seleccionado por ESE usuario
-```
-
-Esto significa que si dos usuarios están en eventos diferentes, cada uno verá el branding de su evento.
-
-## Detalle Técnico: Storage
-
-```sql
--- Bucket para assets de eventos
-INSERT INTO storage.buckets (id, name, public) VALUES ('event-assets', 'event-assets', true);
-
--- RLS: admins del evento pueden subir/borrar
-CREATE POLICY "Admins can upload event assets"
-ON storage.objects FOR INSERT TO authenticated
-WITH CHECK (bucket_id = 'event-assets' AND ...);
-```
-
-Path convention: `{event_id}/logo.png`, `{event_id}/background.jpg`, `{event_id}/sponsors/{sponsor_name}.png`
-
-## Resultado Esperado
-
-1. Admin sube logo del evento -> aparece en el Header para todos los usuarios de ese evento
-2. Admin sube fondo -> aparece como background en Dashboard y Scanner
-3. Admin agrega logos de patrocinadores -> aparecen en barra inferior
-4. Colores configurados se aplican realmente a botones, bordes, badges
-5. Cada evento tiene su propia identidad visual completa
-6. Los organizadores sienten la herramienta como "suya"
