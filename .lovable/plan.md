@@ -1,69 +1,141 @@
 
+# Plan: Personalización Visual del HUB por Evento
 
-## Two Critical Issues to Fix
+## Problema Actual
 
-### Issue 1: Reset not working for QR attendees
+La configuración de eventos tiene campos para logo y colores, pero:
+1. Los campos `logo_url` y `event_image_url` solo aceptan URLs manuales (no se pueden subir archivos)
+2. El `ThemeContext` aplica colores y fuente globalmente usando `get_active_event_config()` (busca un evento "activo" global), no el evento seleccionado del usuario
+3. No existe campo para imagen de fondo (background) del dashboard/scanner
+4. No hay soporte para logos de patrocinadores/organizadores
+5. Los colores configurados no se reflejan visualmente en el Header, cards, ni botones de la app
+6. No hay vista previa real de cómo se verá el evento
 
-**Root Cause**: The `useResetControlUsage` function (line 220-252 of `useSupabaseData.ts`) deletes from `control_usage` table filtered by `attendee_id`. The edge function `process-qr-scan` calls `validate_control_access_public` which counts rows in `control_usage` for the attendee. After reset, when the attendee is scanned again, the validation function should allow access since usage count is now 0.
+## Solución Propuesta
 
-However, the edge function response handling has a subtle issue: when the edge function returns a 403 status (access denied), `supabase.functions.invoke` treats non-2xx responses differently. Let me verify the actual flow:
+### 1. Migración de Base de Datos
 
-- The edge function inserts into `control_usage` on success (line 365-372 of process-qr-scan)
-- Reset deletes from `control_usage` by `attendee_id`
-- Next scan: `validate_control_access_public` should see 0 uses and allow access
+Agregar nuevos campos a `event_configs`:
 
-The real problem is likely that the edge function returns 403 for denied access, and `supabase.functions.invoke` may throw the response body as an error rather than returning it as data. But for the "reset not working" issue — I need to check if the `useProcessQRCode` hook properly handles the 403 response. Looking at lines 189-210: when `error` is set, it throws, losing the detailed response. But more importantly, if the 403 response data includes `canAccess: false` in `data`, it should still be accessible.
+| Campo | Tipo | Propósito |
+|-------|------|-----------|
+| `background_url` | text | Imagen de fondo del HUB |
+| `sponsor_logos` | jsonb | Array de logos de patrocinadores `[{name, url, link}]` |
+| `welcome_message` | text | Mensaje personalizado de bienvenida |
+| `background_opacity` | numeric | Opacidad del fondo (0.05 a 0.5) |
 
-Wait — re-reading the edge function: on 403, it returns `success: false` but NOT `canAccess`. The normalized response (line 199) does `canAccess: Boolean(data?.canAccess ?? data?.success)` — so `canAccess` would be `false` since `success` is `false`. But the issue is that `supabase.functions.invoke` with a non-2xx status code sets `error` AND `data` may be null.
+Crear un nuevo **storage bucket** `event-assets` (público) para subir logos, fondos e imágenes de patrocinadores directamente desde la app.
 
-**Actually, the real issue**: `supabase.functions.invoke` returns `{ data, error }` where for non-2xx responses, `error` contains the response body and `data` is null. So on 403, the code at line 189 catches it and throws a generic error, losing the attendee details. But this doesn't explain "reset not working" — it should still allow access after reset.
+### 2. Subida de Archivos (reemplazar URLs manuales)
 
-Let me reconsider: Perhaps the user is talking about the **cédula** system reset, not the QR system. The cédula system uses `cedula_control_usage` table with a UNIQUE constraint `(event_id, numero_cedula, control_type_id)`. There is NO reset function for `cedula_control_usage` at all. The `useResetControlUsage` only resets `control_usage` (QR system). So if the user resets and re-scans a cédula, the `cedula_control_usage` record still exists and the duplicate constraint fires.
+Crear componente `EventImageUploader.tsx` que permita:
+- **Arrastrar y soltar** o **seleccionar archivo** para subir imágenes
+- Vista previa inmediata del archivo subido
+- Subida automática al bucket `event-assets` con path `{event_id}/logo.png`, `{event_id}/background.jpg`, etc.
+- Botón para eliminar imagen actual
 
-But if the user is talking about QR ticket reset — the `control_usage` records are deleted, and the `cedula_registros` insert would fail with duplicate. Let me check `cedula_registros` — it has a UNIQUE constraint too.
+Se usará en EventConfig para:
+- Logo del evento (reemplaza campo URL manual)
+- Imagen de fondo del HUB (nuevo)
+- Imagen del evento (reemplaza campo URL manual)
 
-**Most likely scenario**: The user resets via the AttendeesManager (which deletes from `control_usage`), then re-scans the QR ticket. The `validate_control_access_public` should return `can_access: true` since usage is now 0. Then the edge function inserts into `control_usage` — this should work. But the `useProcessQRCode` hook also invalidates queries. This should work.
+### 3. Logos de Patrocinadores/Organizadores
 
-Unless the issue is with caching or the `supabase.functions.invoke` error handling for 403 responses. Let me look at this more carefully.
+Agregar sección en EventConfig tab "Config" para gestionar logos de patrocinadores:
+- Botón "Agregar Patrocinador"
+- Cada patrocinador: nombre, logo (subido), link opcional
+- Máximo 6 patrocinadores
+- Los logos se muestran en el footer del Header o en una barra inferior dedicada
 
-Actually, I think the issue might be simpler: the edge function uses `supabaseClient` with SERVICE_ROLE_KEY, so RLS is bypassed. The `validate_control_access_public` counts `control_usage` rows. After reset (delete), count should be 0. This should work.
+### 4. ThemeContext: Usar Evento Seleccionado
 
-But wait — the `useResetControlUsage` uses the **client** supabase (with RLS). The RLS for `control_usage` DELETE says... there's NO delete policy! Looking at the schema: `control_usage` has "Can't DELETE records from the table". So the reset mutation silently fails because RLS blocks the delete!
+Refactorizar `ThemeContext.tsx` para:
+- Usar el `selectedEvent` del `EventContext` en vez de `get_active_event_config()`
+- Aplicar dinámicamente colores, fuente, logo y fondo según el evento del usuario
+- Actualizar las CSS variables `--primary`, `--accent`, etc. con los colores del evento
+- Esto hace que **cada usuario vea la app con el branding de SU evento**
 
-**That's the bug!** The `control_usage` table has no DELETE RLS policy, so `useResetControlUsage` always fails silently (the Supabase client doesn't throw on RLS-blocked deletes when using `.delete()` — it just deletes 0 rows).
+### 5. Aplicación Visual del Branding
 
-### Issue 2: Auto-scroll to top on mobile scanner
+**Header.tsx:**
+- Mostrar el logo del evento (si existe) junto al título "CHEQUI"
+- Usar el `primary_color` del evento como color del borde inferior
+- Barra de logos de patrocinadores debajo del header (si existen)
 
-**Root Cause**: In the QRScanner component, when `scanning` state changes (start → stop after QR detected), the conditional rendering switches between `ScannerVideo` → `ScanResult` → back to `ScannerVideo`. These component swaps cause the DOM to re-layout, and on mobile, the browser may scroll to maintain focus or due to the content height change.
+**Admin.tsx y Scanner.tsx:**
+- Fondo con la imagen configurada (con opacidad controlada)
+- Cards y badges usando los colores del evento
+- Mensaje de bienvenida personalizado visible en el dashboard
 
-Additionally, when `lastResult` auto-clears after 3.5-4 seconds (line 217-221), the component switches from `ScanResult` back to `ScannerVideo`, which has different height — causing a layout shift that triggers scroll-to-top.
+**Footer de todas las páginas internas:**
+- Logos de patrocinadores en fila horizontal
+- "Powered by Chequi" junto con los logos
 
-The fix: prevent scroll jumps by giving the scanner area a fixed minimum height and using CSS to prevent scroll restoration on state changes.
+### 6. Vista Previa en EventConfig
+
+Reemplazar la mini-preview actual (un rectángulo de 96px) por una vista previa más completa que muestre:
+- Header con logo
+- Card de ejemplo con los colores configurados
+- Fondo con la imagen subida
+- Logos de patrocinadores en la parte inferior
 
 ---
 
-### Plan
+## Archivos a Crear
 
-#### Fix 1: Add DELETE policy for `control_usage` table
-Create a migration adding a DELETE RLS policy so admins and control users can delete `control_usage` records. This makes the reset function actually work.
+| Archivo | Descripción |
+|---------|-------------|
+| `src/components/EventImageUploader.tsx` | Componente de subida de imágenes con drag & drop |
+| `src/components/SponsorLogosManager.tsx` | CRUD de logos de patrocinadores |
+| `src/components/SponsorLogosBar.tsx` | Barra visual de logos de patrocinadores |
+| `src/components/EventBrandingPreview.tsx` | Vista previa del branding completo |
 
-**File**: New migration SQL
-```sql
-CREATE POLICY "Admin and control can delete control usage"
-ON public.control_usage
-FOR DELETE
-TO public
-USING (
-  user_has_role_secure(auth.uid(), 'admin'::user_role) 
-  OR user_has_role_secure(auth.uid(), 'control'::user_role)
-);
+## Archivos a Modificar
+
+| Archivo | Cambios |
+|---------|---------|
+| Migración SQL | Nuevos campos + bucket `event-assets` + RLS |
+| `src/types/database.ts` | Agregar campos nuevos a `EventConfig` |
+| `src/context/ThemeContext.tsx` | Usar `selectedEvent` del EventContext, aplicar fondo y logo |
+| `src/components/EventConfig.tsx` | Reemplazar inputs URL por uploaders, agregar sección patrocinadores, mejor preview |
+| `src/components/Header.tsx` | Mostrar logo del evento, borde con color del evento |
+| `src/pages/Admin.tsx` | Fondo personalizado, mensaje bienvenida |
+| `src/pages/Scanner.tsx` | Fondo personalizado del evento |
+| `src/index.css` | CSS variables para fondo y nuevas propiedades dinámicas |
+| `src/hooks/useEventConfig.ts` | Asegurar que los nuevos campos se incluyan en queries |
+
+## Detalle Técnico: ThemeContext Refactorizado
+
+```typescript
+// Antes: usa get_active_event_config() - un solo evento global
+const { data: eventConfig } = useActiveEventConfig();
+
+// Después: usa selectedEvent del contexto del usuario
+const { selectedEvent } = useEventContext();
+// Aplica colores, logo, fondo del evento seleccionado por ESE usuario
 ```
 
-#### Fix 2: Prevent auto-scroll on mobile scanner
-**Files to modify**:
-- `src/components/QRScanner.tsx` — Add a fixed min-height wrapper around the conditional render area (ScanResult / CameraPermissions / ScannerVideo) to prevent layout shifts. Also add `overflow-anchor: none` CSS.
-- `src/components/scanner/ScannerVideo.tsx` — Add a fixed min-height to prevent height changes when switching between idle/scanning states.
-- `src/pages/Scanner.tsx` — Ensure the main content area doesn't trigger scroll reset on re-renders. Change the `overflow-y-auto` to use a scroll container that maintains position.
+Esto significa que si dos usuarios están en eventos diferentes, cada uno verá el branding de su evento.
 
-The key technique: wrap the conditional render block in a div with `min-h-[400px]` (matching the scanner video height) so that swapping between ScanResult/ScannerVideo doesn't change the page height and trigger scroll.
+## Detalle Técnico: Storage
 
+```sql
+-- Bucket para assets de eventos
+INSERT INTO storage.buckets (id, name, public) VALUES ('event-assets', 'event-assets', true);
+
+-- RLS: admins del evento pueden subir/borrar
+CREATE POLICY "Admins can upload event assets"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'event-assets' AND ...);
+```
+
+Path convention: `{event_id}/logo.png`, `{event_id}/background.jpg`, `{event_id}/sponsors/{sponsor_name}.png`
+
+## Resultado Esperado
+
+1. Admin sube logo del evento -> aparece en el Header para todos los usuarios de ese evento
+2. Admin sube fondo -> aparece como background en Dashboard y Scanner
+3. Admin agrega logos de patrocinadores -> aparecen en barra inferior
+4. Colores configurados se aplican realmente a botones, bordes, badges
+5. Cada evento tiene su propia identidad visual completa
+6. Los organizadores sienten la herramienta como "suya"

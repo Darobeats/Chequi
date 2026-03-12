@@ -90,7 +90,7 @@ const ScannerVideo: React.FC<ScannerVideoProps> = ({
   const canStartScanning = hasCamera && permissionStatus === 'granted' && !scanning;
 
   return (
-    <div className="flex flex-col items-center w-full">
+    <div className="flex flex-col items-center w-full min-h-[400px]" style={{ overflowAnchor: 'none' }}>
       <div className="w-full max-w-[320px] aspect-square rounded-md mb-4 md:mb-6 relative overflow-hidden scanner-video bg-gray-950 border-2 border-gray-800">
         {canStartScanning && (
           <div className="flex flex-col items-center justify-center h-full p-4">
