@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useBulkCreateCedulasAutorizadas } from '@/hooks/useCedulasAutorizadas';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface CedulasBulkImportProps {
   eventId: string;
@@ -50,10 +50,22 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
     
     try {
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(data);
+      const worksheet = workbook.worksheets[0];
+      
+      if (!worksheet) {
+        setError('No se encontró una hoja de cálculo en el archivo');
+        setParsing(false);
+        return;
+      }
+      
+      const jsonData: any[][] = [];
+      worksheet.eachRow((row) => {
+        // ExcelJS row.values is 1-indexed, slice off index 0
+        const values = (row.values as any[]).slice(1);
+        jsonData.push(values);
+      });
       
       if (jsonData.length < 2) {
         setError('El archivo debe tener al menos una fila de encabezados y una de datos');
