@@ -8,10 +8,70 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0A0A0A" />
-    <title>Chequi</title>
+
+    <!-- SEO Meta Tags -->
+    <title>Chequi — Control de Acceso Profesional para Eventos</title>
+    <meta name="description" content="Sistema profesional de control de acceso para eventos corporativos y masivos. Gestiona desde 100 hasta 50,000+ asistentes con tecnología QR en tiempo real. Sin instalación, desde cualquier dispositivo." />
+    <meta name="keywords" content="control de acceso, eventos, QR, tickets, escaneo, gestión de asistentes, eventos corporativos, control de entrada, boletas digitales" />
+    <meta name="author" content="Chequi" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://chequi.online/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://chequi.online/" />
+    <meta property="og:title" content="Chequi — Control de Acceso Profesional para Eventos" />
+    <meta property="og:description" content="Gestiona desde 100 hasta 50,000+ asistentes con tecnología QR en tiempo real. Sin apps, sin complicaciones. Resultados desde el primer evento." />
+    <meta property="og:site_name" content="Chequi" />
+    <meta property="og:locale" content="es_CO" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Chequi — Control de Acceso Profesional para Eventos" />
+    <meta name="twitter:description" content="Gestiona desde 100 hasta 50,000+ asistentes con tecnología QR en tiempo real. Sin apps, sin complicaciones." />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Chequi",
+      "url": "https://chequi.online",
+      "description": "Sistema profesional de control de acceso para eventos corporativos y masivos. Gestiona desde 100 hasta 50,000+ asistentes con tecnología QR en tiempo real.",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "Chequi",
+        "url": "https://chequi.online",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Bogotá",
+          "addressCountry": "CO"
+        }
+      },
+      "featureList": [
+        "Tickets QR personalizados",
+        "Escáner multi-dispositivo",
+        "Dashboard en tiempo real",
+        "Gestión masiva de asistentes",
+        "Reportes empresariales en Excel",
+        "Control de acceso por cédula",
+        "Modo offline con sincronización automática"
+      ]
+    }
+    </script>
+
+    <!-- Fonts (reduced to only used ones) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Poppins:wght@300;400;500;600;700&family=Source+Sans+Pro:wght@300;400;600;700&family=Oswald:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
       /* Prevenir zoom en inputs en iOS */
       @media screen and (max-width: 768px) {
@@ -28,18 +88,71 @@
         overscroll-behavior-y: none;
         -webkit-overflow-scrolling: touch;
       }
+      /* Noscript styles */
+      .noscript-content {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        color: #e0e0e0;
+        background: #0A0A0A;
+        min-height: 100vh;
+      }
+      .noscript-content h1 { font-size: 2rem; margin-bottom: 16px; color: #fff; }
+      .noscript-content h2 { font-size: 1.4rem; margin: 24px 0 12px; color: #ccc; }
+      .noscript-content p { line-height: 1.6; margin-bottom: 12px; }
+      .noscript-content ul { padding-left: 20px; margin-bottom: 16px; }
+      .noscript-content li { margin-bottom: 8px; line-height: 1.5; }
+      .noscript-content a { color: #60a5fa; }
     </style>
-    
-  
-  <meta name="twitter:card" content="summary">
-  <meta property="og:type" content="website">
-  
-  
-  <meta property="og:title" content="Chequi">
-  <meta name="twitter:title" content="Chequi">
-</head>
+  </head>
   <body>
     <div id="root"></div>
+
+    <noscript>
+      <div class="noscript-content">
+        <h1>Chequi — Control de Acceso Profesional para Eventos</h1>
+        <p>Sistema profesional de control de acceso para eventos corporativos y masivos. Gestiona desde 100 hasta 50,000+ asistentes con tecnología QR en tiempo real.</p>
+
+        <h2>Características principales</h2>
+        <ul>
+          <li><strong>Tickets QR Personalizados:</strong> Genera códigos QR únicos por asistente con tu logo y colores. Previene fraude y reventa. Exportación masiva en PNG y PDF.</li>
+          <li><strong>Escáner Multi-Dispositivo:</strong> Funciona en cualquier smartphone sin instalación. Modo offline con sincronización automática. Múltiples puntos de control simultáneos.</li>
+          <li><strong>Dashboard en Tiempo Real:</strong> Métricas de asistencia en vivo. Gráficos de actividad por hora. Tasas de llegada y ocupación.</li>
+          <li><strong>Gestión de Asistentes:</strong> Importación masiva desde Excel. Asignación automática de tickets. Categorización por tipo/empresa.</li>
+          <li><strong>Control de Seguridad:</strong> Roles diferenciados (Admin/Control/Scanner). Auditoría completa de accesos. Protección de datos con políticas RLS.</li>
+          <li><strong>Reportes Empresariales:</strong> Exportación Excel con 5 hojas detalladas. Análisis por categoría de ticket. Actividad por hora con picos.</li>
+        </ul>
+
+        <h2>Casos de uso</h2>
+        <ul>
+          <li>Eventos corporativos y conferencias (50 - 5,000 asistentes)</li>
+          <li>Conciertos y festivales (500 - 50,000+ asistentes)</li>
+          <li>Eventos académicos y graduaciones (100 - 10,000 asistentes)</li>
+          <li>Eventos deportivos (1,000 - 100,000 asistentes)</li>
+          <li>Ferias y exposiciones (1,000 - 20,000 asistentes)</li>
+        </ul>
+
+        <h2>Tres pasos para tu evento exitoso</h2>
+        <ul>
+          <li><strong>1. Configura (15 min):</strong> Crea tu evento, define categorías de tickets y sube tu lista de asistentes desde Excel.</li>
+          <li><strong>2. Distribuye (Automático):</strong> Genera códigos QR únicos. Exporta en PNG o PDF y envía por correo.</li>
+          <li><strong>3. Controla (Durante el evento):</strong> Escanea QR con cualquier smartphone. Dashboard en tiempo real con métricas.</li>
+        </ul>
+
+        <h2>Resultados medibles</h2>
+        <ul>
+          <li>95% reducción de fraude vs métodos tradicionales</li>
+          <li>-70% tiempo de registro comparado con papel</li>
+          <li>100% visibilidad en tiempo real</li>
+          <li>Menos de 2 minutos para configurar cada punto de control</li>
+        </ul>
+
+        <p>Para usar Chequi, por favor habilita JavaScript en tu navegador. <a href="https://chequi.online/auth">Iniciar sesión</a></p>
+        <p>Hecho en Colombia con ❤️ — Bogotá, Colombia</p>
+      </div>
+    </noscript>
+
     <script type="module" src="/src/main.tsx"></script>
     <script src="https://cdn.gpteng.co/gptengineer.js"></script>
   </body>
