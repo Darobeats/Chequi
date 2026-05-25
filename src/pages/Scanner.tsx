@@ -252,7 +252,7 @@ const Scanner = () => {
               }
             : undefined,
         });
-        if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+        scanFeedback.offlineSuccess();
         toast.success('📥 Guardado localmente (offline)', {
           description: 'Se sincronizará al volver la conexión.',
         });
