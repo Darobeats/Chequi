@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +13,38 @@ serve(async (req) => {
   }
 
   try {
+    // Require authenticated user with scanner/control/admin role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'No autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { data: { user }, error: userErr } = await authClient.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (userErr || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Token inválido' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const { data: roleRows } = await authClient
+      .from('user_roles').select('role').eq('user_id', user.id);
+    const allowed = ['admin', 'control', 'scanner'];
+    if (!(roleRows ?? []).some((r: any) => allowed.includes(r.role))) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Permisos insuficientes' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { image } = await req.json();
     
     if (!image) {
