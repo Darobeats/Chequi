@@ -44,6 +44,9 @@ function validateScanRequest(body: any): { valid: boolean; error?: string; data?
   if (body.ticketId.length < 1 || body.ticketId.length > 100) {
     return { valid: false, error: 'ticketId debe tener entre 1 y 100 caracteres' };
   }
+  if (!/^[A-Za-z0-9_-]+$/.test(body.ticketId)) {
+    return { valid: false, error: 'ticketId tiene formato inválido' };
+  }
 
   // Validate controlTypeId
   if (!body.controlTypeId || typeof body.controlTypeId !== 'string') {
