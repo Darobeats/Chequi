@@ -190,6 +190,27 @@ serve(async (req) => {
 
     console.log('Processing scan for user:', user.id);
 
+    // Authorization: require admin/control/scanner role
+    const { data: roleRows, error: roleErr } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+    if (roleErr) {
+      console.error('Role lookup error:', roleErr);
+      return new Response(
+        JSON.stringify({ success: false, message: 'No autorizado' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const roles = (roleRows ?? []).map((r: any) => r.role);
+    const allowedRoles = ['admin', 'control', 'scanner'];
+    if (!roles.some((r: string) => allowedRoles.includes(r))) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'No autorizado - rol insuficiente' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse and validate request body
     const body = await req.json();
     const validation = validateScanRequest(body);
