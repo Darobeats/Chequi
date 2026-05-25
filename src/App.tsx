@@ -15,6 +15,7 @@ import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import Users from "./pages/Users";
 import CedulaRegistro from "./pages/CedulaRegistro";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -80,6 +81,7 @@ const App = () => (
                     </ProtectedRoute>
                   } 
                 />
+                <Route path="/install" element={<Install />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
