@@ -296,12 +296,13 @@ const Scanner = () => {
       console.error('[Scanner] Error saving:', error);
       const err = error as any;
       if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+        scanFeedback.duplicate();
         toast.error(t('scanner.alreadyRegistered'), {
           description: t('scanner.alreadyRegisteredDesc'),
           duration: 6000,
         });
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
       } else {
+        scanFeedback.warning();
         toast.error(t('scanner.errorSaving'));
       }
     }
