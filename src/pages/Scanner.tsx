@@ -421,8 +421,7 @@ const Scanner = () => {
       let primerApellido = parts.length > 0 ? parts[parts.length - 1] : nombreTrimmed;
       let nombres = parts.length > 1 ? parts.slice(0, -1).join(' ') : nombreTrimmed;
 
-      // Create registro
-      await createCedulaMutation.mutateAsync({
+      const registroPayload = {
         event_id: eventId,
         numero_cedula: cedulaTrimmed,
         primer_apellido: primerApellido,
@@ -431,8 +430,46 @@ const Scanner = () => {
         scanned_by: user?.id,
         device_info: 'MANUAL_ENTRY',
         was_on_whitelist: requireWhitelist ? true : undefined,
-      });
-      
+      };
+
+      // OFFLINE PATH for manual entry
+      if (!navigator.onLine && user?.id) {
+        await offlineCedula.enqueue({
+          eventId,
+          numeroCedula: cedulaTrimmed,
+          controlTypeId: selectedControlType,
+          scannedBy: user.id,
+          registro: registroPayload,
+          controlUsage: {
+            event_id: eventId,
+            numero_cedula: cedulaTrimmed,
+            control_type_id: selectedControlType,
+            device: 'MANUAL_ENTRY (Offline)',
+            scanned_by: user.id,
+          },
+          accessLog: requireWhitelist
+            ? {
+                event_id: eventId,
+                numero_cedula: cedulaTrimmed,
+                nombre_detectado: nombreTrimmed,
+                access_result: 'authorized',
+                scanned_by: user.id,
+                device_info: 'MANUAL_ENTRY (Offline)',
+              }
+            : undefined,
+        });
+        scanFeedback.offlineSuccess();
+        toast.success('📥 Manual guardado offline', { description: nombreTrimmed });
+        setManualCedula('');
+        setManualNombre('');
+        setManualDialogOpen(false);
+        setIsManualSubmitting(false);
+        return;
+      }
+
+      // Create registro
+      await createCedulaMutation.mutateAsync(registroPayload);
+
       // Register control usage
       await createControlUsage.mutateAsync({
         event_id: eventId,
@@ -441,7 +478,7 @@ const Scanner = () => {
         device: 'MANUAL_ENTRY',
         scanned_by: user?.id,
       });
-      
+
       // Log access if whitelist
       if (requireWhitelist) {
         await createAccessLog.mutateAsync({
@@ -453,7 +490,8 @@ const Scanner = () => {
           device_info: 'MANUAL_ENTRY',
         });
       }
-      
+
+      scanFeedback.success();
       toast.success(t('scanner.accessRegistered'), { description: nombreTrimmed });
       setManualCedula('');
       setManualNombre('');
@@ -462,12 +500,13 @@ const Scanner = () => {
       console.error('Manual entry error:', error);
       const err = error as any;
       if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+        scanFeedback.duplicate();
         toast.error(t('scanner.alreadyRegistered'), {
           description: t('scanner.alreadyRegisteredDesc'),
           duration: 6000,
         });
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
       } else {
+        scanFeedback.warning();
         toast.error(t('scanner.errorRegistering'));
       }
     } finally {
