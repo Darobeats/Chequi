@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png", "apple-touch-icon.png"],
       manifest: false, // We ship our own manifest.webmanifest in /public
       workbox: {
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         // Never intercept auth/oauth/supabase requests
         navigateFallbackDenylist: [
           /^\/~oauth/,
