@@ -21,6 +21,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import OfflinePrecharge from "@/components/OfflinePrecharge";
+import OfflineSyncStatus from "@/components/scanner/OfflineSyncStatus";
+import { useOfflineCedulaScans } from "@/hooks/useOfflineCedulaScans";
+import { useOfflineAuthorization } from "@/hooks/useOfflineAuthorization";
+import { useOfflineControlLimit } from "@/hooks/useOfflineControlLimit";
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
@@ -65,9 +70,10 @@ const Scanner = () => {
   const whitelistConfig = whitelistConfigById || activeWhitelistConfig;
   const whitelistLoading = whitelistLoadingById && activeWhitelistLoading;
   
-  const checkAuthorization = useCheckCedulaAuthorization(selectedEvent?.id || null);
-  const checkControlLimit = useCheckCedulaControlLimit(selectedEvent?.id || null);
+  const checkAuthorization = useOfflineAuthorization(selectedEvent?.id || null);
+  const checkControlLimit = useOfflineControlLimit(selectedEvent?.id || null);
   const createAccessLog = useCreateAccessLog();
+  const offlineCedula = useOfflineCedulaScans();
 
   // URGENT FIX: Force auto-select single event
   useEffect(() => {
@@ -213,21 +219,50 @@ const Scanner = () => {
         device_info: navigator.userAgent,
       };
 
-      // Add was_on_whitelist flag if whitelist is enabled
-      const registroWithWhitelist = whitelistConfig?.requireWhitelist 
+      const registroWithWhitelist = whitelistConfig?.requireWhitelist
         ? { ...registro, was_on_whitelist: true }
         : registro;
 
-      await createCedulaMutation.mutateAsync(registroWithWhitelist as InsertCedulaRegistro);
-      
-      // Register control usage if control type is selected
-      if (selectedControlType) {
-        console.log('[Scanner] Registering control usage:', {
-          event_id: selectedEvent.id,
-          numero_cedula: pendingScan.numeroCedula,
-          control_type_id: selectedControlType,
+      // OFFLINE PATH: queue and return immediately
+      if (!navigator.onLine && user?.id && selectedControlType) {
+        await offlineCedula.enqueue({
+          eventId: selectedEvent.id,
+          numeroCedula: pendingScan.numeroCedula,
+          controlTypeId: selectedControlType,
+          scannedBy: user.id,
+          registro: registroWithWhitelist,
+          controlUsage: {
+            event_id: selectedEvent.id,
+            numero_cedula: pendingScan.numeroCedula,
+            control_type_id: selectedControlType,
+            device: `${navigator.userAgent} (Offline)`,
+            scanned_by: user.id,
+          },
+          accessLog: whitelistConfig?.requireWhitelist
+            ? {
+                event_id: selectedEvent.id,
+                numero_cedula: pendingScan.numeroCedula,
+                nombre_detectado: pendingScan.nombreCompleto,
+                access_result: 'authorized',
+                scanned_by: user.id,
+                device_info: `${navigator.userAgent} (Offline)`,
+              }
+            : undefined,
         });
-        
+        if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+        toast.success('📥 Guardado localmente (offline)', {
+          description: 'Se sincronizará al volver la conexión.',
+        });
+        setPendingScan(null);
+        setIsUnauthorized(false);
+        setAutorizadaData(null);
+        setControlLimitInfo(null);
+        return;
+      }
+
+      await createCedulaMutation.mutateAsync(registroWithWhitelist as InsertCedulaRegistro);
+
+      if (selectedControlType) {
         await createControlUsage.mutateAsync({
           event_id: selectedEvent.id,
           numero_cedula: pendingScan.numeroCedula,
@@ -236,8 +271,7 @@ const Scanner = () => {
           scanned_by: user?.id,
         });
       }
-      
-      // Log successful access if whitelist is enabled
+
       if (whitelistConfig?.requireWhitelist) {
         await createAccessLog.mutateAsync({
           event_id: selectedEvent.id,
@@ -248,7 +282,7 @@ const Scanner = () => {
           device_info: navigator.userAgent,
         });
       }
-      
+
       toast.success(t('scanner.savedSuccess'));
       setPendingScan(null);
       setIsUnauthorized(false);
@@ -454,6 +488,15 @@ const Scanner = () => {
 
       <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto relative z-10" style={{ overflowAnchor: 'none' }}>
         <div className="w-full max-w-4xl space-y-4">
+          <OfflinePrecharge />
+
+          <OfflineSyncStatus
+            isOnline={offlineCedula.isOnline}
+            pendingCount={offlineCedula.pending.length}
+            isSyncing={offlineCedula.isSyncing}
+            onSync={() => void offlineCedula.sync()}
+          />
+
           {/* Whitelist status indicator */}
           {whitelistConfig?.requireWhitelist && (
             <Alert className="bg-yellow-900/30 border-yellow-600">
