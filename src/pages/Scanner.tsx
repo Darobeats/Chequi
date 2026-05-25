@@ -286,6 +286,7 @@ const Scanner = () => {
         });
       }
 
+      scanFeedback.success();
       toast.success(t('scanner.savedSuccess'));
       setPendingScan(null);
       setIsUnauthorized(false);
