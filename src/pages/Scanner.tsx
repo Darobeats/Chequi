@@ -23,9 +23,12 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import OfflinePrecharge from "@/components/OfflinePrecharge";
 import OfflineSyncStatus from "@/components/scanner/OfflineSyncStatus";
+import OfflineQueueDialog from "@/components/scanner/OfflineQueueDialog";
+import OfflineTutorial from "@/components/scanner/OfflineTutorial";
 import { useOfflineCedulaScans } from "@/hooks/useOfflineCedulaScans";
 import { useOfflineAuthorization } from "@/hooks/useOfflineAuthorization";
 import { useOfflineControlLimit } from "@/hooks/useOfflineControlLimit";
+import { scanFeedback } from "@/lib/scanFeedback";
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
