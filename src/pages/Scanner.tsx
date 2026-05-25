@@ -23,9 +23,12 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import OfflinePrecharge from "@/components/OfflinePrecharge";
 import OfflineSyncStatus from "@/components/scanner/OfflineSyncStatus";
+import OfflineQueueDialog from "@/components/scanner/OfflineQueueDialog";
+import OfflineTutorial from "@/components/scanner/OfflineTutorial";
 import { useOfflineCedulaScans } from "@/hooks/useOfflineCedulaScans";
 import { useOfflineAuthorization } from "@/hooks/useOfflineAuthorization";
 import { useOfflineControlLimit } from "@/hooks/useOfflineControlLimit";
+import { scanFeedback } from "@/lib/scanFeedback";
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
@@ -249,7 +252,7 @@ const Scanner = () => {
               }
             : undefined,
         });
-        if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+        scanFeedback.offlineSuccess();
         toast.success('📥 Guardado localmente (offline)', {
           description: 'Se sincronizará al volver la conexión.',
         });
@@ -283,6 +286,7 @@ const Scanner = () => {
         });
       }
 
+      scanFeedback.success();
       toast.success(t('scanner.savedSuccess'));
       setPendingScan(null);
       setIsUnauthorized(false);
@@ -292,12 +296,13 @@ const Scanner = () => {
       console.error('[Scanner] Error saving:', error);
       const err = error as any;
       if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+        scanFeedback.duplicate();
         toast.error(t('scanner.alreadyRegistered'), {
           description: t('scanner.alreadyRegisteredDesc'),
           duration: 6000,
         });
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
       } else {
+        scanFeedback.warning();
         toast.error(t('scanner.errorSaving'));
       }
     }
@@ -416,8 +421,7 @@ const Scanner = () => {
       let primerApellido = parts.length > 0 ? parts[parts.length - 1] : nombreTrimmed;
       let nombres = parts.length > 1 ? parts.slice(0, -1).join(' ') : nombreTrimmed;
 
-      // Create registro
-      await createCedulaMutation.mutateAsync({
+      const registroPayload = {
         event_id: eventId,
         numero_cedula: cedulaTrimmed,
         primer_apellido: primerApellido,
@@ -426,8 +430,46 @@ const Scanner = () => {
         scanned_by: user?.id,
         device_info: 'MANUAL_ENTRY',
         was_on_whitelist: requireWhitelist ? true : undefined,
-      });
-      
+      };
+
+      // OFFLINE PATH for manual entry
+      if (!navigator.onLine && user?.id) {
+        await offlineCedula.enqueue({
+          eventId,
+          numeroCedula: cedulaTrimmed,
+          controlTypeId: selectedControlType,
+          scannedBy: user.id,
+          registro: registroPayload,
+          controlUsage: {
+            event_id: eventId,
+            numero_cedula: cedulaTrimmed,
+            control_type_id: selectedControlType,
+            device: 'MANUAL_ENTRY (Offline)',
+            scanned_by: user.id,
+          },
+          accessLog: requireWhitelist
+            ? {
+                event_id: eventId,
+                numero_cedula: cedulaTrimmed,
+                nombre_detectado: nombreTrimmed,
+                access_result: 'authorized',
+                scanned_by: user.id,
+                device_info: 'MANUAL_ENTRY (Offline)',
+              }
+            : undefined,
+        });
+        scanFeedback.offlineSuccess();
+        toast.success('📥 Manual guardado offline', { description: nombreTrimmed });
+        setManualCedula('');
+        setManualNombre('');
+        setManualDialogOpen(false);
+        setIsManualSubmitting(false);
+        return;
+      }
+
+      // Create registro
+      await createCedulaMutation.mutateAsync(registroPayload);
+
       // Register control usage
       await createControlUsage.mutateAsync({
         event_id: eventId,
@@ -436,7 +478,7 @@ const Scanner = () => {
         device: 'MANUAL_ENTRY',
         scanned_by: user?.id,
       });
-      
+
       // Log access if whitelist
       if (requireWhitelist) {
         await createAccessLog.mutateAsync({
@@ -448,7 +490,8 @@ const Scanner = () => {
           device_info: 'MANUAL_ENTRY',
         });
       }
-      
+
+      scanFeedback.success();
       toast.success(t('scanner.accessRegistered'), { description: nombreTrimmed });
       setManualCedula('');
       setManualNombre('');
@@ -457,12 +500,13 @@ const Scanner = () => {
       console.error('Manual entry error:', error);
       const err = error as any;
       if (err?.code === '23505' || err?.message?.includes('unique') || err?.message?.includes('duplicate')) {
+        scanFeedback.duplicate();
         toast.error(t('scanner.alreadyRegistered'), {
           description: t('scanner.alreadyRegisteredDesc'),
           duration: 6000,
         });
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
       } else {
+        scanFeedback.warning();
         toast.error(t('scanner.errorRegistering'));
       }
     } finally {
@@ -487,15 +531,26 @@ const Scanner = () => {
       <Header title={t('scanner.title')} />
 
       <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto relative z-10" style={{ overflowAnchor: 'none' }}>
+        <OfflineTutorial />
         <div className="w-full max-w-4xl space-y-4">
           <OfflinePrecharge />
 
-          <OfflineSyncStatus
-            isOnline={offlineCedula.isOnline}
-            pendingCount={offlineCedula.pending.length}
-            isSyncing={offlineCedula.isSyncing}
-            onSync={() => void offlineCedula.sync()}
-          />
+          <div className="flex flex-col gap-2">
+            <OfflineSyncStatus
+              isOnline={offlineCedula.isOnline}
+              pendingCount={offlineCedula.pending.length}
+              isSyncing={offlineCedula.isSyncing}
+              onSync={() => void offlineCedula.sync()}
+            />
+            <div className="flex justify-end">
+              <OfflineQueueDialog
+                isOnline={offlineCedula.isOnline}
+                isSyncing={offlineCedula.isSyncing}
+                onSync={() => void offlineCedula.sync()}
+                pendingCount={offlineCedula.pending.length}
+              />
+            </div>
+          </div>
 
           {/* Whitelist status indicator */}
           {whitelistConfig?.requireWhitelist && (
