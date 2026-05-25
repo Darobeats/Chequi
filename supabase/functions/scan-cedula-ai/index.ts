@@ -192,7 +192,7 @@ IMPORTANTE:
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: errorMessage 
+        error: 'Error procesando la cédula'
       }),
       {
         status: 500,

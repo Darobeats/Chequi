@@ -135,36 +135,75 @@ serve(async (req) => {
         continue;
       }
 
-      // 1. Insert registro (upsert on conflict)
+      // 1. Insert registro (upsert on conflict) - allowlist fields only
       let duplicate = false;
       if (scan.registro) {
-        const reg = { ...scan.registro, event_id: scan.eventId, scanned_by: user.id };
+        const r = scan.registro;
+        const reg = {
+          event_id: scan.eventId,
+          numero_cedula: scan.numeroCedula, // HMAC-verified value
+          nombres: typeof r.nombres === 'string' ? r.nombres : null,
+          primer_apellido: typeof r.primer_apellido === 'string' ? r.primer_apellido : null,
+          segundo_apellido: typeof r.segundo_apellido === 'string' ? r.segundo_apellido : null,
+          nombre_completo: typeof r.nombre_completo === 'string' ? r.nombre_completo : null,
+          sexo: typeof r.sexo === 'string' ? r.sexo : null,
+          rh: typeof r.rh === 'string' ? r.rh : null,
+          fecha_nacimiento: typeof r.fecha_nacimiento === 'string' ? r.fecha_nacimiento : null,
+          fecha_expedicion: typeof r.fecha_expedicion === 'string' ? r.fecha_expedicion : null,
+          lugar_expedicion: typeof r.lugar_expedicion === 'string' ? r.lugar_expedicion : null,
+          raw_data: typeof r.raw_data === 'string' ? r.raw_data : null,
+          device_info: typeof r.device_info === 'string' ? r.device_info : null,
+          was_on_whitelist: typeof r.was_on_whitelist === 'boolean' ? r.was_on_whitelist : null,
+          scanned_by: user.id,
+          scanned_at: new Date(scan.timestamp).toISOString(),
+        };
         const { error: regErr } = await client
           .from("cedula_registros")
           .upsert(reg, { onConflict: "event_id,numero_cedula" });
         if (regErr) {
-          results.push({ id: scan.id, status: "rejected", error: `registro: ${regErr.message}` });
+          console.error('registro error:', regErr);
+          results.push({ id: scan.id, status: "rejected", error: "registro_failed" });
           continue;
         }
       }
 
-      // 2. Insert control usage (skip if unauthorized)
+      // 2. Insert control usage (skip if unauthorized) - allowlist fields only
       if (!scan.isUnauthorized && scan.controlUsage) {
-        const usage = { ...scan.controlUsage, event_id: scan.eventId, scanned_by: user.id };
+        const u = scan.controlUsage;
+        const usage = {
+          event_id: scan.eventId,
+          numero_cedula: scan.numeroCedula, // HMAC-verified
+          control_type_id: scan.controlTypeId, // HMAC-verified
+          scanned_by: user.id,
+          used_at: new Date(scan.timestamp).toISOString(),
+          notes: typeof u.notes === 'string' ? u.notes : null,
+          device: typeof u.device === 'string' ? u.device : null,
+        };
         const { error: usageErr } = await client.from("cedula_control_usage").insert(usage);
         if (usageErr) {
           if (usageErr.code === "23505" || usageErr.message?.includes("duplicate")) {
             duplicate = true;
           } else {
-            results.push({ id: scan.id, status: "rejected", error: `usage: ${usageErr.message}` });
+            console.error('usage error:', usageErr);
+            results.push({ id: scan.id, status: "rejected", error: "usage_failed" });
             continue;
           }
         }
       }
 
-      // 3. Access log (optional)
+      // 3. Access log (optional) - allowlist fields only
       if (scan.accessLog) {
-        const log = { ...scan.accessLog, event_id: scan.eventId, scanned_by: user.id };
+        const a = scan.accessLog;
+        const allowedResults = ['granted', 'denied'];
+        const log = {
+          event_id: scan.eventId,
+          numero_cedula: scan.numeroCedula, // HMAC-verified
+          nombre_detectado: typeof a.nombre_detectado === 'string' ? a.nombre_detectado : null,
+          access_result: allowedResults.includes(a.access_result) ? a.access_result : 'denied',
+          denial_reason: typeof a.denial_reason === 'string' ? a.denial_reason : null,
+          device_info: typeof a.device_info === 'string' ? a.device_info : null,
+          scanned_by: user.id,
+        };
         await client.from("cedula_access_logs").insert(log);
       }
 
