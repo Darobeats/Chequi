@@ -281,6 +281,17 @@ serve(async (req) => {
 
     console.log('Processing scan for event:', activeEventId);
 
+    // Verify user is assigned to this event (or is super_admin)
+    const { data: canAccess, error: accessErr } = await supabaseClient
+      .rpc('user_can_access_event', { check_event_id: activeEventId, check_user_id: user.id });
+    if (accessErr || !canAccess) {
+      console.error('Event access denied for user', user.id, accessErr);
+      return new Response(
+        JSON.stringify({ success: false, message: 'No autorizado para este evento' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verify attendee belongs to the event
     const { data: attendeeCheck, error: attendeeCheckError } = await supabaseClient
       .from('attendees')
