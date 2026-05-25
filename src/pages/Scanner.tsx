@@ -531,15 +531,26 @@ const Scanner = () => {
       <Header title={t('scanner.title')} />
 
       <main className="flex-1 flex flex-col items-center justify-start p-3 md:p-4 pt-4 md:pt-6 overflow-y-auto relative z-10" style={{ overflowAnchor: 'none' }}>
+        <OfflineTutorial />
         <div className="w-full max-w-4xl space-y-4">
           <OfflinePrecharge />
 
-          <OfflineSyncStatus
-            isOnline={offlineCedula.isOnline}
-            pendingCount={offlineCedula.pending.length}
-            isSyncing={offlineCedula.isSyncing}
-            onSync={() => void offlineCedula.sync()}
-          />
+          <div className="flex flex-col gap-2">
+            <OfflineSyncStatus
+              isOnline={offlineCedula.isOnline}
+              pendingCount={offlineCedula.pending.length}
+              isSyncing={offlineCedula.isSyncing}
+              onSync={() => void offlineCedula.sync()}
+            />
+            <div className="flex justify-end">
+              <OfflineQueueDialog
+                isOnline={offlineCedula.isOnline}
+                isSyncing={offlineCedula.isSyncing}
+                onSync={() => void offlineCedula.sync()}
+                pendingCount={offlineCedula.pending.length}
+              />
+            </div>
+          </div>
 
           {/* Whitelist status indicator */}
           {whitelistConfig?.requireWhitelist && (
