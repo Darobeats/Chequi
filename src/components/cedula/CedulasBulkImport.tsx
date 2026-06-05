@@ -303,7 +303,7 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
                   ))}
                   {parsedData.length > 10 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-hueso/60 text-sm">
+                      <TableCell colSpan={5} className="text-center text-hueso/60 text-sm">
                         ... y {parsedData.length - 10} registros más
                       </TableCell>
                     </TableRow>
