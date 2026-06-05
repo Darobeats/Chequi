@@ -110,31 +110,62 @@ export function useCreateCedulaAutorizada() {
 // Crear múltiples cédulas autorizadas (importación masiva)
 export function useBulkCreateCedulasAutorizadas() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ eventId, cedulas }: { eventId: string; cedulas: Omit<InsertCedulaAutorizada, 'event_id'>[] }) => {
-      const dataToInsert = cedulas.map(c => ({
-        ...c,
-        event_id: eventId,
-      }));
-      
-      const { data, error } = await supabase
-        .from('cedulas_autorizadas')
-        .upsert(dataToInsert, { 
-          onConflict: 'event_id,numero_cedula',
-          ignoreDuplicates: false 
-        })
-        .select();
-      
-      if (error) throw error;
-      return data;
+      if (!eventId) {
+        throw new Error('No hay evento seleccionado. Selecciona un evento antes de importar.');
+      }
+
+      // Sanear: remover claves undefined/'' para no enviar columnas innecesarias
+      const cleaned = cedulas.map((c) => {
+        const row: Record<string, any> = { event_id: eventId };
+        for (const [k, v] of Object.entries(c)) {
+          if (v === undefined || v === null) continue;
+          if (typeof v === 'string' && v.trim() === '') continue;
+          row[k] = typeof v === 'string' ? v.trim() : v;
+        }
+        return row;
+      });
+
+      // Insertar en lotes de 100 para evitar timeouts y aislar errores
+      const CHUNK = 100;
+      const inserted: any[] = [];
+      for (let i = 0; i < cleaned.length; i += CHUNK) {
+        const batch = cleaned.slice(i, i + CHUNK);
+        const batchNum = Math.floor(i / CHUNK) + 1;
+        const { data, error } = await supabase
+          .from('cedulas_autorizadas')
+          .upsert(batch, {
+            onConflict: 'event_id,numero_cedula',
+            ignoreDuplicates: false,
+          })
+          .select();
+
+        if (error) {
+          console.error(`[bulkCreateCedulas] Lote ${batchNum} falló:`, {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            sampleRow: batch[0],
+          });
+          const detail = [error.message, error.details, error.hint].filter(Boolean).join(' — ');
+          throw new Error(`Lote ${batchNum}: ${detail || 'error desconocido'}`);
+        }
+        if (data) inserted.push(...data);
+      }
+      return inserted;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['cedulas_autorizadas', variables.eventId] });
       toast.success(`${data.length} cédulas importadas correctamente`);
     },
-    onError: () => {
-      toast.error('Error en la importación masiva');
+    onError: (error: any) => {
+      console.error('[bulkCreateCedulas] error:', error);
+      toast.error(`Error en la importación: ${error?.message || 'desconocido'}`, {
+        duration: 10000,
+      });
     },
   });
 }
