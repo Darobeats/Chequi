@@ -20,6 +20,7 @@ import { es } from 'date-fns/locale';
 
 export function CedulaDashboardMonitor() {
   const { selectedEvent } = useEventContext();
+  useCedulaRealtime(selectedEvent?.id || null);
   const { data: registros = [], isLoading } = useCedulaRegistros(selectedEvent?.id || null);
   const { data: stats } = useCedulaStats(selectedEvent?.id || null);
   const { data: whitelistConfig } = useEventWhitelistConfigById(selectedEvent?.id || null);
