@@ -19,6 +19,7 @@ interface ParsedRow {
   nombre_completo?: string;
   categoria?: string;
   empresa?: string;
+  mesa?: string;
   valid: boolean;
   error?: string;
 }
@@ -90,6 +91,9 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
       const empresaIndex = headers.findIndex(h => 
         h.includes('empresa') || h.includes('company') || h.includes('organización')
       );
+      const mesaIndex = headers.findIndex(h => 
+        h.includes('mesa') || h === 'table' || h.includes('mesa_asignada') || h.includes('table_number')
+      );
       
       if (cedulaIndex === -1) {
         setError('No se encontró una columna de cédula. Asegúrate de tener un encabezado como "cedula", "cédula" o "documento"');
@@ -130,6 +134,7 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
           nombre_completo: nombreIndex >= 0 ? String(row[nombreIndex] || '').trim() : undefined,
           categoria: categoriaIndex >= 0 ? String(row[categoriaIndex] || '').trim() : undefined,
           empresa: empresaIndex >= 0 ? String(row[empresaIndex] || '').trim() : undefined,
+          mesa: mesaIndex >= 0 ? String(row[mesaIndex] || '').trim() : undefined,
           valid: isValid,
           error: isValid ? undefined : `Formato inválido (${cedula.length} dígitos, se requieren 6-15)`,
         });
@@ -169,6 +174,7 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
       nombre_completo: r.nombre_completo,
       categoria: r.categoria,
       empresa: r.empresa,
+      mesa: r.mesa,
     }));
     
     await bulkCreate.mutateAsync({ eventId, cedulas });
@@ -197,7 +203,7 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
             <strong>Formato esperado:</strong> El archivo debe tener columnas con encabezados. 
             La columna de cédula es obligatoria (puede llamarse "cedula", "cédula" o "documento").
             <br />
-            Columnas opcionales: nombre, categoria, empresa
+            Columnas opcionales: nombre, categoria, empresa, <strong>mesa</strong>
           </AlertDescription>
         </Alert>
         
@@ -274,6 +280,7 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
                     <TableHead className="text-dorado w-12">Estado</TableHead>
                     <TableHead className="text-dorado">Cédula</TableHead>
                     <TableHead className="text-dorado">Nombre</TableHead>
+                    <TableHead className="text-dorado">Mesa</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -291,6 +298,7 @@ export function CedulasBulkImport({ eventId, onComplete }: CedulasBulkImportProp
                       </TableCell>
                       <TableCell className="font-mono text-hueso text-sm">{row.numero_cedula}</TableCell>
                       <TableCell className="text-hueso text-sm truncate max-w-32">{row.nombre_completo || '-'}</TableCell>
+                      <TableCell className="text-hueso text-sm font-bold">{row.mesa || '-'}</TableCell>
                     </TableRow>
                   ))}
                   {parsedData.length > 10 && (
