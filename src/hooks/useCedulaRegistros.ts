@@ -1,7 +1,37 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { CedulaRegistro, InsertCedulaRegistro } from '@/types/cedula';
 import { toast } from 'sonner';
+
+// Realtime subscription para cedula_registros, control_usage y access_logs.
+// Invalida queries del evento activo para refrescar el dashboard al instante.
+export function useCedulaRealtime(eventId: string | null) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!eventId) return;
+
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['cedula_registros', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedula_stats', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedula_control_usage', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedula_access_logs', eventId] });
+    };
+
+    const channel = supabase
+      .channel(`cedula-realtime-${eventId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_registros', filter: `event_id=eq.${eventId}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_control_usage', filter: `event_id=eq.${eventId}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_access_logs', filter: `event_id=eq.${eventId}` }, invalidate)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [eventId, queryClient]);
+}
+
 
 // Helper para paginación automática (superar límite de 1000 filas de Supabase)
 async function fetchAllPaginated<T>(

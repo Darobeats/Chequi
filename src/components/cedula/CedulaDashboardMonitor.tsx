@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro, useClearAllCedulaRegistros } from '@/hooks/useCedulaRegistros';
+import { useCedulaRegistros, useCedulaStats, useDeleteCedulaRegistro, useClearAllCedulaRegistros, useCedulaRealtime } from '@/hooks/useCedulaRegistros';
 import { useCedulasAutorizadasStats, useCedulasAutorizadas, useCedulaAccessLogs, useClearAccessLogs } from '@/hooks/useCedulasAutorizadas';
 import type { CedulaAccessLog } from '@/types/cedula';
 import { useEventWhitelistConfigById } from '@/hooks/useEventWhitelistConfig';
@@ -20,6 +20,7 @@ import { es } from 'date-fns/locale';
 
 export function CedulaDashboardMonitor() {
   const { selectedEvent } = useEventContext();
+  useCedulaRealtime(selectedEvent?.id || null);
   const { data: registros = [], isLoading } = useCedulaRegistros(selectedEvent?.id || null);
   const { data: stats } = useCedulaStats(selectedEvent?.id || null);
   const { data: whitelistConfig } = useEventWhitelistConfigById(selectedEvent?.id || null);
