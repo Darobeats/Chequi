@@ -136,7 +136,7 @@ export function useBulkCreateCedulasAutorizadas() {
         const batchNum = Math.floor(i / CHUNK) + 1;
         const { data, error } = await supabase
           .from('cedulas_autorizadas')
-          .upsert(batch, {
+          .upsert(batch as any, {
             onConflict: 'event_id,numero_cedula',
             ignoreDuplicates: false,
           })
