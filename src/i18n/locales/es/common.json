@@ -178,7 +178,12 @@
     "saveForReport": "Registrar para Reporte",
     "scanAnother": "Escanear Otra Cédula",
     "saving": "Guardando...",
-    "alreadyUsed": "ya ha utilizado"
+    "alreadyUsed": "ya ha utilizado",
+    "tableAssigned": "MESA ASIGNADA",
+    "goToTable": "Diríjase a la mesa",
+    "noTableAssigned": "Sin mesa asignada",
+    "alreadyRegisteredTitle": "YA REGISTRADO",
+    "alreadyRegisteredGoToTable": "Esta cédula ya fue registrada. La mesa asignada se muestra abajo."
   },
   "controlTypeSelector": {
     "label": "Tipo de Control",
