@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, User, Calendar, MapPin, Droplet, XCircle, ShieldCheck, Building, Tag, Beer, AlertTriangle } from 'lucide-react';
+import { CheckCircle, User, Calendar, MapPin, Droplet, XCircle, ShieldCheck, Building, Tag, Beer, AlertTriangle, Armchair } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { CedulaData, CedulaAutorizada } from '@/types/cedula';
 
@@ -11,6 +11,7 @@ interface CedulaScanResultProps {
   onCancel: () => void;
   isLoading?: boolean;
   isUnauthorized?: boolean;
+  isDuplicate?: boolean;
   autorizadaData?: CedulaAutorizada | null;
   requireWhitelist?: boolean;
   controlLimitInfo?: { current: number; max: number } | null;
@@ -21,16 +22,43 @@ interface CedulaScanResultProps {
 
 export function CedulaScanResult({ 
   data, onConfirm, onCancel, isLoading, 
-  isUnauthorized = false, autorizadaData, requireWhitelist,
+  isUnauthorized = false, isDuplicate = false, autorizadaData, requireWhitelist,
   controlLimitInfo, controlName, allowSaveUnauthorized = false, onSaveUnauthorized
 }: CedulaScanResultProps) {
   const { t } = useTranslation('common');
   const isLimitExceeded = controlLimitInfo && controlLimitInfo.max > 0 && controlLimitInfo.current >= controlLimitInfo.max;
   const shouldBlockConfirm = isLimitExceeded || (isUnauthorized && !allowSaveUnauthorized);
+  const mesa = autorizadaData?.mesa?.trim();
+  const hasMesa = !!mesa;
 
   return (
     <Card className={`p-6 ${isUnauthorized || isLimitExceeded ? 'border-destructive/50 bg-destructive/5' : 'border-primary/50 bg-primary/5'}`}>
       <div className="space-y-4">
+        {/* MESA ASIGNADA — bloque destacado para el flujo principal del evento */}
+        {hasMesa && !isUnauthorized && (
+          <div className="rounded-xl border-2 border-primary bg-primary/15 p-5 text-center shadow-lg animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-center gap-2 text-primary/90 text-xs font-semibold uppercase tracking-wider mb-1">
+              <Armchair className="h-4 w-4" />
+              {t('cedulaScanResult.tableAssigned')}
+            </div>
+            <div className="text-5xl md:text-6xl font-extrabold text-primary leading-none my-2 break-words">
+              {mesa}
+            </div>
+            <p className="text-sm text-primary/80 mt-1">{t('cedulaScanResult.goToTable')}</p>
+          </div>
+        )}
+
+        {/* Duplicado: ya registrado, pero igual mostramos la mesa arriba */}
+        {isDuplicate && !isUnauthorized && !isLimitExceeded && (
+          <Alert className="border-amber-500 bg-amber-500/10">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTitle className="font-bold text-amber-600">{t('cedulaScanResult.alreadyRegisteredTitle')}</AlertTitle>
+            <AlertDescription className="text-amber-600">
+              {hasMesa ? t('cedulaScanResult.alreadyRegisteredGoToTable') : t('cedulaScanResult.noTableAssigned')}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {isUnauthorized && !isLimitExceeded && (
           <Alert variant="destructive" className="border-orange-500 bg-orange-500/10">
             <AlertTriangle className="h-5 w-5 text-orange-500" />
@@ -163,6 +191,10 @@ export function CedulaScanResult({
             </>
           ) : isUnauthorized ? (
             <Button onClick={onCancel} variant="destructive" className="w-full">
+              {t('cedulaScanResult.closeAndScanAnother')}
+            </Button>
+          ) : isDuplicate ? (
+            <Button onClick={onCancel} className="w-full" variant="secondary">
               {t('cedulaScanResult.closeAndScanAnother')}
             </Button>
           ) : (

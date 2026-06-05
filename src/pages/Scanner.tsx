@@ -29,6 +29,7 @@ import { useOfflineCedulaScans } from "@/hooks/useOfflineCedulaScans";
 import { useOfflineAuthorization } from "@/hooks/useOfflineAuthorization";
 import { useOfflineControlLimit } from "@/hooks/useOfflineControlLimit";
 import { scanFeedback } from "@/lib/scanFeedback";
+import { supabase } from "@/integrations/supabase/client";
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
@@ -52,6 +53,7 @@ const Scanner = () => {
   const [pendingScan, setPendingScan] = useState<CedulaData | null>(null);
   const [selectedControlType, setSelectedControlType] = useState<string>("");
   const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [isDuplicate, setIsDuplicate] = useState(false);
   const [autorizadaData, setAutorizadaData] = useState<CedulaAutorizada | null>(null);
   const [controlLimitInfo, setControlLimitInfo] = useState<{ current: number; max: number } | null>(null);
   
@@ -136,6 +138,7 @@ const Scanner = () => {
   const handleCedulaScanSuccess = async (data: CedulaData) => {
     // Reset states
     setIsUnauthorized(false);
+    setIsDuplicate(false);
     setAutorizadaData(null);
     setControlLimitInfo(null);
     
@@ -148,38 +151,60 @@ const Scanner = () => {
       requireWhitelist,
       selectedControlType,
     });
+
+    // ALWAYS check authorization to retrieve mesa (table assignment), regardless of whitelist flag
+    let autorizada: CedulaAutorizada | null = null;
+    if (eventId) {
+      autorizada = await checkAuthorization(data.numeroCedula);
+      if (autorizada) setAutorizadaData(autorizada);
+    }
     
-    // Check whitelist if enabled
-    if (requireWhitelist && eventId) {
-      console.log('[Scanner] Checking whitelist authorization...');
-      const autorizada = await checkAuthorization(data.numeroCedula);
+    // Check whitelist if enabled — blocks unauthorized
+    if (requireWhitelist && eventId && !autorizada) {
+      console.log('[Scanner] Access DENIED - cédula not in whitelist');
+      await createAccessLog.mutateAsync({
+        event_id: eventId,
+        numero_cedula: data.numeroCedula,
+        nombre_detectado: data.nombreCompleto,
+        access_result: 'denied',
+        denial_reason: 'Cédula no está en la lista de acceso autorizado',
+        scanned_by: user?.id,
+        device_info: navigator.userAgent,
+      });
       
-      console.log('[Scanner] Authorization result:', autorizada);
-      
-      if (!autorizada) {
-        // Log denied attempt
-        console.log('[Scanner] Access DENIED - cédula not in whitelist');
-        await createAccessLog.mutateAsync({
-          event_id: eventId,
-          numero_cedula: data.numeroCedula,
-          nombre_detectado: data.nombreCompleto,
-          access_result: 'denied',
-          denial_reason: 'Cédula no está en la lista de acceso autorizado',
-          scanned_by: user?.id,
-          device_info: navigator.userAgent,
-        });
-        
-        toast.error(t('scanner.notOnList'), {
-          description: t('scanner.notAuthorized'),
-        });
-        setIsUnauthorized(true);
-        setPendingScan(data);
-        return;
+      toast.error(t('scanner.notOnList'), {
+        description: t('scanner.notAuthorized'),
+      });
+      setIsUnauthorized(true);
+      setPendingScan(data);
+      return;
+    }
+
+    // Detect duplicate (cédula already registered) — show mesa anyway
+    if (eventId && navigator.onLine) {
+      try {
+        const { data: existing } = await supabase
+          .from('cedula_registros')
+          .select('id')
+          .eq('event_id', eventId)
+          .eq('numero_cedula', data.numeroCedula)
+          .maybeSingle();
+        if (existing) {
+          console.log('[Scanner] Duplicate detected, showing mesa info');
+          setIsDuplicate(true);
+          scanFeedback.duplicate();
+          toast.warning(t('scanner.alreadyRegistered'), {
+            description: autorizada?.mesa
+              ? `Mesa: ${autorizada.mesa}`
+              : t('scanner.alreadyRegisteredDesc'),
+            duration: 6000,
+          });
+          setPendingScan(data);
+          return;
+        }
+      } catch (e) {
+        console.warn('[Scanner] Duplicate check failed (non-blocking):', e);
       }
-      
-      // Store authorized data for display
-      console.log('[Scanner] Access AUTHORIZED');
-      setAutorizadaData(autorizada);
     }
     
     // Check control limit if a control type is selected
@@ -258,6 +283,7 @@ const Scanner = () => {
         });
         setPendingScan(null);
         setIsUnauthorized(false);
+        setIsDuplicate(false);
         setAutorizadaData(null);
         setControlLimitInfo(null);
         return;
@@ -290,6 +316,7 @@ const Scanner = () => {
       toast.success(t('scanner.savedSuccess'));
       setPendingScan(null);
       setIsUnauthorized(false);
+      setIsDuplicate(false);
       setAutorizadaData(null);
       setControlLimitInfo(null);
     } catch (error) {
@@ -340,6 +367,7 @@ const Scanner = () => {
       
       setPendingScan(null);
       setIsUnauthorized(false);
+      setIsDuplicate(false);
       setAutorizadaData(null);
       setControlLimitInfo(null);
     } catch (error) {
@@ -351,6 +379,7 @@ const Scanner = () => {
   const handleCancelCedulaScan = () => {
     setPendingScan(null);
     setIsUnauthorized(false);
+    setIsDuplicate(false);
     setAutorizadaData(null);
     setControlLimitInfo(null);
   };
@@ -684,6 +713,7 @@ const Scanner = () => {
                     onCancel={handleCancelCedulaScan}
                     isLoading={createCedulaMutation.isPending || createControlUsage.isPending}
                     isUnauthorized={isUnauthorized}
+                    isDuplicate={isDuplicate}
                     autorizadaData={autorizadaData}
                     requireWhitelist={whitelistConfig?.requireWhitelist}
                     controlLimitInfo={controlLimitInfo}

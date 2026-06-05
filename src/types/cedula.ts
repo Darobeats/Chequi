@@ -57,6 +57,7 @@ export interface CedulaAutorizada {
   nombre_completo: string | null;
   categoria: string | null;
   empresa: string | null;
+  mesa: string | null;
   notas: string | null;
   created_at: string;
   created_by: string | null;
@@ -68,6 +69,7 @@ export interface InsertCedulaAutorizada {
   nombre_completo?: string;
   categoria?: string;
   empresa?: string;
+  mesa?: string;
   notas?: string;
   created_by?: string;
 }
