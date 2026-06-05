@@ -713,6 +713,7 @@ const Scanner = () => {
                     onCancel={handleCancelCedulaScan}
                     isLoading={createCedulaMutation.isPending || createControlUsage.isPending}
                     isUnauthorized={isUnauthorized}
+                    isDuplicate={isDuplicate}
                     autorizadaData={autorizadaData}
                     requireWhitelist={whitelistConfig?.requireWhitelist}
                     controlLimitInfo={controlLimitInfo}
