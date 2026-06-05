@@ -1,42 +1,40 @@
-# Asignación de mesa por cédula
+## Diagnóstico
 
-Objetivo del evento de hoy: al escanear la cédula, mostrar de forma muy visible el **número de mesa** asignado al asistente. Si no está en la base, avisar. Si ya fue registrado antes (duplicado), avisar la duplicidad pero **igualmente mostrar la mesa** para que pueda dirigirse.
+Revisé el Excel `BASE DE ASISTENTES ANIVERSARIO V1.xlsx`:
+- 377 filas, 3 columnas: `CEDULA`, `NOMBRE`, `MESA`
+- Las cédulas son números (algunas de 10 dígitos como `9632421545`)
+- Mesa son enteros (1, 2, 3, ...)
 
-## Cambios
+El código actual (`useBulkCreateCedulasAutorizadas` en `src/hooks/useCedulasAutorizadas.ts`) **silencia el error real** mostrando solo el toast genérico "Error en la importación masiva". Por eso no se ve la causa.
 
-### 1. Base de datos
-- Agregar columna `mesa` (text, nullable) a `cedulas_autorizadas`. Se usa text para soportar valores como "12", "A5", "VIP-3".
-- Sin cambios destructivos. Compatible con eventos existentes.
+Causas más probables (en orden):
+1. **Sesión/permisos**: el upsert requiere RLS `admin` o `control` + `user_can_access_event(event_id)`. Si el `eventId` que se pasa no es uno asignado al usuario o el rol no es correcto, falla con error de RLS sin mostrar detalle.
+2. **Payload de 377 filas en un solo upsert**: aunque Supabase lo soporta, conviene partir en lotes (chunks) para evitar timeouts y permitir tolerancia parcial.
+3. **Valores `undefined`** en `categoria`/`empresa` (no existen en este Excel) podrían enviar claves explícitas que confunden al upsert; mejor omitirlas.
 
-### 2. Importación masiva (CedulasBulkImport)
-- Detectar columna `mesa` / `table` / `mesa_asignada` en el Excel.
-- Incluir `mesa` en las filas parseadas y en el bulk insert.
-- Mostrar columna "Mesa" en el preview.
+## Plan
 
-### 3. Gestión manual (CedulasAutorizadasManager)
-- Añadir campo "Mesa" en el diálogo de alta manual.
-- Mostrar columna "Mesa" en la tabla de autorizadas.
+### 1) `src/hooks/useCedulasAutorizadas.ts` — bulk insert robusto y con error real
+- `useBulkCreateCedulasAutorizadas`:
+  - Insertar en **lotes de 100** dentro de un loop.
+  - **Eliminar campos `undefined`** de cada registro antes de enviar.
+  - Capturar `error.message`, `error.details`, `error.hint`, `error.code` y propagarlos.
+  - En `onError`: mostrar `toast.error('Error: ' + (error.message || 'desconocido'))` y `console.error('[bulkCreateCedulas] error:', error)` para que el operador y nosotros veamos la causa real.
+  - Retornar conteo total insertado sumando todos los lotes.
 
-### 4. Resultado de escaneo (CedulaScanResult) — lo más importante
-- Cuando `autorizadaData.mesa` exista, mostrar un bloque **destacado, grande, alto contraste** arriba del resto: ícono de mesa + "MESA {numero}".
-- Mostrar siempre que haya mesa, incluyendo:
-  - Autorizado normal → bloque verde con mesa.
-  - **Duplicado** (ya registrado previamente) → alerta ámbar "Ya registrado" + bloque con la mesa para que el asistente sepa adónde ir.
-  - No autorizado / sin mesa → mensaje actual sin bloque de mesa.
+### 2) `src/components/cedula/CedulasBulkImport.tsx` — saneo previo y feedback
+- Antes de enviar, **eliminar campos vacíos** (`''`) y `undefined` para que no se envíen como columnas nulas innecesarias.
+- Convertir `mesa` y `numero_cedula` siempre a `string` (ya se hace).
+- Mostrar progreso "Importando lote X de Y…" mientras corre.
+- Si un lote falla, mostrar el número de lote y el mensaje de error específico.
 
-### 5. Detección de duplicado en el flujo de escaneo
-- En `useCedulaScanner` / `Scanner.tsx` (flujo cédula), cuando la cédula ya tenga un registro previo en `cedula_registros`, marcar `isDuplicate=true` y pasar `autorizadaData` con la mesa al `CedulaScanResult`. No bloquear: solo informar y mostrar mesa.
+### 3) Validación de evento seleccionado
+- Verificar al inicio de `handleImport` que `eventId` no esté vacío; si lo está, mostrar mensaje claro "Selecciona un evento primero".
 
-### 6. Tipos e i18n
-- Añadir `mesa?: string | null` en `CedulaAutorizada` e `InsertCedulaAutorizada`.
-- Añadir claves i18n ES/EN: `cedulaScanResult.table`, `cedulaScanResult.tableAssigned`, `cedulaScanResult.alreadyRegistered`, `cedulaScanResult.alreadyRegisteredGoToTable`.
+### Resultado
+- El usuario podrá importar las 377 filas.
+- Si vuelve a fallar, **veremos el error real** (RLS, columna, tipo, etc.) tanto en el toast como en consola, y lo arreglaremos en una siguiente iteración inmediata.
 
-## Detalles técnicos
-- Migración: `ALTER TABLE public.cedulas_autorizadas ADD COLUMN mesa text;` (RLS y grants existentes ya cubren la columna).
-- `types.ts` de Supabase se regenera tras la migración; los hooks existentes seguirán funcionando porque solo agregamos un campo opcional.
-- El bloque de mesa en `CedulaScanResult` usará tokens semánticos (`bg-primary/10`, `text-primary`, `border-primary`) — sin colores hardcoded.
-
-## Fuera de alcance
-- Reasignación de mesa desde el escáner.
-- Reporte por mesa (puede agregarse después si lo piden).
-- Cambios en flujo QR (este evento es solo cédula).
+### Fuera de alcance
+- No se cambia el esquema de BD.
+- No se modifican políticas RLS (ya están correctas según la última auditoría).
