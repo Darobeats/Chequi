@@ -1,0 +1,1 @@
+ALTER TABLE public.cedulas_autorizadas ADD COLUMN IF NOT EXISTS mesa text;

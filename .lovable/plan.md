@@ -1,134 +1,42 @@
-## Soporte Offline — Fases 1 a 5
+# Asignación de mesa por cédula
 
-Implementación priorizada para que la app funcione sin internet durante el evento y los datos lleguen completos al reporte de cobro.
+Objetivo del evento de hoy: al escanear la cédula, mostrar de forma muy visible el **número de mesa** asignado al asistente. Si no está en la base, avisar. Si ya fue registrado antes (duplicado), avisar la duplicidad pero **igualmente mostrar la mesa** para que pueda dirigirse.
 
-### ⚠️ Aviso importante sobre PWA (Fase 1)
+## Cambios
 
-PWA y Service Worker **solo funcionan en la versión publicada** (`chequi.online`), no en el preview del editor Lovable. Esto es una limitación técnica del entorno de preview (iframes bloquean Service Workers). El equipo en campo debe usar la URL publicada e instalar la app en el celular antes del evento.
+### 1. Base de datos
+- Agregar columna `mesa` (text, nullable) a `cedulas_autorizadas`. Se usa text para soportar valores como "12", "A5", "VIP-3".
+- Sin cambios destructivos. Compatible con eventos existentes.
 
----
+### 2. Importación masiva (CedulasBulkImport)
+- Detectar columna `mesa` / `table` / `mesa_asignada` en el Excel.
+- Incluir `mesa` en las filas parseadas y en el bulk insert.
+- Mostrar columna "Mesa" en el preview.
 
-### Fase 1 — App Shell Offline (PWA)
+### 3. Gestión manual (CedulasAutorizadasManager)
+- Añadir campo "Mesa" en el diálogo de alta manual.
+- Mostrar columna "Mesa" en la tabla de autorizadas.
 
-**Objetivo:** que la app abra sin internet, incluso tras cerrar el navegador.
+### 4. Resultado de escaneo (CedulaScanResult) — lo más importante
+- Cuando `autorizadaData.mesa` exista, mostrar un bloque **destacado, grande, alto contraste** arriba del resto: ícono de mesa + "MESA {numero}".
+- Mostrar siempre que haya mesa, incluyendo:
+  - Autorizado normal → bloque verde con mesa.
+  - **Duplicado** (ya registrado previamente) → alerta ámbar "Ya registrado" + bloque con la mesa para que el asistente sepa adónde ir.
+  - No autorizado / sin mesa → mensaje actual sin bloque de mesa.
 
-1. Instalar `vite-plugin-pwa` y `workbox-window`.
-2. Configurar `vite.config.ts`:
-   - `registerType: 'autoUpdate'`
-   - `devOptions: { enabled: false }` (no activar en dev/preview)
-   - `navigateFallbackDenylist: [/^\/~oauth/, /^\/auth/, /supabase/]`
-   - Estrategia `NetworkFirst` para HTML, `CacheFirst` para assets estáticos.
-3. Guard de registro en `src/main.tsx`: NO registrar SW si está en iframe ni en host de preview de Lovable.
-4. Crear `public/manifest.webmanifest` con: nombre "Chequi", íconos 192/512, theme color `#0A0A0A`, `display: standalone`.
-5. Crear íconos PWA en `public/` (192x192, 512x512, apple-touch-icon).
-6. Actualizar `index.html` con `<link rel="manifest">` y `apple-touch-icon`.
-7. Crear página `/install` con instrucciones para Android (botón de instalación) e iOS (Compartir → Agregar a inicio).
-8. Botón de acceso a `/install` desde el header del Scanner.
+### 5. Detección de duplicado en el flujo de escaneo
+- En `useCedulaScanner` / `Scanner.tsx` (flujo cédula), cuando la cédula ya tenga un registro previo en `cedula_registros`, marcar `isDuplicate=true` y pasar `autorizadaData` con la mesa al `CedulaScanResult`. No bloquear: solo informar y mostrar mesa.
 
-### Fase 2 — Pre-carga de datos del evento (IndexedDB)
+### 6. Tipos e i18n
+- Añadir `mesa?: string | null` en `CedulaAutorizada` e `InsertCedulaAutorizada`.
+- Añadir claves i18n ES/EN: `cedulaScanResult.table`, `cedulaScanResult.tableAssigned`, `cedulaScanResult.alreadyRegistered`, `cedulaScanResult.alreadyRegisteredGoToTable`.
 
-**Objetivo:** descargar todo lo necesario antes de salir de zona con cobertura.
+## Detalles técnicos
+- Migración: `ALTER TABLE public.cedulas_autorizadas ADD COLUMN mesa text;` (RLS y grants existentes ya cubren la columna).
+- `types.ts` de Supabase se regenera tras la migración; los hooks existentes seguirán funcionando porque solo agregamos un campo opcional.
+- El bloque de mesa en `CedulaScanResult` usará tokens semánticos (`bg-primary/10`, `text-primary`, `border-primary`) — sin colores hardcoded.
 
-1. Instalar `idb` (wrapper liviano de IndexedDB).
-2. Crear `src/lib/offlineDB.ts` con stores: `whitelist`, `attendees`, `controlTypes`, `categoryControls`, `eventConfig`, `pendingCedulaScans`, `pendingQRScans`, `localCedulaUsage` (para detectar duplicados offline).
-3. Crear hook `src/hooks/useOfflinePrecharge.ts`:
-   - Descarga paginada (respetando límite de 1000) de `cedulas_autorizadas`, `attendees`, `control_types`, `category_controls`, `event_configs` del evento seleccionado.
-   - Guarda en IndexedDB con timestamp.
-   - Retorna progreso (X de Y registros).
-4. Crear componente `src/components/OfflinePrecharge.tsx`:
-   - Botón "📥 Preparar evento para modo offline"
-   - Barra de progreso por tabla
-   - Indicador "✅ Evento listo offline · 1.234 cédulas · 567 tickets · actualizado hace 3 min"
-   - Botón "🔄 Refrescar cache"
-5. Integrar en el header de `/scanner` y `/cedula-registro`.
-
-### Fase 3 — Cola offline para módulo Cédula
-
-**Objetivo:** que escanear cédulas y registrar accesos NO requiera internet.
-
-1. Crear `src/hooks/useOfflineCedulaScans.ts` (espejo de `useOfflineScans`):
-   - `addPendingCedulaScan({ registro, controlUsage, accessLog })` → guarda en IndexedDB con firma HMAC.
-   - Auto-sync al volver `navigator.onLine`.
-   - Maneja respuestas del edge function: `synced` / `duplicate_skipped` / `rejected`.
-2. Crear `src/hooks/useOfflineAuthorization.ts`:
-   - Si `navigator.onLine` → consulta Supabase normal.
-   - Si offline → consulta IndexedDB (`whitelist` store).
-3. Crear `src/hooks/useOfflineControlLimit.ts`:
-   - Si offline → cuenta usos en `localCedulaUsage` de IndexedDB.
-4. Modificar `src/pages/Scanner.tsx`:
-   - Detectar `navigator.onLine` en cada handler.
-   - Offline: encolar y actualizar `localCedulaUsage` localmente para detectar duplicados intra-dispositivo.
-   - Mostrar `<OfflineSyncStatus>` (componente existente) también en tab Cédula.
-   - Feedback visual: vibración + sonido distinto offline ("guardado localmente · se sincronizará").
-5. Misma lógica para `handleManualSubmit` (entrada manual offline).
-
-### Fase 4 — Edge function `process-cedula-scan`
-
-**Objetivo:** sincronizar la cola de cédulas al volver internet, con validación de firma e idempotencia.
-
-1. Crear `supabase/functions/process-cedula-scan/index.ts`:
-   - Valida JWT del usuario.
-   - Valida firma HMAC-SHA256 (igual que `process-qr-scan`).
-   - Verifica `user_can_access_event(event_id)`.
-   - Inserta `cedula_registros`, `cedula_control_usage`, `cedula_access_logs` en transacción.
-   - Maneja duplicados (constraint UNIQUE) → retorna `duplicate_skipped` sin error.
-   - Acepta payload en lote (`scans: []`) para reducir round-trips al sincronizar muchos a la vez.
-2. Registrar en `supabase/config.toml` (`verify_jwt = true`).
-3. Test básico con `supabase--test_edge_functions`.
-4. El hook `useOfflineCedulaScans` invoca esta función en bloques de 50.
-
-### Fase 5 — Resiliencia de sesión
-
-**Objetivo:** que el operador no pierda la sesión durante un evento de varias horas sin internet.
-
-1. Configurar Supabase Auth para que el refresh token dure mínimo 7 días (acción manual en Dashboard — se indicará al usuario con `presentation-link`).
-2. Modificar `SupabaseAuthContext`:
-   - Si `getSession()` falla offline pero hay token cacheado en `localStorage`, considerarlo válido localmente hasta que expire el JWT.
-   - Bloquear `signOut()` accidental cuando hay escaneos pendientes (alerta de confirmación).
-3. Banner persistente en `/scanner`:
-   - 🟢 Online · sesión activa
-   - 🟡 Online · sincronizando (X pendientes)
-   - 🔴 Offline · sesión local válida hasta `[fecha]`
-4. Si JWT expira offline: permitir seguir escaneando con cola local; al volver online forzar re-login para sincronizar.
-
----
-
-### Resumen de archivos
-
-**Nuevos:**
-- `public/manifest.webmanifest`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`
-- `src/lib/offlineDB.ts`
-- `src/hooks/useOfflinePrecharge.ts`
-- `src/hooks/useOfflineCedulaScans.ts`
-- `src/hooks/useOfflineAuthorization.ts`
-- `src/hooks/useOfflineControlLimit.ts`
-- `src/components/OfflinePrecharge.tsx`
-- `src/components/OfflineSessionBanner.tsx`
-- `src/pages/Install.tsx`
-- `supabase/functions/process-cedula-scan/index.ts`
-
-**Modificados:**
-- `vite.config.ts` (VitePWA)
-- `src/main.tsx` (guard SW + registro)
-- `index.html` (manifest link, icons)
-- `src/pages/Scanner.tsx` (encolar offline)
-- `src/context/SupabaseAuthContext.tsx` (sesión offline)
-- `src/App.tsx` (ruta `/install`)
-- `supabase/config.toml` (nueva función)
-
-**Dependencias:** `vite-plugin-pwa`, `workbox-window`, `idb`
-
----
-
-### Acción manual requerida del usuario (post-implementación)
-
-1. Extender la duración del refresh token en Supabase Dashboard (Auth Settings).
-2. Antes de un evento sin internet: abrir la app publicada `chequi.online` en los celulares de campo, instalar a inicio, hacer login y pulsar "Preparar evento para modo offline".
-
-### Lo que queda para Fases 6–8 (siguiente prompt)
-
-- Panel detallado de cola pendiente con vista por escaneo
-- Export Excel desde IndexedDB sin sincronizar (respaldo)
-- Tutorial in-app para operadores
-- Sonidos/vibración diferenciados
-- Vista de conflictos post-sync
+## Fuera de alcance
+- Reasignación de mesa desde el escáner.
+- Reporte por mesa (puede agregarse después si lo piden).
+- Cambios en flujo QR (este evento es solo cédula).

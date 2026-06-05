@@ -281,6 +281,7 @@ export type Database = {
           empresa: string | null
           event_id: string
           id: string
+          mesa: string | null
           nombre_completo: string | null
           notas: string | null
           numero_cedula: string
@@ -292,6 +293,7 @@ export type Database = {
           empresa?: string | null
           event_id: string
           id?: string
+          mesa?: string | null
           nombre_completo?: string | null
           notas?: string | null
           numero_cedula: string
@@ -303,6 +305,7 @@ export type Database = {
           empresa?: string | null
           event_id?: string
           id?: string
+          mesa?: string | null
           nombre_completo?: string | null
           notas?: string | null
           numero_cedula?: string
