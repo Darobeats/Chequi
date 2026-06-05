@@ -45,7 +45,7 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [newCedula, setNewCedula] = useState({ numero_cedula: '', nombre_completo: '', categoria: '', empresa: '' });
+  const [newCedula, setNewCedula] = useState({ numero_cedula: '', nombre_completo: '', categoria: '', empresa: '', mesa: '' });
   const [activeTab, setActiveTab] = useState('lista');
   
   // Set de cédulas registradas para comparación rápida
@@ -62,7 +62,8 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
       a.numero_cedula.includes(searchTerm) ||
       a.nombre_completo?.toLowerCase().includes(term) ||
       a.categoria?.toLowerCase().includes(term) ||
-      a.empresa?.toLowerCase().includes(term)
+      a.empresa?.toLowerCase().includes(term) ||
+      a.mesa?.toLowerCase().includes(term)
     );
   }, [autorizadas, searchTerm]);
   
@@ -82,10 +83,11 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
       nombre_completo: newCedula.nombre_completo.trim() || undefined,
       categoria: newCedula.categoria.trim() || undefined,
       empresa: newCedula.empresa.trim() || undefined,
+      mesa: newCedula.mesa.trim() || undefined,
       created_by: user?.id,
     });
     
-    setNewCedula({ numero_cedula: '', nombre_completo: '', categoria: '', empresa: '' });
+    setNewCedula({ numero_cedula: '', nombre_completo: '', categoria: '', empresa: '', mesa: '' });
     setShowAddDialog(false);
   };
   
@@ -281,6 +283,15 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
                             />
                           </div>
                         </div>
+                        <div>
+                          <Label className="text-hueso">Mesa asignada</Label>
+                          <Input
+                            value={newCedula.mesa}
+                            onChange={(e) => setNewCedula({ ...newCedula, mesa: e.target.value })}
+                            placeholder="Ej: 12, A5, VIP-3"
+                            className="bg-gray-900/50 border-gray-700 text-hueso"
+                          />
+                        </div>
                       </div>
                       <DialogFooter>
                         <Button variant="outline" onClick={() => setShowAddDialog(false)}>
@@ -353,6 +364,7 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
                     <TableRow className="bg-gray-900/80 hover:bg-gray-900/80">
                       <TableHead className="text-dorado">Cédula</TableHead>
                       <TableHead className="text-dorado">Nombre</TableHead>
+                      <TableHead className="text-dorado">Mesa</TableHead>
                       <TableHead className="text-dorado hidden md:table-cell">Categoría</TableHead>
                       <TableHead className="text-dorado hidden lg:table-cell">Empresa</TableHead>
                       <TableHead className="text-dorado text-center">Estado</TableHead>
@@ -362,13 +374,13 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-hueso/60">
+                        <TableCell colSpan={7} className="text-center py-8 text-hueso/60">
                           Cargando...
                         </TableCell>
                       </TableRow>
                     ) : filteredAutorizadas.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-hueso/60">
+                        <TableCell colSpan={7} className="text-center py-8 text-hueso/60">
                           {searchTerm ? 'No se encontraron resultados' : 'No hay cédulas autorizadas'}
                         </TableCell>
                       </TableRow>
@@ -379,6 +391,7 @@ export function CedulasAutorizadasManager({ eventId }: CedulasAutorizadasManager
                           <TableRow key={autorizada.id} className="hover:bg-gray-900/30">
                             <TableCell className="font-mono text-hueso">{autorizada.numero_cedula}</TableCell>
                             <TableCell className="text-hueso">{autorizada.nombre_completo || '-'}</TableCell>
+                            <TableCell className="text-dorado font-bold">{autorizada.mesa || '-'}</TableCell>
                             <TableCell className="text-hueso hidden md:table-cell">{autorizada.categoria || '-'}</TableCell>
                             <TableCell className="text-hueso hidden lg:table-cell">{autorizada.empresa || '-'}</TableCell>
                             <TableCell className="text-center">
