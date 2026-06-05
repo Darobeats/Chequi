@@ -32,7 +32,6 @@ export function useCedulaRealtime(eventId: string | null) {
   }, [eventId, queryClient]);
 }
 
-import { toast } from 'sonner';
 
 // Helper para paginación automática (superar límite de 1000 filas de Supabase)
 async function fetchAllPaginated<T>(
