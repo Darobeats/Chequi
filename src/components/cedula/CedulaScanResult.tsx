@@ -193,6 +193,10 @@ export function CedulaScanResult({
             <Button onClick={onCancel} variant="destructive" className="w-full">
               {t('cedulaScanResult.closeAndScanAnother')}
             </Button>
+          ) : isDuplicate ? (
+            <Button onClick={onCancel} className="w-full" variant="secondary">
+              {t('cedulaScanResult.closeAndScanAnother')}
+            </Button>
           ) : (
             <div className="flex gap-3">
               <Button onClick={onConfirm} className="flex-1" disabled={isLoading}>
