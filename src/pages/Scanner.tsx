@@ -283,6 +283,7 @@ const Scanner = () => {
         });
         setPendingScan(null);
         setIsUnauthorized(false);
+        setIsDuplicate(false);
         setAutorizadaData(null);
         setControlLimitInfo(null);
         return;
@@ -315,6 +316,7 @@ const Scanner = () => {
       toast.success(t('scanner.savedSuccess'));
       setPendingScan(null);
       setIsUnauthorized(false);
+      setIsDuplicate(false);
       setAutorizadaData(null);
       setControlLimitInfo(null);
     } catch (error) {
@@ -365,6 +367,7 @@ const Scanner = () => {
       
       setPendingScan(null);
       setIsUnauthorized(false);
+      setIsDuplicate(false);
       setAutorizadaData(null);
       setControlLimitInfo(null);
     } catch (error) {
@@ -376,6 +379,7 @@ const Scanner = () => {
   const handleCancelCedulaScan = () => {
     setPendingScan(null);
     setIsUnauthorized(false);
+    setIsDuplicate(false);
     setAutorizadaData(null);
     setControlLimitInfo(null);
   };
