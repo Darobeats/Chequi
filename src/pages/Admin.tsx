@@ -19,7 +19,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
 import { useCedulaStats } from '@/hooks/useCedulaRegistros';
-import { useCedulaControlStats } from '@/hooks/useCedulaControlUsage';
+import { useCedulaControlStats, useCedulaControlUsage } from '@/hooks/useCedulaControlUsage';
+import { useCedulasAutorizadas } from '@/hooks/useCedulasAutorizadas';
 import { BarChart3, Users, FileText, Settings, ClipboardCheck, IdCard, Utensils } from 'lucide-react';
 
 const Admin = () => {
@@ -37,6 +38,8 @@ const Admin = () => {
   
   const { data: cedulaStats } = useCedulaStats(selectedEvent?.id || null);
   const { data: cedulaControlStats } = useCedulaControlStats(selectedEvent?.id || null);
+  const { data: cedulaControlUsage = [] } = useCedulaControlUsage(selectedEvent?.id || null);
+  const { data: cedulasAutorizadas = [] } = useCedulasAutorizadas(selectedEvent?.id || null);
 
   useEffect(() => {
     if (!user && !loading) {
@@ -57,20 +60,41 @@ const Admin = () => {
     );
   }
 
-  const totalAttendees = attendees.length;
-  const totalUsages = controlUsage.length;
-  const attendeesWithUsage = new Set(controlUsage.map(usage => usage.attendee_id)).size;
+  // Unified totals: combine QR-based attendees with cédula-based whitelist
+  const hasCedulaData = cedulasAutorizadas.length > 0 || cedulaControlUsage.length > 0 || (cedulaStats?.total || 0) > 0;
+  const totalAttendees = attendees.length + cedulasAutorizadas.length;
+  const totalUsages = controlUsage.length + cedulaControlUsage.length;
+  const qrAttendeesWithUsage = new Set(controlUsage.map(u => u.attendee_id)).size;
+  const cedulaUniqueScanned = new Set(cedulaControlUsage.map(u => u.numero_cedula)).size;
+  const attendeesWithUsage = qrAttendeesWithUsage + cedulaUniqueScanned;
   const attendeesWithQR = attendees.filter(a => a.qr_code).length;
 
+  // Usage by control type: combine QR + cédula counts per control
   const usageByControlType = controlTypes.map(controlType => {
-    const usageCount = controlUsage.filter(usage => usage.control_type_id === controlType.id).length;
-    return { name: controlType.name, count: usageCount, color: controlType.color };
+    const qrCount = controlUsage.filter(usage => usage.control_type_id === controlType.id).length;
+    const cedulaCount = cedulaControlUsage.filter(usage => usage.control_type_id === controlType.id).length;
+    return { name: controlType.name, count: qrCount + cedulaCount, color: controlType.color };
   });
 
-  const attendeesByCategory = ticketCategories.map(category => {
-    const count = attendees.filter(attendee => attendee.category_id === category.id).length;
-    return { name: category.name, count, color: category.color };
-  });
+  // Attendees by category: if cédulas exist, show whitelist counts by categoria; else QR categories
+  const attendeesByCategory = hasCedulaData
+    ? (() => {
+        const byCat = new Map<string, number>();
+        cedulasAutorizadas.forEach((c: any) => {
+          const key = (c.categoria && String(c.categoria).trim()) || 'General';
+          byCat.set(key, (byCat.get(key) || 0) + 1);
+        });
+        // also include QR categories if any
+        ticketCategories.forEach(cat => {
+          const qrCount = attendees.filter(a => a.category_id === cat.id).length;
+          if (qrCount > 0) byCat.set(cat.name, (byCat.get(cat.name) || 0) + qrCount);
+        });
+        return Array.from(byCat.entries()).map(([name, count]) => ({ name, count, color: undefined as any }));
+      })()
+    : ticketCategories.map(category => {
+        const count = attendees.filter(attendee => attendee.category_id === category.id).length;
+        return { name: category.name, count, color: category.color };
+      });
 
   const backgroundUrl = (selectedEvent as any)?.background_url;
   const backgroundOpacity = (selectedEvent as any)?.background_opacity ?? 0.15;

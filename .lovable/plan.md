@@ -1,54 +1,42 @@
-## Causa raíz
+# Restaurar insights en vivo para el evento Kenvue
 
-La pestaña **Resumen** (dentro de `ControlAnalytics.tsx`, en Admin → Analytics) está cableada únicamente a las tablas QR clásicas:
+## Diagnóstico (verificado en base de datos y en producción)
 
-- `useControlUsage()` → tabla `control_usage` (escaneos de tickets QR)
-- `useAttendees()` → tabla `attendees`
-- `useUsageCounters()` → contadores QR
+- **No hay pérdida de datos**: 270 consumos en `cedula_control_usage` (121 hoy, último a las 12:52 hora Colombia), 328 cédulas autorizadas, 4 controles (Acceso, Crispetas, Gaseosa, Refrigerio).
+- **El fix de analítica YA está publicado** en chequi.online (verifiqué el bundle de producción: contiene el código nuevo).
+- **Causa #1 — versión vieja en caché (PWA)**: la app instala un service worker que cachea la aplicación. Un dashboard abierto desde antes de publicar el arreglo sigue corriendo la versión vieja indefinidamente. No existe verificación periódica de versión ni recarga automática.
+- **Causa #2 — secciones aún conectadas solo a QR**: la pestaña "Summary" de Admin, los 5 KPIs superiores de Admin, y los porcentajes de "Cobertura" usan `attendees`/`control_usage` (tablas QR, vacías en este evento), por eso muestran ceros aunque el resto ya combine datos de cédula.
 
-En los eventos actuales del cliente el flujo es **por cédula** (`cedula_registros`, `cedula_control_usage`, `cedula_access_logs`). Como no hay filas en `control_usage` ni en `attendees` para esos eventos, todos los KPIs, series temporales, distribución horaria, cobertura y actividad en vivo aparecen vacíos. Además, `useControlUsage` solo hace polling cada 5s y no escucha realtime; ninguna invalidación se dispara al insertar una cédula.
+## ACCIÓN INMEDIATA (sin código, díganle al cliente YA)
 
-## Solución
+En el dispositivo del cliente: **cerrar la pestaña/app y volver a abrir chequi.online** (o recargar 2 veces). Con eso cargará la versión publicada con los datos en vivo. Los datos aparecerán completos porque están en la base.
 
-Unificar la fuente de datos del módulo de analítica para que combine QR + cédula, y agregar realtime sobre las tablas de cédula para que la pestaña Resumen se actualice al instante.
+## Cambios de código (solo frontend, no disruptivos, sin tocar esquema)
 
-### Cambios
+### 1. Auto-actualización de versión en pantallas abiertas
+- En el registro del service worker, agregar verificación periódica de actualización (cada 60s) y recarga automática controlada cuando hay versión nueva.
+- Garantiza que cualquier arreglo futuro llegue a dashboards abiertos durante el evento sin intervención manual.
 
-1. **`src/hooks/useAdvancedAnalytics.ts`**
-   - Leer también `cedula_control_usage` y `cedula_registros` del evento activo (con paginación `fetchAllPaginated`).
-   - Normalizar cada registro de cédula al mismo shape que `control_usage` esperado por el hook:
-     - `used_at` ← `used_at` (consumo) o `scanned_at` (registro de acceso, mapeado contra el control "Ingreso/Entrada/Acceso" del evento).
-     - `control_type_id` ← `control_type_id` o el del control de ingreso.
-     - `attendee_id` ← `numero_cedula` (string como identificador único).
-     - `attendee.category_id` ← se resuelve buscando la categoría en `cedulas_autorizadas` (por `numero_cedula`) y mapeando contra `ticket_categories` por nombre (LOWER). Si no hay match, se deja `null` y solo afecta filtros por categoría.
-   - `filteredData` pasa a ser la unión `[...controlUsage, ...cedulaUsageNormalizada]`.
-   - `enhancedMetrics`:
-     - `totalUsages` y `uniqueAttendees` se calculan desde `filteredData` (QR + cédula) cuando hay datos de cédula presentes, en vez de usar solo `useUsageCounters`. Mantener fallback al contador QR si no hay cédula.
-     - `totalAttendees` suma `attendees.length + cedulasAutorizadas.length` cuando exista whitelist; si no, deja `attendees.length`.
-   - Resto de cálculos (timeSeries, hourlyDistribution, coverageAnalysis, intradayInsights, recentActivity) ya operan sobre `filteredData`, así que pasan a reflejar también las cédulas sin más cambios.
+### 2. Pestaña "Summary" de Admin con datos de cédula
+- `src/pages/Admin.tsx`: "Uso por tipo de control" pasará a combinar QR + `cedula_control_usage` (conteo por `control_type_id`).
+- "Asistentes por categoría": cuando el evento es de cédulas, mostrar personas únicas escaneadas y total de autorizadas (con desglose por categoría solo si existe).
 
-2. **Realtime en analytics** — añadir al inicio de `useAdvancedAnalytics` un `useEffect` que, para el `selectedEvent.id` activo, se suscriba a un canal único `analytics-realtime-${eventId}` con `postgres_changes *` sobre:
-   - `control_usage`
-   - `attendees`
-   - `cedula_control_usage` (filtro `event_id=eq.${eventId}`)
-   - `cedula_registros` (filtro `event_id=eq.${eventId}`)
-   - `cedula_access_logs` (filtro `event_id=eq.${eventId}`)
-   
-   En cada evento invalida `['control_usage', eventId]`, `['attendees', eventId]`, `['cedula_control_usage', eventId]`, `['cedula_registros', eventId]`, `['cedula_access_logs', eventId]`, `['cedulas_autorizadas', eventId]`. Cleanup con `supabase.removeChannel`.
+### 3. KPIs superiores de Admin unificados
+- Total Asistentes = asistentes QR + cédulas autorizadas (328).
+- Con Registros = personas únicas con escaneo (QR + cédula).
+- Total Usos = usos QR + consumos cédula.
+- Sin Registros = total − con registros.
+- "Con QR" se oculta o se muestra como "Autorizados" cuando el evento es de cédulas.
 
-3. **Bajar el `refetchInterval` de `useControlUsage`** de 5000 ms a `false` (ya tendremos realtime), evitando llamadas innecesarias.
-
-### Fuera de alcance
-
-- No se modifican tablas ni RLS. Las tres tablas `cedula_*` ya están en `supabase_realtime` (migración previa).
-- No se toca `CedulaDashboardMonitor` ni `CedulaControlAnalytics` (ya andan en realtime).
-- No se cambia la UI ni los textos de las pestañas.
+### 4. "Cobertura" con denominador correcto
+- `useAdvancedAnalytics.ts` (coverageAnalysis): cuando hay cédulas autorizadas, calcular cobertura por control como cédulas únicas escaneadas / total autorizadas (en vez de dividir por `attendees.length` = 0).
+- Cobertura por categoría: usar categorías de `cedulas_autorizadas` si existen; si no (caso actual, categoría vacía), mostrar una sola fila "General" con escaneados/autorizados.
 
 ## Verificación
+- Confirmar con datos reales del evento: Resumen/Tendencias con la curva horaria de los 121 escaneos de hoy, Cobertura mostrando ~X/328 por control, Summary con conteos por control > 0, y que un nuevo escaneo actualice todo en <2s.
+- Revisar que Scanner y registro de cédulas no se vean afectados (cambios solo de lectura/presentación).
 
-Tras implementar, confirmar en preview con un evento por cédula:
-1. La pestaña **Resumen** muestra KPIs > 0 (Consumos totales, Cédulas únicas, Tasa de participación si hay whitelist).
-2. **Tendencias** dibuja la línea horaria con los escaneos del día.
-3. **Cobertura** lista los controles con `totalUsages` y `uniqueUsers` correctos.
-4. **En Vivo** y la actividad de `CedulaControlAnalytics` muestran las últimas cédulas.
-5. Al escanear una nueva cédula, los conteos cambian en **menos de 2 segundos** sin recargar.
+## Notas técnicas
+- Sin migraciones ni cambios de RLS (los roles admin/control ya leen las tablas de cédula correctamente).
+- Cumple la restricción de despliegue no disruptivo a mitad de evento: solo UI condicional y registro de SW.
+- Tras implementar, hay que **Publicar** para que llegue a chequi.online.
