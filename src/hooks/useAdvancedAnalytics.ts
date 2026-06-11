@@ -1,14 +1,21 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useControlUsage, useAttendees, useControlTypes, useTicketCategories, useCategoryControls } from './useSupabaseData';
 import { startOfHour, startOfDay, parseISO, format, isToday, isYesterday, subDays, startOfMinute, addMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useUsageCounters } from './useUsageCounters';
+import { useEventContext } from '@/context/EventContext';
 
 export const useAdvancedAnalytics = (filters: {
   controlType: string;
   category: string;
   timeRange: string;
 }) => {
+  const { selectedEvent } = useEventContext();
+  const eventId = selectedEvent?.id || null;
+  const queryClient = useQueryClient();
+
   const { data: controlUsage = [] } = useControlUsage();
   const { data: attendees = [] } = useAttendees();
   const { data: controlTypes = [] } = useControlTypes();
@@ -16,9 +23,125 @@ export const useAdvancedAnalytics = (filters: {
   const { data: categoryControls = [] } = useCategoryControls();
   const { totalUsagesCount, uniqueAttendeesCount } = useUsageCounters();
 
-  // Filter data based on selections
+  // Cédula data sources for current event
+  const { data: cedulaUsage = [] } = useQuery({
+    queryKey: ['analytics_cedula_control_usage', eventId],
+    enabled: !!eventId,
+    queryFn: async () => {
+      if (!eventId) return [];
+      const rows: any[] = [];
+      const pageSize = 1000;
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from('cedula_control_usage')
+          .select('id, event_id, numero_cedula, control_type_id, used_at')
+          .eq('event_id', eventId)
+          .order('used_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        rows.push(...data);
+        if (data.length < pageSize) break;
+        offset += pageSize;
+      }
+      return rows;
+    },
+  });
+
+  const { data: cedulasAutorizadas = [] } = useQuery({
+    queryKey: ['analytics_cedulas_autorizadas', eventId],
+    enabled: !!eventId,
+    queryFn: async () => {
+      if (!eventId) return [];
+      const rows: any[] = [];
+      const pageSize = 1000;
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from('cedulas_autorizadas')
+          .select('numero_cedula, categoria')
+          .eq('event_id', eventId)
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        rows.push(...data);
+        if (data.length < pageSize) break;
+        offset += pageSize;
+      }
+      return rows;
+    },
+  });
+
+  // Realtime: invalidate all analytics queries on any change
+  useEffect(() => {
+    if (!eventId) return;
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['control_usage', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['attendees', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['analytics_cedula_control_usage', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['analytics_cedulas_autorizadas', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedulaControlUsage', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedula_registros', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['cedula_access_logs', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['usage_total_count', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['usage_unique_attendees_count', eventId] });
+    };
+
+    const channel = supabase
+      .channel(`analytics-realtime-${eventId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'control_usage' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendees' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_control_usage', filter: `event_id=eq.${eventId}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_registros', filter: `event_id=eq.${eventId}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_access_logs', filter: `event_id=eq.${eventId}` }, invalidate)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [eventId, queryClient]);
+
+  // Normalize cédula usage rows to the same shape consumed downstream
+  const normalizedCedulaUsage = useMemo(() => {
+    if (cedulaUsage.length === 0) return [];
+    // Map numero_cedula -> category_id (resolved via ticket_categories by name)
+    const categoryByName = new Map<string, string>();
+    ticketCategories.forEach(tc => categoryByName.set((tc.name || '').toLowerCase(), tc.id));
+    const categoryByCedula = new Map<string, string | null>();
+    cedulasAutorizadas.forEach((c: any) => {
+      const cat = categoryByName.get((c.categoria || '').toLowerCase()) || null;
+      categoryByCedula.set(c.numero_cedula, cat);
+    });
+
+    return cedulaUsage.map((u: any) => {
+      const category_id = categoryByCedula.get(u.numero_cedula) || null;
+      const ct = controlTypes.find(c => c.id === u.control_type_id);
+      return {
+        id: u.id,
+        attendee_id: `cedula:${u.numero_cedula}`,
+        control_type_id: u.control_type_id,
+        used_at: u.used_at,
+        control_type: ct || null,
+        attendee: {
+          id: `cedula:${u.numero_cedula}`,
+          name: u.numero_cedula,
+          category_id,
+          ticket_category: category_id ? ticketCategories.find(tc => tc.id === category_id) : null,
+        },
+      } as any;
+    });
+  }, [cedulaUsage, cedulasAutorizadas, ticketCategories, controlTypes]);
+
+  // Unified data source: QR + cédula
+  const combinedUsage = useMemo(
+    () => [...controlUsage, ...normalizedCedulaUsage],
+    [controlUsage, normalizedCedulaUsage]
+  );
+
+  // Filter data based on selections (QR + cédula combined)
   const filteredData = useMemo(() => {
-    return controlUsage.filter(usage => {
+    return combinedUsage.filter(usage => {
       const usageDate = parseISO(usage.used_at);
       const now = new Date();
       
@@ -45,14 +168,16 @@ export const useAdvancedAnalytics = (filters: {
 
       return timeFilter && controlFilter && categoryFilter;
     });
-  }, [controlUsage, filters]);
+  }, [combinedUsage, filters]);
 
   // Enhanced KPIs - Main counters use ALL data (no filters), analytics use filtered data
   const enhancedMetrics = useMemo(() => {
-    // Main KPIs without filters (all event data)
-    const totalUsages = totalUsagesCount;
-    const uniqueAttendees = uniqueAttendeesCount;
-    const totalAttendees = attendees.length;
+    // Use combined data when cédula activity exists; fallback to QR counters otherwise
+    const hasCedula = normalizedCedulaUsage.length > 0 || cedulasAutorizadas.length > 0;
+    const uniqueFromCombined = new Set(combinedUsage.map(u => u.attendee_id).filter(Boolean)).size;
+    const totalUsages = hasCedula ? combinedUsage.length : totalUsagesCount;
+    const uniqueAttendees = hasCedula ? uniqueFromCombined : uniqueAttendeesCount;
+    const totalAttendees = attendees.length + cedulasAutorizadas.length;
     const participationRate = totalAttendees > 0 ? (uniqueAttendees / totalAttendees) * 100 : 0;
     
     // Peak activity analysis
@@ -100,7 +225,7 @@ export const useAdvancedAnalytics = (filters: {
       controlTypeUsage,
       categoryEfficiency
     };
-  }, [totalUsagesCount, uniqueAttendeesCount, filteredData, attendees, controlTypes, ticketCategories]);
+  }, [totalUsagesCount, uniqueAttendeesCount, filteredData, attendees, controlTypes, ticketCategories, combinedUsage, normalizedCedulaUsage, cedulasAutorizadas]);
 
   // Time series data for trends
   const timeSeriesData = useMemo(() => {
