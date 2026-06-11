@@ -265,36 +265,68 @@ export const useAdvancedAnalytics = (filters: {
 
   // Coverage analysis
   const coverageAnalysis = useMemo(() => {
+    const hasCedula = cedulasAutorizadas.length > 0 || normalizedCedulaUsage.length > 0;
+    const totalUniverse = attendees.length + cedulasAutorizadas.length;
+
     const controlCoverage = controlTypes.map(ct => {
-      const usages = filteredData.filter(u => u.control_type_id === ct.id).length;
-      const uniqueUsers = new Set(filteredData.filter(u => u.control_type_id === ct.id).map(u => u.attendee_id)).size;
-      
+      const usagesInControl = filteredData.filter(u => u.control_type_id === ct.id);
+      const uniqueUsers = new Set(usagesInControl.map(u => u.attendee_id)).size;
       return {
         id: ct.id,
         name: ct.name,
-        totalUsages: usages,
+        totalUsages: usagesInControl.length,
         uniqueUsers,
-        coverage: attendees.length > 0 ? (uniqueUsers / attendees.length) * 100 : 0,
+        coverage: totalUniverse > 0 ? (uniqueUsers / totalUniverse) * 100 : 0,
         color: ct.color
       };
     });
 
-    const categoryCoverage = ticketCategories.map(tc => {
-      const categoryAttendees = attendees.filter(a => a.category_id === tc.id);
-      const usedAttendees = new Set(filteredData.filter(u => u.attendee?.category_id === tc.id).map(u => u.attendee_id));
-      
-      return {
-        id: tc.id,
-        name: tc.name,
-        totalAttendees: categoryAttendees.length,
-        usedAttendees: usedAttendees.size,
-        coverage: categoryAttendees.length > 0 ? (usedAttendees.size / categoryAttendees.length) * 100 : 0,
-        color: tc.color
-      };
-    });
+    let categoryCoverage;
+    if (hasCedula) {
+      // Build coverage from cédulas_autorizadas by categoria (free-form)
+      const byCat = new Map<string, { total: number; scanned: Set<string> }>();
+      cedulasAutorizadas.forEach((c: any) => {
+        const key = (c.categoria && String(c.categoria).trim()) || 'General';
+        if (!byCat.has(key)) byCat.set(key, { total: 0, scanned: new Set() });
+        byCat.get(key)!.total += 1;
+      });
+      // Map scanned cédulas to their categoria
+      const cedulaCategoria = new Map<string, string>();
+      cedulasAutorizadas.forEach((c: any) => {
+        const key = (c.categoria && String(c.categoria).trim()) || 'General';
+        cedulaCategoria.set(c.numero_cedula, key);
+      });
+      normalizedCedulaUsage.forEach((u: any) => {
+        const numero = String(u.attendee_id || '').replace(/^cedula:/, '');
+        const cat = cedulaCategoria.get(numero) || 'General';
+        if (!byCat.has(cat)) byCat.set(cat, { total: 0, scanned: new Set() });
+        byCat.get(cat)!.scanned.add(numero);
+      });
+      categoryCoverage = Array.from(byCat.entries()).map(([name, v]) => ({
+        id: name,
+        name,
+        totalAttendees: v.total,
+        usedAttendees: v.scanned.size,
+        coverage: v.total > 0 ? (v.scanned.size / v.total) * 100 : 0,
+        color: '#6366f1'
+      }));
+    } else {
+      categoryCoverage = ticketCategories.map(tc => {
+        const categoryAttendees = attendees.filter(a => a.category_id === tc.id);
+        const usedAttendees = new Set(filteredData.filter(u => u.attendee?.category_id === tc.id).map(u => u.attendee_id));
+        return {
+          id: tc.id,
+          name: tc.name,
+          totalAttendees: categoryAttendees.length,
+          usedAttendees: usedAttendees.size,
+          coverage: categoryAttendees.length > 0 ? (usedAttendees.size / categoryAttendees.length) * 100 : 0,
+          color: tc.color
+        };
+      });
+    }
 
     return { controlCoverage, categoryCoverage };
-  }, [filteredData, attendees, controlTypes, ticketCategories]);
+  }, [filteredData, attendees, controlTypes, ticketCategories, cedulasAutorizadas, normalizedCedulaUsage]);
 
   // Intraday insights for single-day events
   const intradayInsights = useMemo(() => {
