@@ -19,7 +19,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
 import { useCedulaStats } from '@/hooks/useCedulaRegistros';
-import { useCedulaControlStats } from '@/hooks/useCedulaControlUsage';
+import { useCedulaControlStats, useCedulaControlUsage } from '@/hooks/useCedulaControlUsage';
+import { useCedulasAutorizadas } from '@/hooks/useCedulasAutorizadas';
 import { BarChart3, Users, FileText, Settings, ClipboardCheck, IdCard, Utensils } from 'lucide-react';
 
 const Admin = () => {
