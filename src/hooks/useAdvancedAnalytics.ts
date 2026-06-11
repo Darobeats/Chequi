@@ -139,9 +139,9 @@ export const useAdvancedAnalytics = (filters: {
     [controlUsage, normalizedCedulaUsage]
   );
 
-  // Filter data based on selections
+  // Filter data based on selections (QR + cédula combined)
   const filteredData = useMemo(() => {
-    return controlUsage.filter(usage => {
+    return combinedUsage.filter(usage => {
       const usageDate = parseISO(usage.used_at);
       const now = new Date();
       
