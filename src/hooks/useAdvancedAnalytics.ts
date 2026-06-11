@@ -168,14 +168,16 @@ export const useAdvancedAnalytics = (filters: {
 
       return timeFilter && controlFilter && categoryFilter;
     });
-  }, [controlUsage, filters]);
+  }, [combinedUsage, filters]);
 
   // Enhanced KPIs - Main counters use ALL data (no filters), analytics use filtered data
   const enhancedMetrics = useMemo(() => {
-    // Main KPIs without filters (all event data)
-    const totalUsages = totalUsagesCount;
-    const uniqueAttendees = uniqueAttendeesCount;
-    const totalAttendees = attendees.length;
+    // Use combined data when cédula activity exists; fallback to QR counters otherwise
+    const hasCedula = normalizedCedulaUsage.length > 0 || cedulasAutorizadas.length > 0;
+    const uniqueFromCombined = new Set(combinedUsage.map(u => u.attendee_id).filter(Boolean)).size;
+    const totalUsages = hasCedula ? combinedUsage.length : totalUsagesCount;
+    const uniqueAttendees = hasCedula ? uniqueFromCombined : uniqueAttendeesCount;
+    const totalAttendees = attendees.length + cedulasAutorizadas.length;
     const participationRate = totalAttendees > 0 ? (uniqueAttendees / totalAttendees) * 100 : 0;
     
     // Peak activity analysis
