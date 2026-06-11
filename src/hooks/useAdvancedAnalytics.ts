@@ -225,7 +225,7 @@ export const useAdvancedAnalytics = (filters: {
       controlTypeUsage,
       categoryEfficiency
     };
-  }, [totalUsagesCount, uniqueAttendeesCount, filteredData, attendees, controlTypes, ticketCategories]);
+  }, [totalUsagesCount, uniqueAttendeesCount, filteredData, attendees, controlTypes, ticketCategories, combinedUsage, normalizedCedulaUsage, cedulasAutorizadas]);
 
   // Time series data for trends
   const timeSeriesData = useMemo(() => {
