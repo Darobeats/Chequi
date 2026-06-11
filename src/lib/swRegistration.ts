@@ -46,9 +46,19 @@ export function registerServiceWorker() {
         // Reload once new SW takes control to ensure fresh shell
         window.location.reload();
       });
-      wb.register().catch((err) =>
-        console.warn("[PWA] SW registration failed:", err)
-      );
+      wb.register()
+        .then((reg) => {
+          if (!reg) return;
+          // Poll for updates every 60s so long-open dashboards pick up
+          // new deploys without manual reload (critical mid-event).
+          const checkForUpdate = () => { reg.update().catch(() => {}); };
+          setInterval(checkForUpdate, 60_000);
+          window.addEventListener("focus", checkForUpdate);
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") checkForUpdate();
+          });
+        })
+        .catch((err) => console.warn("[PWA] SW registration failed:", err));
     })
     .catch(() => {});
 }
