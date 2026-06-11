@@ -130,7 +130,7 @@ export const useControlUsage = () => {
         attendee: Attendee & { ticket_category: TicketCategory };
       })[];
     },
-    refetchInterval: 5000, // Refetch every 5 seconds for real-time updates
+    refetchInterval: false, // Realtime invalidation handles updates
     enabled: !!selectedEvent?.id
   });
 };
