@@ -1,40 +1,54 @@
-## Diagnóstico
+## Causa raíz
 
-Revisé el Excel `BASE DE ASISTENTES ANIVERSARIO V1.xlsx`:
-- 377 filas, 3 columnas: `CEDULA`, `NOMBRE`, `MESA`
-- Las cédulas son números (algunas de 10 dígitos como `9632421545`)
-- Mesa son enteros (1, 2, 3, ...)
+La pestaña **Resumen** (dentro de `ControlAnalytics.tsx`, en Admin → Analytics) está cableada únicamente a las tablas QR clásicas:
 
-El código actual (`useBulkCreateCedulasAutorizadas` en `src/hooks/useCedulasAutorizadas.ts`) **silencia el error real** mostrando solo el toast genérico "Error en la importación masiva". Por eso no se ve la causa.
+- `useControlUsage()` → tabla `control_usage` (escaneos de tickets QR)
+- `useAttendees()` → tabla `attendees`
+- `useUsageCounters()` → contadores QR
 
-Causas más probables (en orden):
-1. **Sesión/permisos**: el upsert requiere RLS `admin` o `control` + `user_can_access_event(event_id)`. Si el `eventId` que se pasa no es uno asignado al usuario o el rol no es correcto, falla con error de RLS sin mostrar detalle.
-2. **Payload de 377 filas en un solo upsert**: aunque Supabase lo soporta, conviene partir en lotes (chunks) para evitar timeouts y permitir tolerancia parcial.
-3. **Valores `undefined`** en `categoria`/`empresa` (no existen en este Excel) podrían enviar claves explícitas que confunden al upsert; mejor omitirlas.
+En los eventos actuales del cliente el flujo es **por cédula** (`cedula_registros`, `cedula_control_usage`, `cedula_access_logs`). Como no hay filas en `control_usage` ni en `attendees` para esos eventos, todos los KPIs, series temporales, distribución horaria, cobertura y actividad en vivo aparecen vacíos. Además, `useControlUsage` solo hace polling cada 5s y no escucha realtime; ninguna invalidación se dispara al insertar una cédula.
 
-## Plan
+## Solución
 
-### 1) `src/hooks/useCedulasAutorizadas.ts` — bulk insert robusto y con error real
-- `useBulkCreateCedulasAutorizadas`:
-  - Insertar en **lotes de 100** dentro de un loop.
-  - **Eliminar campos `undefined`** de cada registro antes de enviar.
-  - Capturar `error.message`, `error.details`, `error.hint`, `error.code` y propagarlos.
-  - En `onError`: mostrar `toast.error('Error: ' + (error.message || 'desconocido'))` y `console.error('[bulkCreateCedulas] error:', error)` para que el operador y nosotros veamos la causa real.
-  - Retornar conteo total insertado sumando todos los lotes.
+Unificar la fuente de datos del módulo de analítica para que combine QR + cédula, y agregar realtime sobre las tablas de cédula para que la pestaña Resumen se actualice al instante.
 
-### 2) `src/components/cedula/CedulasBulkImport.tsx` — saneo previo y feedback
-- Antes de enviar, **eliminar campos vacíos** (`''`) y `undefined` para que no se envíen como columnas nulas innecesarias.
-- Convertir `mesa` y `numero_cedula` siempre a `string` (ya se hace).
-- Mostrar progreso "Importando lote X de Y…" mientras corre.
-- Si un lote falla, mostrar el número de lote y el mensaje de error específico.
+### Cambios
 
-### 3) Validación de evento seleccionado
-- Verificar al inicio de `handleImport` que `eventId` no esté vacío; si lo está, mostrar mensaje claro "Selecciona un evento primero".
+1. **`src/hooks/useAdvancedAnalytics.ts`**
+   - Leer también `cedula_control_usage` y `cedula_registros` del evento activo (con paginación `fetchAllPaginated`).
+   - Normalizar cada registro de cédula al mismo shape que `control_usage` esperado por el hook:
+     - `used_at` ← `used_at` (consumo) o `scanned_at` (registro de acceso, mapeado contra el control "Ingreso/Entrada/Acceso" del evento).
+     - `control_type_id` ← `control_type_id` o el del control de ingreso.
+     - `attendee_id` ← `numero_cedula` (string como identificador único).
+     - `attendee.category_id` ← se resuelve buscando la categoría en `cedulas_autorizadas` (por `numero_cedula`) y mapeando contra `ticket_categories` por nombre (LOWER). Si no hay match, se deja `null` y solo afecta filtros por categoría.
+   - `filteredData` pasa a ser la unión `[...controlUsage, ...cedulaUsageNormalizada]`.
+   - `enhancedMetrics`:
+     - `totalUsages` y `uniqueAttendees` se calculan desde `filteredData` (QR + cédula) cuando hay datos de cédula presentes, en vez de usar solo `useUsageCounters`. Mantener fallback al contador QR si no hay cédula.
+     - `totalAttendees` suma `attendees.length + cedulasAutorizadas.length` cuando exista whitelist; si no, deja `attendees.length`.
+   - Resto de cálculos (timeSeries, hourlyDistribution, coverageAnalysis, intradayInsights, recentActivity) ya operan sobre `filteredData`, así que pasan a reflejar también las cédulas sin más cambios.
 
-### Resultado
-- El usuario podrá importar las 377 filas.
-- Si vuelve a fallar, **veremos el error real** (RLS, columna, tipo, etc.) tanto en el toast como en consola, y lo arreglaremos en una siguiente iteración inmediata.
+2. **Realtime en analytics** — añadir al inicio de `useAdvancedAnalytics` un `useEffect` que, para el `selectedEvent.id` activo, se suscriba a un canal único `analytics-realtime-${eventId}` con `postgres_changes *` sobre:
+   - `control_usage`
+   - `attendees`
+   - `cedula_control_usage` (filtro `event_id=eq.${eventId}`)
+   - `cedula_registros` (filtro `event_id=eq.${eventId}`)
+   - `cedula_access_logs` (filtro `event_id=eq.${eventId}`)
+   
+   En cada evento invalida `['control_usage', eventId]`, `['attendees', eventId]`, `['cedula_control_usage', eventId]`, `['cedula_registros', eventId]`, `['cedula_access_logs', eventId]`, `['cedulas_autorizadas', eventId]`. Cleanup con `supabase.removeChannel`.
+
+3. **Bajar el `refetchInterval` de `useControlUsage`** de 5000 ms a `false` (ya tendremos realtime), evitando llamadas innecesarias.
 
 ### Fuera de alcance
-- No se cambia el esquema de BD.
-- No se modifican políticas RLS (ya están correctas según la última auditoría).
+
+- No se modifican tablas ni RLS. Las tres tablas `cedula_*` ya están en `supabase_realtime` (migración previa).
+- No se toca `CedulaDashboardMonitor` ni `CedulaControlAnalytics` (ya andan en realtime).
+- No se cambia la UI ni los textos de las pestañas.
+
+## Verificación
+
+Tras implementar, confirmar en preview con un evento por cédula:
+1. La pestaña **Resumen** muestra KPIs > 0 (Consumos totales, Cédulas únicas, Tasa de participación si hay whitelist).
+2. **Tendencias** dibuja la línea horaria con los escaneos del día.
+3. **Cobertura** lista los controles con `totalUsages` y `uniqueUsers` correctos.
+4. **En Vivo** y la actividad de `CedulaControlAnalytics` muestran las últimas cédulas.
+5. Al escanear una nueva cédula, los conteos cambian en **menos de 2 segundos** sin recargar.
