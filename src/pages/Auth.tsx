@@ -20,17 +20,13 @@ const Auth = () => {
   const { t } = useTranslation('common');
 
   React.useEffect(() => {
-    console.log("Auth page - user:", !!user, "loading:", loading);
     if (user && !loading) {
-      console.log("User found in Auth page, redirecting to dashboard");
       navigate("/dashboard");
     }
   }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    console.log("Sign in attempt:", { email, hasPassword: !!password });
 
     if (!email || !password) {
       toast.error("Error", { description: "Por favor complete todos los campos" });
@@ -39,21 +35,17 @@ const Auth = () => {
 
     setSubmitting(true);
     try {
-      console.log("Calling signIn...");
       const { error } = await signIn(email, password);
 
-      console.log("SignIn result:", { error });
-
       if (error) {
-        console.error("SignIn error:", error);
+        if (import.meta.env.DEV) console.error("SignIn error:", error);
         toast.error("Error de inicio de sesión", { description: error.message });
       } else {
-        console.log("SignIn successful");
         toast.success("Inicio de sesión exitoso");
         navigate("/dashboard");
       }
     } catch (error) {
-      console.error("SignIn catch error:", error);
+      if (import.meta.env.DEV) console.error("SignIn catch error:", error);
       toast.error("Error", { description: "Hubo un problema al procesar su solicitud." });
     } finally {
       setSubmitting(false);

@@ -37,10 +37,8 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const fetchProfile = async (userId: string) => {
     try {
-      console.log(`Fetching profile for user: ${userId}`);
-      console.log('Auth state:', { userId, sessionExists: !!session });
-      
-      // Fetch profile data
+      if (import.meta.env.DEV) console.log('Fetching profile');
+
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -48,33 +46,26 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
+        if (import.meta.env.DEV) console.error('Error fetching profile:', profileError);
         throw profileError;
       }
 
-      // Fetch role from user_roles table (security: roles are now separated)
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (roleError) {
+      if (roleError && import.meta.env.DEV) {
         console.error('Error fetching user role:', roleError);
-        // Don't throw, just default to attendee
       }
 
       const userRole = roleData?.role || 'attendee';
-
-      const completeProfile = {
-        ...profileData,
-        role: userRole
-      } as Profile;
-
-      console.log('Profile fetched successfully:', completeProfile);
+      const completeProfile = { ...profileData, role: userRole } as Profile;
+      if (import.meta.env.DEV) console.log('Profile fetched successfully');
       return completeProfile;
     } catch (error) {
-      console.error('Error in fetchProfile:', error);
+      if (import.meta.env.DEV) console.error('Error in fetchProfile:', error);
       throw error;
     }
   };
@@ -82,92 +73,54 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     let isMounted = true;
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, {
-          email: session?.user?.email,
-          userId: session?.user?.id,
-          sessionExists: !!session,
-          eventType: event
-        });
-        
+        if (import.meta.env.DEV) console.log('Auth state changed:', event);
+
         if (!isMounted) return;
 
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Use setTimeout to defer profile fetching and prevent deadlocks
           setTimeout(() => {
             if (isMounted) {
               fetchProfile(session.user.id)
-                .then(userProfile => {
-                  if (isMounted) {
-                    console.log('Setting profile:', userProfile);
-                    setProfile(userProfile);
-                  }
-                })
+                .then(userProfile => { if (isMounted) setProfile(userProfile); })
                 .catch(error => {
-                  console.error('Failed to fetch profile:', error);
-                  if (isMounted) {
-                    setProfile(null);
-                  }
+                  if (import.meta.env.DEV) console.error('Failed to fetch profile:', error);
+                  if (isMounted) setProfile(null);
                 })
-                .finally(() => {
-                  if (isMounted) {
-                    setLoading(false);
-                  }
-                });
+                .finally(() => { if (isMounted) setLoading(false); });
             }
           }, 0);
         } else {
-          console.log('No user, clearing profile');
           setProfile(null);
-          if (isMounted) {
-            setLoading(false);
-          }
+          if (isMounted) setLoading(false);
         }
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
-      
       if (!isMounted) return;
 
       if (session) {
         setSession(session);
         setUser(session.user);
-        
-        // Use setTimeout to defer profile fetching
+
         setTimeout(() => {
           if (isMounted) {
             fetchProfile(session.user.id)
-              .then(userProfile => {
-                if (isMounted) {
-                  console.log('Setting initial profile:', userProfile);
-                  setProfile(userProfile);
-                }
-              })
+              .then(userProfile => { if (isMounted) setProfile(userProfile); })
               .catch(error => {
-                console.error('Failed to fetch initial profile:', error);
-                if (isMounted) {
-                  setProfile(null);
-                }
+                if (import.meta.env.DEV) console.error('Failed to fetch initial profile:', error);
+                if (isMounted) setProfile(null);
               })
-              .finally(() => {
-                if (isMounted) {
-                  setLoading(false);
-                }
-              });
+              .finally(() => { if (isMounted) setLoading(false); });
           }
         }, 0);
       } else {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     });
 
