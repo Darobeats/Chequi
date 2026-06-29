@@ -86,9 +86,9 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
     
     if (!error && data && data.length > 0 && data[0].max_uses > 0) {
       maxUses = data[0].max_uses;
-      console.log('[useCedulaControlLimit] Got configured limit:', maxUses);
+      if (import.meta.env.DEV) console.log('[useCedulaControlLimit] Got configured limit:', maxUses);
     } else {
-      console.log('[useCedulaControlLimit] No configured limit, using DEFAULT of 1');
+      if (import.meta.env.DEV) console.log('[useCedulaControlLimit] No configured limit, using DEFAULT of 1');
     }
 
     // STRICT ENFORCEMENT: Block if already used
