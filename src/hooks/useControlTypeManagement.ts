@@ -15,9 +15,10 @@ export const useCreateControlType = () => {
     }) => {
       if (!eventId) throw new Error('No hay evento seleccionado');
 
+      const { required_control: _rc, ...safeInsert } = controlType as any;
       const { data, error } = await supabase
         .from('control_types')
-        .insert({ ...controlType, event_id: eventId })
+        .insert({ ...safeInsert, event_id: eventId })
         .select()
         .single();
       
