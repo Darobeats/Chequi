@@ -118,7 +118,7 @@ export function useCreateCedulaControlUsage() {
   
   return useMutation({
     mutationFn: async (usage: InsertCedulaControlUsage) => {
-      console.log('[useCreateCedulaControlUsage] Creating:', usage);
+      if (import.meta.env.DEV) console.log('[useCreateCedulaControlUsage] Creating usage record');
       
       const { data, error } = await supabase
         .from('cedula_control_usage')
