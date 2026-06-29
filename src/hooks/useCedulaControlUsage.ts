@@ -131,7 +131,7 @@ export function useCreateCedulaControlUsage() {
         throw error;
       }
       
-      console.log('[useCreateCedulaControlUsage] Created:', data);
+      if (import.meta.env.DEV) console.log('[useCreateCedulaControlUsage] Created OK');
       return data;
     },
     onSuccess: (_, variables) => {
