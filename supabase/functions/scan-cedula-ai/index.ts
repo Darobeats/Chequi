@@ -45,10 +45,55 @@ serve(async (req) => {
       );
     }
 
-    const { image } = await req.json();
-    
-    if (!image) {
-      throw new Error('No se proporcionó imagen');
+    // Enforce a strict body size limit before parsing to avoid memory exhaustion.
+    const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
+    if (contentLength && contentLength > MAX_BYTES) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Imagen demasiado grande' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_BYTES) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Imagen demasiado grande' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let parsed: { image?: unknown };
+    try {
+      parsed = JSON.parse(rawBody);
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'JSON inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const image = parsed.image;
+    if (typeof image !== 'string' || image.length === 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'No se proporcionó imagen' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Only accept base64 data URIs for common image formats. Reject URLs to prevent SSRF at the AI gateway tier.
+    const dataUriRegex = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+    if (!dataUriRegex.test(image)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Formato de imagen no permitido (use data URI base64)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (image.length > MAX_BYTES) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Imagen demasiado grande' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
