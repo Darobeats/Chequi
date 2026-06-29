@@ -93,7 +93,7 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
 
     // STRICT ENFORCEMENT: Block if already used
     if (currentUses >= maxUses) {
-      console.log('[useCedulaControlLimit] BLOCKED - Limit exceeded:', currentUses, '>=', maxUses);
+      if (import.meta.env.DEV) console.log('[useCedulaControlLimit] BLOCKED - Limit exceeded:', currentUses, '>=', maxUses);
       return {
         can_access: false,
         current_uses: currentUses,
