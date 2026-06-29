@@ -7,7 +7,7 @@ type UserRole = Database['public']['Enums']['user_role'];
 export const useUserRole = () => {
   const { profile, loading } = useSupabaseAuth();
   
-  console.log('useUserRole - profile:', profile, 'loading:', loading);
+  if (import.meta.env.DEV) console.log('useUserRole - loading:', loading, 'hasProfile:', !!profile);
   
   const role = profile?.role || null;
   
