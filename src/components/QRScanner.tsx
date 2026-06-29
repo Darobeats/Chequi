@@ -4,12 +4,15 @@ import { useControlTypes, useProcessQRCode } from '@/hooks/useSupabaseData';
 import { useCameraPermissions } from '@/hooks/useCameraPermissions';
 import { useOfflineScans } from '@/hooks/useOfflineScans';
 import { useEventContext } from '@/context/EventContext';
+import { useKioskMode } from '@/hooks/useKioskMode';
+import { scanFeedback } from '@/lib/scanFeedback';
 import EventSelector from './scanner/EventSelector';
 import ControlTypeSelector from './scanner/ControlTypeSelector';
 import CameraPermissions from './scanner/CameraPermissions';
 import ScannerVideo from './scanner/ScannerVideo';
 import ScanResult from './scanner/ScanResult';
 import OfflineSyncStatus from './scanner/OfflineSyncStatus';
+import KioskToggle from './scanner/KioskToggle';
 
 interface QRScannerProps {
   selectedEventId?: string;
