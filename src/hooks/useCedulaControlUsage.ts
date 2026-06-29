@@ -102,7 +102,7 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
       };
     }
 
-    console.log('[useCedulaControlLimit] ALLOWED:', currentUses, '/', maxUses);
+    if (import.meta.env.DEV) console.log('[useCedulaControlLimit] ALLOWED:', currentUses, '/', maxUses);
     return {
       can_access: true,
       current_uses: currentUses,
