@@ -72,7 +72,7 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
       .eq('control_type_id', controlTypeId);
     
     const currentUses = currentCount || 0;
-    console.log('[useCedulaControlLimit] Current usage count:', currentUses);
+    if (import.meta.env.DEV) console.log('[useCedulaControlLimit] Current usage count:', currentUses);
 
     // Try to get configured limit from database function
     const { data, error } = await supabase
