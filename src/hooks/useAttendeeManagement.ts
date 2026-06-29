@@ -41,9 +41,10 @@ export const useUpdateAttendee = () => {
   
   return useMutation({
     mutationFn: async ({ id, ...updateData }: Partial<Attendee> & { id: string }) => {
+      const { ticket_category: _tc, ...safeUpdate } = updateData as any;
       const { data, error } = await supabase
         .from('attendees')
-        .update(updateData)
+        .update(safeUpdate)
         .eq('id', id)
         .select(`
           *,

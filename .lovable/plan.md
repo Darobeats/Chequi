@@ -1,42 +1,111 @@
-# Restaurar insights en vivo para el evento Kenvue
 
-## Diagnóstico (verificado en base de datos y en producción)
+# Plan: Generador masivo de QRs + Modo Kiosko (auto-escaneo)
 
-- **No hay pérdida de datos**: 270 consumos en `cedula_control_usage` (121 hoy, último a las 12:52 hora Colombia), 328 cédulas autorizadas, 4 controles (Acceso, Crispetas, Gaseosa, Refrigerio).
-- **El fix de analítica YA está publicado** en chequi.online (verifiqué el bundle de producción: contiene el código nuevo).
-- **Causa #1 — versión vieja en caché (PWA)**: la app instala un service worker que cachea la aplicación. Un dashboard abierto desde antes de publicar el arreglo sigue corriendo la versión vieja indefinidamente. No existe verificación periódica de versión ni recarga automática.
-- **Causa #2 — secciones aún conectadas solo a QR**: la pestaña "Summary" de Admin, los 5 KPIs superiores de Admin, y los porcentajes de "Cobertura" usan `attendees`/`control_usage` (tablas QR, vacías en este evento), por eso muestran ceros aunque el resto ya combine datos de cédula.
+---
 
-## ACCIÓN INMEDIATA (sin código, díganle al cliente YA)
+## Parte 1 — Generador masivo de QRs (sin cambios)
 
-En el dispositivo del cliente: **cerrar la pestaña/app y volver a abrir chequi.online** (o recargar 2 veces). Con eso cargará la versión publicada con los datos en vivo. Los datos aparecerán completos porque están en la base.
+**Objetivo:** Generar N QRs pre-creados, exportar Excel + ZIP de PNGs para que el cliente reparta.
 
-## Cambios de código (solo frontend, no disruptivos, sin tocar esquema)
+- DB: usar `attendees` existente con `name = 'Pre-asignado #N'` y categoría seleccionada en el form.
+- Nuevo componente `BulkQRGenerator.tsx` en Admin:
+  - Cantidad (default 3000), categoría destino, prefijo opcional.
+  - Inserta en BD vía edge function `bulk-generate-qrs` (batch 500, valida admin del evento).
+  - Genera PNGs con `qrcode` lib en Web Worker (sin congelar UI), empaqueta con `jszip`, descarga.
+  - Excel con `exceljs`: `# | qr_code | categoría`.
+- Progress bar visual.
 
-### 1. Auto-actualización de versión en pantallas abiertas
-- En el registro del service worker, agregar verificación periódica de actualización (cada 60s) y recarga automática controlada cuando hay versión nueva.
-- Garantiza que cualquier arreglo futuro llegue a dashboards abiertos durante el evento sin intervención manual.
+**Archivos:** `supabase/functions/bulk-generate-qrs/index.ts`, `src/components/admin/BulkQRGenerator.tsx`, `src/workers/qrGenerator.worker.ts`, edit `src/pages/Admin.tsx`.
 
-### 2. Pestaña "Summary" de Admin con datos de cédula
-- `src/pages/Admin.tsx`: "Uso por tipo de control" pasará a combinar QR + `cedula_control_usage` (conteo por `control_type_id`).
-- "Asistentes por categoría": cuando el evento es de cédulas, mostrar personas únicas escaneadas y total de autorizadas (con desglose por categoría solo si existe).
+---
 
-### 3. KPIs superiores de Admin unificados
-- Total Asistentes = asistentes QR + cédulas autorizadas (328).
-- Con Registros = personas únicas con escaneo (QR + cédula).
-- Total Usos = usos QR + consumos cédula.
-- Sin Registros = total − con registros.
-- "Con QR" se oculta o se muestra como "Autorizados" cuando el evento es de cédulas.
+## Parte 2 — Modo Kiosko (auto-escaneo desatendido) ✨ REVISADO
 
-### 4. "Cobertura" con denominador correcto
-- `useAdvancedAnalytics.ts` (coverageAnalysis): cuando hay cédulas autorizadas, calcular cobertura por control como cédulas únicas escaneadas / total autorizadas (en vez de dividir por `attendees.length` = 0).
-- Cobertura por categoría: usar categorías de `cedulas_autorizadas` si existen; si no (caso actual, categoría vacía), mostrar una sola fila "General" con escaneados/autorizados.
+**Objetivo:** Una vez configurado evento + control type, el operador presiona **un solo botón "Activar modo kiosko"** y el dispositivo queda escaneando solo. Conforme pasan los asistentes, lee QR tras QR sin intervención humana. Cada escaneo muestra resultado por unos segundos, se auto-cierra, y vuelve a escanear automáticamente.
 
-## Verificación
-- Confirmar con datos reales del evento: Resumen/Tendencias con la curva horaria de los 121 escaneos de hoy, Cobertura mostrando ~X/328 por control, Summary con conteos por control > 0, y que un nuevo escaneo actualice todo en <2s.
-- Revisar que Scanner y registro de cédulas no se vean afectados (cambios solo de lectura/presentación).
+### 2.1 Flujo actual vs nuevo
 
-## Notas técnicas
-- Sin migraciones ni cambios de RLS (los roles admin/control ya leen las tablas de cédula correctamente).
-- Cumple la restricción de despliegue no disruptivo a mitad de evento: solo UI condicional y registro de SW.
-- Tras implementar, hay que **Publicar** para que llegue a chequi.online.
+**Hoy:**
+1. Operador selecciona evento + control
+2. Presiona "Activar Cámara"
+3. Escanea QR → muestra resultado
+4. Después de 3.5s el resultado se cierra
+5. **El operador debe presionar "Activar Cámara" otra vez** ⛔
+
+**Modo kiosko:**
+1. Operador selecciona evento + control + activa kiosko
+2. Cámara queda **permanentemente activa**
+3. Cada QR detectado:
+   - Pausa el escáner 2-3s (anti-duplicado)
+   - Muestra overlay translúcido grande sobre la cámara: ✓/✗ + categoría + usos
+   - Suena beep diferenciado (verde/rojo, ya existe `scanFeedback.ts`)
+   - Vibración (ya soportado)
+   - Auto-cierra y reanuda escaneo, **sin tocar el dispositivo**
+4. Si QR no es "de los nuestros" → flash rojo + beep error, sin congelarse.
+
+### 2.2 Cambios en `src/components/QRScanner.tsx`
+
+- Nuevo toggle persistente `kioskMode` (guardado en `localStorage` por evento+control).
+- Cuando `kioskMode=true`:
+  - `startScanning()` se invoca **automáticamente** al montar y tras cada resultado.
+  - El `useEffect` que auto-cierra `lastResult` también llama `setScanning(true)` de nuevo (no solo limpia).
+  - Tiempos reducidos: éxito 2s, error 2.5s (configurable).
+  - Bloquear navegación accidental: prevenir scroll, ocultar header en modo kiosko (fullscreen API opcional).
+- Botón grande "🔒 Activar modo kiosko" / "Desactivar" (requiere mantener presionado 2s para salir, evita toques accidentales del público).
+
+### 2.3 Cambios en `ScannerVideo.tsx`
+
+- Cuando `kioskMode=true`: ocultar botón "Detener escaneo", mostrar contador "Escaneados: 124" en esquina, indicador visual permanente de "escaneando".
+
+### 2.4 Cambios en `ScanResult.tsx`
+
+- Cuando `kioskMode=true`: render como **overlay flotante sobre el video** (no reemplaza la cámara), tamaño grande, auto-desaparece. La cámara nunca se apaga visualmente.
+- Eliminar botón cerrar (innecesario, es automático).
+
+### 2.5 Wake Lock + prevención de sleep
+
+- Usar `navigator.wakeLock.request('screen')` cuando kiosko activo → el dispositivo no se apaga.
+- Fullscreen API opcional: pedir fullscreen al activar kiosko.
+- Liberar wake lock al desactivar.
+
+### 2.6 Modo kiosko para Cédula (mismo patrón)
+
+- En `src/pages/Scanner.tsx` (módulo cédula) + `CedulaScanner.tsx`:
+  - Mismo toggle kiosko.
+  - Tras capturar foto + analizar IA → muestra resultado overlay, auto-reanuda captura.
+  - Nota: el flujo cédula requiere capturar foto manualmente (no es continuo como QR). En kiosko cédula → tras mostrar resultado, vuelve directamente a `startCamera()` listo para nueva captura, sin tocar pantalla.
+
+### 2.7 Indicadores visuales kiosko
+
+- Badge fijo arriba: "🟢 MODO KIOSKO ACTIVO — Evento X · Control Y · Escaneados: N"
+- Si se pierde conexión: indicador discreto pero scanner sigue funcionando (offline queue ya implementado).
+- Contador de escaneos en sesión (memoria local).
+
+---
+
+## Archivos
+
+**Nuevos:**
+- `supabase/functions/bulk-generate-qrs/index.ts`
+- `src/components/admin/BulkQRGenerator.tsx`
+- `src/workers/qrGenerator.worker.ts`
+- `src/hooks/useKioskMode.ts` (toggle + wake lock + persistencia localStorage)
+- `src/hooks/useWakeLock.ts`
+
+**Editados:**
+- `src/pages/Admin.tsx` (montar BulkQRGenerator)
+- `src/components/QRScanner.tsx` (lógica auto-restart, kiosk toggle)
+- `src/components/scanner/ScannerVideo.tsx` (UI kiosko)
+- `src/components/scanner/ScanResult.tsx` (overlay flotante en kiosko)
+- `src/pages/Scanner.tsx` (kiosko para cédula)
+- `src/components/cedula/CedulaScanner.tsx` (auto-reanudar captura)
+- `src/i18n/locales/{es,en}/common.json`
+
+**Sin cambios de schema** para Parte 2 — todo es UI/lógica de cliente.
+
+---
+
+## Confirmación pre-implementación
+
+1. **Salir de kiosko**: ¿prefieres mantener presionado un botón 2s, o un código PIN corto (ej. 4 dígitos) para evitar que un asistente desactive el kiosko por accidente?
+2. **Generador QR — lote único o reutilizable**: ¿es solo para este evento (componente "one-shot") o lo dejamos como herramienta permanente disponible para futuros eventos?

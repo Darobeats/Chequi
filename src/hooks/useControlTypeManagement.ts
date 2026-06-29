@@ -15,9 +15,10 @@ export const useCreateControlType = () => {
     }) => {
       if (!eventId) throw new Error('No hay evento seleccionado');
 
+      const { required_control: _rc, ...safeInsert } = controlType as any;
       const { data, error } = await supabase
         .from('control_types')
-        .insert({ ...controlType, event_id: eventId })
+        .insert({ ...safeInsert, event_id: eventId })
         .select()
         .single();
       
@@ -35,9 +36,10 @@ export const useUpdateControlType = () => {
   
   return useMutation({
     mutationFn: async (controlType: Partial<ControlType> & { id: string }) => {
+      const { required_control: _rc, ...safeUpdate } = controlType as any;
       const { error } = await supabase
         .from('control_types')
-        .update(controlType)
+        .update(safeUpdate)
         .eq('id', controlType.id);
       
       if (error) throw error;

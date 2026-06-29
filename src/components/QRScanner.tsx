@@ -4,12 +4,15 @@ import { useControlTypes, useProcessQRCode } from '@/hooks/useSupabaseData';
 import { useCameraPermissions } from '@/hooks/useCameraPermissions';
 import { useOfflineScans } from '@/hooks/useOfflineScans';
 import { useEventContext } from '@/context/EventContext';
+import { useKioskMode } from '@/hooks/useKioskMode';
+import { scanFeedback } from '@/lib/scanFeedback';
 import EventSelector from './scanner/EventSelector';
 import ControlTypeSelector from './scanner/ControlTypeSelector';
 import CameraPermissions from './scanner/CameraPermissions';
 import ScannerVideo from './scanner/ScannerVideo';
 import ScanResult from './scanner/ScanResult';
 import OfflineSyncStatus from './scanner/OfflineSyncStatus';
+import KioskToggle from './scanner/KioskToggle';
 
 interface QRScannerProps {
   selectedEventId?: string;
@@ -55,6 +58,11 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     isOnline,
     hasPendingScans
   } = useOfflineScans();
+
+  const { kioskMode, setKioskMode, scanCount, incrementScans } = useKioskMode(
+    selectedEventId,
+    selectedControlType
+  );
 
   // Notify parent of event change
   useEffect(() => {
@@ -158,7 +166,9 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
           message: 'Escaneo guardado localmente (sin conexión)',
           controlType: selectedControl?.name
         });
-        
+        scanFeedback.offlineSuccess();
+        incrementScans();
+
         processingRef.current = false;
         return;
       }
@@ -179,6 +189,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
           maxUses: result.usage?.maxUses || 0,
           controlType: selectedControl?.name,
         });
+        scanFeedback.success();
+        incrementScans();
 
         toast.success('Control registrado exitosamente', {
           description: `${selectedControl?.description || selectedControl?.name} - ${result.attendee?.name || ''}`,
@@ -193,6 +205,11 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
           message: result.message,
           lastUsage: result.lastUsage || null,
         });
+        if (result.lastUsage || /usado|alcanzado|l[íi]mite/i.test(result.message || '')) {
+          scanFeedback.duplicate();
+        } else {
+          scanFeedback.denied();
+        }
 
         toast.error('QR no válido para este control', {
           description: result.message || 'El QR ya fue utilizado o no tiene acceso',
@@ -201,6 +218,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     } catch (error: any) {
       console.error('❌ Error procesando QR:', error);
       setLastResult({ success: false, message: error?.message || 'Error desconocido' });
+      scanFeedback.denied();
       toast.error('Error al procesar el código QR', {
         description: error?.message,
       });
@@ -209,22 +227,38 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     }
   };
 
-  // Reset de resultado después de mostrarlo
+  // Reset de resultado después de mostrarlo (más rápido en kiosko)
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
+
     if (lastResult) {
-      const duration = lastResult.success ? 3500 : 4000; // Reducido para escaneos consecutivos más rápidos
+      const duration = kioskMode
+        ? (lastResult.success ? 1800 : 2400)
+        : (lastResult.success ? 3500 : 4000);
       timer = setTimeout(() => {
         setLastResult(null);
-        setLastScannedCode(''); // permitir re-escaneo del mismo código
+        setLastScannedCode('');
       }, duration);
     }
-    
+
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [lastResult]);
+  }, [lastResult, kioskMode]);
+
+  // (declarado más abajo) needsPermission se evalúa en render; usamos refs simples
+  const needsPermission = hasCamera && (permissionStatus === 'unknown' || permissionStatus === 'prompt' || permissionStatus === 'denied');
+
+  // En modo kiosko: arrancar la cámara automáticamente al activar / cambiar control
+  useEffect(() => {
+    if (!kioskMode) return;
+    if (!selectedEventId || !selectedControlType) return;
+    if (needsPermission) return;
+    if (!scanning && !lastResult) {
+      startScanning();
+    }
+  }, [kioskMode, selectedEventId, selectedControlType, scanning, lastResult, needsPermission]);
+
 
   // Función para cerrar el resultado y permitir nuevo escaneo inmediatamente
   const handleCloseResult = () => {
@@ -241,7 +275,6 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
   }
 
   const selectedControlTypeName = controlTypes?.find(ct => ct.id === selectedControlType)?.name;
-  const needsPermission = hasCamera && (permissionStatus === 'unknown' || permissionStatus === 'prompt' || permissionStatus === 'denied');
 
   return (
     <div className="flex flex-col items-center justify-center touch-manipulation">
@@ -260,6 +293,19 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
         onControlTypeChange={setSelectedControlType}
         isLoading={loadingControlTypes}
       />
+
+      {selectedEventId && selectedControlType && (
+        <div className="my-3 flex justify-center w-full">
+          <KioskToggle
+            enabled={kioskMode}
+            onToggle={setKioskMode}
+            scanCount={scanCount}
+            disabled={needsPermission}
+          />
+        </div>
+      )}
+
+
 
 
       <div className="w-full min-h-[420px] flex flex-col items-center" style={{ overflowAnchor: 'none' }}>
