@@ -59,6 +59,11 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     hasPendingScans
   } = useOfflineScans();
 
+  const { kioskMode, setKioskMode, scanCount, incrementScans } = useKioskMode(
+    selectedEventId,
+    selectedControlType
+  );
+
   // Notify parent of event change
   useEffect(() => {
     if (selectedEvent?.id && onEventChange) {
