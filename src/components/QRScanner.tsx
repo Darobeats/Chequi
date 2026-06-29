@@ -246,15 +246,18 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     };
   }, [lastResult, kioskMode]);
 
+  // (declarado más abajo) needsPermission se evalúa en render; usamos refs simples
+  const needsPermission = hasCamera && (permissionStatus === 'unknown' || permissionStatus === 'prompt' || permissionStatus === 'denied');
+
   // En modo kiosko: arrancar la cámara automáticamente al activar / cambiar control
   useEffect(() => {
     if (!kioskMode) return;
     if (!selectedEventId || !selectedControlType) return;
-    if (needsPermissionRef.current) return;
-    if (!scanning) {
+    if (needsPermission) return;
+    if (!scanning && !lastResult) {
       startScanning();
     }
-  }, [kioskMode, selectedEventId, selectedControlType, scanning]);
+  }, [kioskMode, selectedEventId, selectedControlType, scanning, lastResult, needsPermission]);
 
 
   // Función para cerrar el resultado y permitir nuevo escaneo inmediatamente
@@ -272,7 +275,6 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
   }
 
   const selectedControlTypeName = controlTypes?.find(ct => ct.id === selectedControlType)?.name;
-  const needsPermission = hasCamera && (permissionStatus === 'unknown' || permissionStatus === 'prompt' || permissionStatus === 'denied');
 
   return (
     <div className="flex flex-col items-center justify-center touch-manipulation">
@@ -291,6 +293,19 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
         onControlTypeChange={setSelectedControlType}
         isLoading={loadingControlTypes}
       />
+
+      {selectedEventId && selectedControlType && (
+        <div className="my-3 flex justify-center w-full">
+          <KioskToggle
+            enabled={kioskMode}
+            onToggle={setKioskMode}
+            scanCount={scanCount}
+            disabled={needsPermission}
+          />
+        </div>
+      )}
+
+
 
 
       <div className="w-full min-h-[420px] flex flex-col items-center" style={{ overflowAnchor: 'none' }}>
