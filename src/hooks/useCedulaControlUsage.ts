@@ -61,7 +61,7 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
       return { can_access: false, current_uses: 0, max_uses: 0, error_message: 'Evento no seleccionado' };
     }
 
-    console.log('[useCedulaControlLimit] Checking:', { eventId, numeroCedula, controlTypeId });
+    if (import.meta.env.DEV) console.log('[useCedulaControlLimit] Checking limit');
 
     // CRITICAL: Always count current usage FIRST to enforce limits
     const { count: currentCount, error: countError } = await supabase
