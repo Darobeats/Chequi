@@ -57,7 +57,7 @@ export const useCedulaAI = () => {
         throw new Error(data?.error || 'No se pudieron extraer los datos');
       }
 
-      console.log('Datos extraídos por IA:', data.data);
+      if (import.meta.env.DEV) console.log('Datos extraídos por IA (success)');
 
       const cedulaData: CedulaData = {
         numeroCedula: data.data.numero_cedula,

@@ -61,7 +61,7 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
       return { can_access: false, current_uses: 0, max_uses: 0, error_message: 'Evento no seleccionado' };
     }
 
-    console.log('[useCedulaControlLimit] Checking:', { eventId, numeroCedula, controlTypeId });
+    if (import.meta.env.DEV) console.log('[useCedulaControlLimit] Checking limit');
 
     // CRITICAL: Always count current usage FIRST to enforce limits
     const { count: currentCount, error: countError } = await supabase
@@ -72,7 +72,7 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
       .eq('control_type_id', controlTypeId);
     
     const currentUses = currentCount || 0;
-    console.log('[useCedulaControlLimit] Current usage count:', currentUses);
+    if (import.meta.env.DEV) console.log('[useCedulaControlLimit] Current usage count:', currentUses);
 
     // Try to get configured limit from database function
     const { data, error } = await supabase
@@ -86,14 +86,14 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
     
     if (!error && data && data.length > 0 && data[0].max_uses > 0) {
       maxUses = data[0].max_uses;
-      console.log('[useCedulaControlLimit] Got configured limit:', maxUses);
+      if (import.meta.env.DEV) console.log('[useCedulaControlLimit] Got configured limit:', maxUses);
     } else {
-      console.log('[useCedulaControlLimit] No configured limit, using DEFAULT of 1');
+      if (import.meta.env.DEV) console.log('[useCedulaControlLimit] No configured limit, using DEFAULT of 1');
     }
 
     // STRICT ENFORCEMENT: Block if already used
     if (currentUses >= maxUses) {
-      console.log('[useCedulaControlLimit] BLOCKED - Limit exceeded:', currentUses, '>=', maxUses);
+      if (import.meta.env.DEV) console.log('[useCedulaControlLimit] BLOCKED - Limit exceeded:', currentUses, '>=', maxUses);
       return {
         can_access: false,
         current_uses: currentUses,
@@ -102,7 +102,7 @@ export function useCheckCedulaControlLimit(eventId: string | null) {
       };
     }
 
-    console.log('[useCedulaControlLimit] ALLOWED:', currentUses, '/', maxUses);
+    if (import.meta.env.DEV) console.log('[useCedulaControlLimit] ALLOWED:', currentUses, '/', maxUses);
     return {
       can_access: true,
       current_uses: currentUses,
@@ -118,7 +118,7 @@ export function useCreateCedulaControlUsage() {
   
   return useMutation({
     mutationFn: async (usage: InsertCedulaControlUsage) => {
-      console.log('[useCreateCedulaControlUsage] Creating:', usage);
+      if (import.meta.env.DEV) console.log('[useCreateCedulaControlUsage] Creating usage record');
       
       const { data, error } = await supabase
         .from('cedula_control_usage')
@@ -131,7 +131,7 @@ export function useCreateCedulaControlUsage() {
         throw error;
       }
       
-      console.log('[useCreateCedulaControlUsage] Created:', data);
+      if (import.meta.env.DEV) console.log('[useCreateCedulaControlUsage] Created OK');
       return data;
     },
     onSuccess: (_, variables) => {
