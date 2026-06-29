@@ -191,9 +191,10 @@ export const SupabaseAuthProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!user) return { error: new Error('No user logged in') };
 
     try {
+      const { role: _ignoredRole, ...safeUpdates } = updates as any;
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(safeUpdates)
         .eq('id', user.id);
 
       if (!error && profile) {
