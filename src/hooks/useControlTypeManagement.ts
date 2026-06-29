@@ -36,9 +36,10 @@ export const useUpdateControlType = () => {
   
   return useMutation({
     mutationFn: async (controlType: Partial<ControlType> & { id: string }) => {
+      const { required_control: _rc, ...safeUpdate } = controlType as any;
       const { error } = await supabase
         .from('control_types')
-        .update(controlType)
+        .update(safeUpdate)
         .eq('id', controlType.id);
       
       if (error) throw error;
