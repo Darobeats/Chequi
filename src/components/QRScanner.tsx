@@ -166,7 +166,9 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
           message: 'Escaneo guardado localmente (sin conexión)',
           controlType: selectedControl?.name
         });
-        
+        scanFeedback.offlineSuccess();
+        incrementScans();
+
         processingRef.current = false;
         return;
       }
@@ -187,6 +189,8 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
           maxUses: result.usage?.maxUses || 0,
           controlType: selectedControl?.name,
         });
+        scanFeedback.success();
+        incrementScans();
 
         toast.success('Control registrado exitosamente', {
           description: `${selectedControl?.description || selectedControl?.name} - ${result.attendee?.name || ''}`,
@@ -201,6 +205,11 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
           message: result.message,
           lastUsage: result.lastUsage || null,
         });
+        if (result.lastUsage || /usado|alcanzado|l[íi]mite/i.test(result.message || '')) {
+          scanFeedback.duplicate();
+        } else {
+          scanFeedback.denied();
+        }
 
         toast.error('QR no válido para este control', {
           description: result.message || 'El QR ya fue utilizado o no tiene acceso',
@@ -209,6 +218,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     } catch (error: any) {
       console.error('❌ Error procesando QR:', error);
       setLastResult({ success: false, message: error?.message || 'Error desconocido' });
+      scanFeedback.denied();
       toast.error('Error al procesar el código QR', {
         description: error?.message,
       });
