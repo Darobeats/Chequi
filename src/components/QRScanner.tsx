@@ -227,22 +227,35 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     }
   };
 
-  // Reset de resultado después de mostrarlo
+  // Reset de resultado después de mostrarlo (más rápido en kiosko)
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
+
     if (lastResult) {
-      const duration = lastResult.success ? 3500 : 4000; // Reducido para escaneos consecutivos más rápidos
+      const duration = kioskMode
+        ? (lastResult.success ? 1800 : 2400)
+        : (lastResult.success ? 3500 : 4000);
       timer = setTimeout(() => {
         setLastResult(null);
-        setLastScannedCode(''); // permitir re-escaneo del mismo código
+        setLastScannedCode('');
       }, duration);
     }
-    
+
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [lastResult]);
+  }, [lastResult, kioskMode]);
+
+  // En modo kiosko: arrancar la cámara automáticamente al activar / cambiar control
+  useEffect(() => {
+    if (!kioskMode) return;
+    if (!selectedEventId || !selectedControlType) return;
+    if (needsPermissionRef.current) return;
+    if (!scanning) {
+      startScanning();
+    }
+  }, [kioskMode, selectedEventId, selectedControlType, scanning]);
+
 
   // Función para cerrar el resultado y permitir nuevo escaneo inmediatamente
   const handleCloseResult = () => {
