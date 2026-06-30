@@ -153,7 +153,7 @@ const BulkQRGenerator: React.FC = () => {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!working) { setOpen(o); if (!o) reset(); } }}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2 border-dorado text-dorado hover:bg-dorado hover:text-empresarial">
           <QrCode className="h-4 w-4" />
           Generar QRs masivos
         </Button>

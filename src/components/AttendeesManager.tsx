@@ -149,7 +149,7 @@ const AttendeesManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-center gap-4">
         <div className="flex items-center gap-2">
           {useWhitelistData ? (
             <IdCard className="h-6 w-6 text-dorado" />
@@ -165,7 +165,7 @@ const AttendeesManager: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full xl:w-auto justify-start xl:justify-end flex-wrap gap-2">
           {!useWhitelistData && (
             <>
               <BulkQRGenerator />
