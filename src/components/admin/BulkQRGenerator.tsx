@@ -28,7 +28,7 @@ function randomCode(len: number): string {
 
 const BulkQRGenerator: React.FC = () => {
   const { selectedEvent } = useEventContext();
-  const { data: categories = [] } = useTicketCategories();
+  const { data: categories = [], isLoading: categoriesLoading } = useTicketCategories();
   const queryClient = useQueryClient();
 
   const [open, setOpen] = useState(false);
@@ -40,7 +40,8 @@ const BulkQRGenerator: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState<string>('');
 
-  const eventCategories = categories.filter((c: any) => c.event_id === selectedEvent?.id);
+  const eventCategories = categories;
+  const canGenerate = !!selectedEvent?.id && eventCategories.length > 0 && !!categoryId;
 
   const reset = () => {
     setProgress(0);
@@ -181,14 +182,20 @@ const BulkQRGenerator: React.FC = () => {
 
           <div className="space-y-2">
             <Label>Categoría destino</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} disabled={working}>
-              <SelectTrigger><SelectValue placeholder="Selecciona categoría" /></SelectTrigger>
+            <Select value={categoryId} onValueChange={setCategoryId} disabled={working || categoriesLoading || !selectedEvent?.id || eventCategories.length === 0}>
+              <SelectTrigger><SelectValue placeholder={categoriesLoading ? 'Cargando categorías...' : 'Selecciona categoría'} /></SelectTrigger>
               <SelectContent>
                 {eventCategories.map((c: any) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {!selectedEvent?.id && (
+              <p className="text-xs text-muted-foreground">Selecciona un evento para generar QRs.</p>
+            )}
+            {selectedEvent?.id && !categoriesLoading && eventCategories.length === 0 && (
+              <p className="text-xs text-muted-foreground">Este evento aún no tiene categorías de ticket configuradas.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -221,7 +228,7 @@ const BulkQRGenerator: React.FC = () => {
 
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={working}>Cancelar</Button>
-          <Button onClick={handleGenerate} disabled={working || !categoryId} className="gap-2">
+          <Button onClick={handleGenerate} disabled={working || !canGenerate} className="gap-2">
             {working ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             {working ? 'Procesando...' : 'Generar y descargar'}
           </Button>

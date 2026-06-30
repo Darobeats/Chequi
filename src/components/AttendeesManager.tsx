@@ -18,6 +18,7 @@ import AttendeeForm from './AttendeeForm';
 import BulkImportDialog from './BulkImportDialog';
 import ExportButton from './ExportButton';
 import QRCodeDisplay from './QRCodeDisplay';
+import BulkQRGenerator from '@/components/admin/BulkQRGenerator';
 
 const AttendeesManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -167,6 +168,8 @@ const AttendeesManager: React.FC = () => {
         <div className="flex flex-wrap gap-2">
           {!useWhitelistData && (
             <>
+              <BulkQRGenerator />
+
               <Button
                 onClick={() => setShowBulkImport(true)}
                 variant="outline"
