@@ -17,6 +17,7 @@ import SponsorLogosBar from '@/components/SponsorLogosBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import BulkQRGenerator from '@/components/admin/BulkQRGenerator';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
 import { useCedulaStats } from '@/hooks/useCedulaRegistros';
 import { useCedulaControlStats, useCedulaControlUsage } from '@/hooks/useCedulaControlUsage';
