@@ -124,20 +124,23 @@ const Admin = () => {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">{t('admin.controlPanel')}</h1>
           {isAdmin && (
-            <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <ClipboardCheck className="h-4 w-4" />
-                  {t('admin.preEventCheck')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{t('admin.systemVerification')}</DialogTitle>
-                </DialogHeader>
-                <ScannerSetup onSetupComplete={() => setShowSetupDialog(false)} />
-              </DialogContent>
-            </Dialog>
+            <div className="flex items-center gap-2 flex-wrap">
+              <BulkQRGenerator />
+              <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <ClipboardCheck className="h-4 w-4" />
+                    {t('admin.preEventCheck')}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>{t('admin.systemVerification')}</DialogTitle>
+                  </DialogHeader>
+                  <ScannerSetup onSetupComplete={() => setShowSetupDialog(false)} />
+                </DialogContent>
+              </Dialog>
+            </div>
           )}
         </div>
         
