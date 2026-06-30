@@ -152,13 +152,13 @@ const AttendeeManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col xl:flex-row xl:justify-between xl:items-start gap-4">
         <div>
           <h2 className="text-3xl font-bold text-primary">Gestión de Asistentes</h2>
           <p className="text-muted-foreground mt-2">
             Administra todos los aspectos de los asistentes del evento
           </p>
-          <div className="flex gap-4 mt-4">
+          <div className="flex flex-wrap gap-4 mt-4">
             <div className="bg-card p-4 rounded-lg border">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
@@ -185,8 +185,9 @@ const AttendeeManagement: React.FC = () => {
         </div>
         
         {/* Action Buttons */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex w-full xl:w-auto justify-start xl:justify-end gap-2 flex-wrap">
           <BulkQRGenerator />
+
           <Button
             onClick={() => setShowBulkImport(true)}
             variant="outline"
