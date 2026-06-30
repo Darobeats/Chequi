@@ -17,6 +17,7 @@ import SponsorLogosBar from '@/components/SponsorLogosBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import BulkQRGenerator from '@/components/admin/BulkQRGenerator';
 import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
 import { useCedulaStats } from '@/hooks/useCedulaRegistros';
 import { useCedulaControlStats, useCedulaControlUsage } from '@/hooks/useCedulaControlUsage';
@@ -234,7 +235,10 @@ const Admin = () => {
 
           <TabsContent value="attendees" className="space-y-6">
             <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
-              <h2 className="text-xl font-semibold text-dorado mb-4">{t('admin.attendeeList')}</h2>
+              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                <h2 className="text-xl font-semibold text-dorado">{t('admin.attendeeList')}</h2>
+                {isAdmin && <BulkQRGenerator />}
+              </div>
               <AttendeeList />
             </div>
           </TabsContent>
