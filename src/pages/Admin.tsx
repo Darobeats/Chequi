@@ -237,7 +237,6 @@ const Admin = () => {
             <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="text-xl font-semibold text-dorado">{t('admin.attendeeList')}</h2>
-                {isAdmin && <BulkQRGenerator />}
               </div>
               <AttendeeList />
             </div>
