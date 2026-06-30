@@ -39,8 +39,9 @@ export const useAttendees = () => {
 
   // Set up real-time subscription
   useEffect(() => {
+    const channelName = `attendees-realtime-${(globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2))}`;
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -56,7 +57,7 @@ export const useAttendees = () => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      try { supabase.removeChannel(channel); } catch { /* noop */ }
     };
   }, [queryClient]);
 

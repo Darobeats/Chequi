@@ -19,15 +19,16 @@ export function useCedulaRealtime(eventId: string | null) {
       queryClient.invalidateQueries({ queryKey: ['cedula_access_logs', eventId] });
     };
 
+    const channelName = `cedula-realtime-${eventId}-${(globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2))}`;
     const channel = supabase
-      .channel(`cedula-realtime-${eventId}`)
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_registros', filter: `event_id=eq.${eventId}` }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_control_usage', filter: `event_id=eq.${eventId}` }, invalidate)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cedula_access_logs', filter: `event_id=eq.${eventId}` }, invalidate)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      try { supabase.removeChannel(channel); } catch { /* noop */ }
     };
   }, [eventId, queryClient]);
 }
