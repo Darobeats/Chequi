@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdvancedAnalytics } from '@/hooks/useAdvancedAnalytics';
-import { useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
-import { Filter, BarChart3, TrendingUp, Target, Activity, Eye } from 'lucide-react';
+import { useControlTypes, useTicketCategories, useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
+import { Filter, BarChart3, TrendingUp, Target, Activity, Eye, Loader2 } from 'lucide-react';
 
 // Import the new analytics components
 import EnhancedKPIs from './analytics/EnhancedKPIs';
@@ -17,6 +17,10 @@ import DetailedDataTable from './analytics/DetailedDataTable';
 const ControlAnalytics = () => {
   const { data: controlTypes = [] } = useControlTypes();
   const { data: ticketCategories = [] } = useTicketCategories();
+  const { isLoading: loadingAttendees, isError: errorAttendees } = useAttendees();
+  const { isLoading: loadingUsage, isError: errorUsage } = useControlUsage();
+  const isLoadingData = loadingAttendees || loadingUsage;
+  const hasDataError = errorAttendees || errorUsage;
 
   const [selectedControlType, setSelectedControlType] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -37,9 +41,21 @@ const ControlAnalytics = () => {
     timeRange
   });
 
-
   return (
     <div className="space-y-6">
+      {/* Data loading / error banners so the client always sees status */}
+      {isLoadingData && (
+        <div className="flex items-center gap-2 rounded-md border border-border bg-card/50 px-3 py-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Cargando datos del evento… (esto puede tardar unos segundos en eventos grandes)
+        </div>
+      )}
+      {hasDataError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          Ocurrió un error cargando los datos. Verifica tu conexión o recarga la página.
+        </div>
+      )}
+
       {/* Enhanced Filters */}
       <Card className="bg-card/50 border-border">
         <CardHeader>
