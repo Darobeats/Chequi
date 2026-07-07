@@ -968,6 +968,30 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      get_event_analytics_summary: {
+        Args: {
+          p_category?: string
+          p_control_type?: string
+          p_event_id: string
+          p_time_range?: string
+        }
+        Returns: Json
+      }
+      get_event_recent_activity: {
+        Args: { p_event_id: string; p_limit?: number }
+        Returns: {
+          category_color: string
+          category_name: string
+          control_color: string
+          control_name: string
+          device: string
+          id: string
+          notes: string
+          source: string
+          subject_name: string
+          used_at: string
+        }[]
+      }
       get_user_events: {
         Args: { check_user_id?: string }
         Returns: {
