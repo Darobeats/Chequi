@@ -255,13 +255,14 @@ export const useAdvancedAnalytics = (filters: {
     });
 
     // Control-type stacked by hour: pivot { hour, [controlName]: count }
-    const controlTypeByHourMap = new Map<string, Record<string, any>>();
+    const controlTypeByHourMap = new Map<string, { hour: string; [key: string]: any }>();
     (summary?.control_type_by_hour ?? []).forEach(row => {
       const existing = controlTypeByHourMap.get(row.hour) || { hour: row.hour };
       existing[row.control_name] = row.count;
       controlTypeByHourMap.set(row.hour, existing);
     });
-    const controlTypeByHour = Array.from(controlTypeByHourMap.values()).sort((a, b) => a.hour.localeCompare(b.hour));
+    const controlTypeByHour: Array<{ hour: string; [key: string]: any }> =
+      Array.from(controlTypeByHourMap.values()).sort((a, b) => a.hour.localeCompare(b.hour));
 
     // Category heatmap
     const maxHourCount = Math.max(...hd.map(h => h.count), 1);
