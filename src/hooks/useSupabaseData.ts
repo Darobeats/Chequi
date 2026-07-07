@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Attendee, ControlType, TicketCategory, ControlUsage, CategoryControl } from '@/types/database';
 import { useEventContext } from '@/context/EventContext';
+import { fetchAllPaginated } from '@/lib/fetchAllPaginated';
 
 export const useAttendees = () => {
   const queryClient = useQueryClient();
@@ -13,28 +14,34 @@ export const useAttendees = () => {
     queryKey: ['attendees', selectedEvent?.id],
     queryFn: async () => {
       if (!selectedEvent?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('attendees')
-        .select(`
-          id,
-          name,
-          cedula,
-          ticket_id,
-          category_id,
-          event_id,
-          qr_code,
-          status,
-          created_at,
-          updated_at,
-          ticket_category:ticket_categories(*)
-        `)
-        .eq('event_id', selectedEvent.id);
-      
-      if (error) throw error;
-      return data as (Attendee & { ticket_category: TicketCategory })[];
+
+      // Paginate past Supabase's 1000-row limit so 3k-10k events show all attendees.
+      const rows = await fetchAllPaginated<Attendee & { ticket_category: TicketCategory }>(
+        (from, to) =>
+          supabase
+            .from('attendees')
+            .select(`
+              id,
+              name,
+              cedula,
+              ticket_id,
+              category_id,
+              event_id,
+              qr_code,
+              status,
+              created_at,
+              updated_at,
+              ticket_category:ticket_categories(*)
+            `)
+            .eq('event_id', selectedEvent.id)
+            .order('created_at', { ascending: true })
+            .range(from, to) as unknown as PromiseLike<{ data: (Attendee & { ticket_category: TicketCategory })[] | null; error: unknown }>,
+      );
+
+      return rows;
     },
-    enabled: !!selectedEvent?.id
+    enabled: !!selectedEvent?.id,
+    staleTime: 30_000,
   });
 
   // Set up real-time subscription
