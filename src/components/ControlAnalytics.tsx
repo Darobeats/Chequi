@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAdvancedAnalytics } from '@/hooks/useAdvancedAnalytics';
-import { useControlTypes, useTicketCategories } from '@/hooks/useSupabaseData';
-import { Filter, BarChart3, TrendingUp, Target, Activity, Eye } from 'lucide-react';
+import { useControlTypes, useTicketCategories, useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
+import { Filter, BarChart3, TrendingUp, Target, Activity, Eye, Loader2 } from 'lucide-react';
 
 // Import the new analytics components
 import EnhancedKPIs from './analytics/EnhancedKPIs';
@@ -17,6 +17,10 @@ import DetailedDataTable from './analytics/DetailedDataTable';
 const ControlAnalytics = () => {
   const { data: controlTypes = [] } = useControlTypes();
   const { data: ticketCategories = [] } = useTicketCategories();
+  const { isLoading: loadingAttendees, isError: errorAttendees } = useAttendees();
+  const { isLoading: loadingUsage, isError: errorUsage } = useControlUsage();
+  const isLoadingData = loadingAttendees || loadingUsage;
+  const hasDataError = errorAttendees || errorUsage;
 
   const [selectedControlType, setSelectedControlType] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
