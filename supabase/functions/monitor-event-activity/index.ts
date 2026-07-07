@@ -79,6 +79,26 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Verify the caller is assigned to this specific event (or is super admin)
+    const { data: canAccessEvent, error: eventAccessError } = await supabase
+      .rpc('user_can_access_event', {
+        check_event_id: activeEvent.id,
+        check_user_id: user.id,
+      });
+
+    if (eventAccessError || !canAccessEvent) {
+      console.log('❌ User not assigned to active event:', user.id, activeEvent.id);
+      return new Response(
+        JSON.stringify({
+          error: 'Access denied. You are not assigned to the active event.',
+          status: 'forbidden',
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+
+
     console.log('✅ Active event:', activeEvent.event_name);
 
     // Get recent scans (last 15 minutes)
