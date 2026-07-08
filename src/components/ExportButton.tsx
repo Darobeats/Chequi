@@ -21,13 +21,14 @@ const ExportButton: React.FC = () => {
       const token = sessionData.session?.access_token;
       if (!token) throw new Error('Sesión no válida');
 
-      const url = `${(supabase as any).supabaseUrl}/functions/v1/export-attendees-report`;
-      const res = await fetch(url, {
+      const SUPABASE_URL = 'https://kufuqtpqiaupaxchdnsy.supabase.co';
+      const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1ZnVxdHBxaWF1cGF4Y2hkbnN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY0MTEzNDMsImV4cCI6MjA2MTk4NzM0M30.y0I6UsR-wW73bNwBu4X91wwcLTC9V5gB2og1-m03RDY';
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/export-attendees-report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'apikey': (supabase as any).supabaseKey,
+          'apikey': ANON,
         },
         body: JSON.stringify({ event_id: selectedEvent.id }),
       });
