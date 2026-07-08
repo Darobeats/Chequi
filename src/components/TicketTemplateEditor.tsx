@@ -12,6 +12,7 @@ import { QrCode, Type, Tag, Hash, Palette } from 'lucide-react';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { VisualTicketEditor } from './VisualTicketEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import TemplateBindingsEditor from './TemplateBindingsEditor';
 
 interface TicketTemplateEditorProps {
   template?: TicketTemplate | null;
@@ -498,6 +499,12 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
       </Card>
         </>
       )}
+
+      {template && (
+        <TemplateBindingsEditor templateId={template.id} eventId={formData.event_config_id} />
+      )}
+
+
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>

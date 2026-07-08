@@ -13,6 +13,7 @@ import TrendAnalysis from './analytics/TrendAnalysis';
 import CoverageMetrics from './analytics/CoverageMetrics';
 import LiveActivityFeed from './analytics/LiveActivityFeed';
 import DetailedDataTable from './analytics/DetailedDataTable';
+import CategoryBreakdownChart from './analytics/CategoryBreakdownChart';
 
 const ControlAnalytics = () => {
   const { data: controlTypes = [] } = useControlTypes();
@@ -34,7 +35,8 @@ const ControlAnalytics = () => {
     hourlyDistribution,
     coverageAnalysis,
     recentActivity,
-    intradayInsights
+    intradayInsights,
+    categoryByHour,
   } = useAdvancedAnalytics({
     controlType: selectedControlType,
     category: selectedCategory,
@@ -157,6 +159,7 @@ const ControlAnalytics = () => {
             hourlyDistribution={hourlyDistribution}
             intradayInsights={intradayInsights}
           />
+          <CategoryBreakdownChart categoryByHour={categoryByHour} />
         </TabsContent>
 
           <TabsContent value="trends" className="space-y-6">
@@ -165,6 +168,7 @@ const ControlAnalytics = () => {
               hourlyDistribution={hourlyDistribution}
               intradayInsights={intradayInsights}
             />
+            <CategoryBreakdownChart categoryByHour={categoryByHour} />
           </TabsContent>
 
         <TabsContent value="coverage" className="space-y-6">

@@ -53,7 +53,8 @@ export const useAdvancedAnalytics = (filters: {
   const summaryQuery = useQuery({
     queryKey: ['analytics_summary', eventId, filters.timeRange, controlTypeParam, categoryParam],
     enabled: !!eventId,
-    staleTime: 15_000,
+    staleTime: 5_000,
+    refetchInterval: 30_000,
     queryFn: async (): Promise<SummaryPayload | null> => {
       if (!eventId) return null;
       const { data, error } = await supabase.rpc('get_event_analytics_summary', {
@@ -70,7 +71,8 @@ export const useAdvancedAnalytics = (filters: {
   const recentQuery = useQuery({
     queryKey: ['analytics_recent_activity', eventId],
     enabled: !!eventId,
-    staleTime: 10_000,
+    staleTime: 5_000,
+    refetchInterval: 20_000,
     queryFn: async (): Promise<RecentActivityRow[]> => {
       if (!eventId) return [];
       const { data, error } = await supabase.rpc('get_event_recent_activity', {
@@ -333,6 +335,7 @@ export const useAdvancedAnalytics = (filters: {
     coverageAnalysis,
     recentActivity,
     intradayInsights,
+    categoryByHour: summary?.category_by_hour ?? [],
     isLoading: summaryQuery.isLoading || recentQuery.isLoading,
     isError: summaryQuery.isError || recentQuery.isError,
   };
