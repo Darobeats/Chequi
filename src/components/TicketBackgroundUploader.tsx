@@ -196,7 +196,7 @@ export const TicketBackgroundUploader = ({
               Arrastra una imagen o haz clic para seleccionar
             </p>
             <p className="text-xs text-muted-foreground">
-              PNG, JPG, WEBP (máx. 2MB)
+              PDF, PNG, JPG, WEBP, SVG, GIF, BMP, TIFF, AVIF, HEIC (máx. 20MB)
             </p>
             <p className="text-xs text-muted-foreground">
               Recomendado: mínimo 800x800px para calidad de impresión
