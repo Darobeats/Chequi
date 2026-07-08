@@ -109,6 +109,10 @@ const Scanner = () => {
     }
   }, [controlTypes, selectedControlType]);
 
+  // Kiosk auto-selection driver
+  useKioskAutoControl(activeKioskProfile, setSelectedControlType, !!activeKioskProfile);
+
+
   // Debug logging for whitelist config
   useEffect(() => {
     console.log('[Scanner] State:', {
