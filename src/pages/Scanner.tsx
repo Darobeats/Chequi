@@ -68,6 +68,8 @@ const Scanner = () => {
   
   const createCedulaMutation = useCreateCedulaRegistro();
   const createControlUsage = useCreateCedulaControlUsage();
+  const [activeKioskProfile, setActiveKioskProfile] = useState<KioskProfile | null>(null);
+  const [kioskScanCount, setKioskScanCount] = useState(0);
   const { data: controlTypes = [], isLoading: controlTypesLoading } = useControlTypes();
   
   // Use both hooks - by ID and active event as fallback
