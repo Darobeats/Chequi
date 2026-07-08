@@ -65,6 +65,13 @@ const EventConfig = () => {
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const { data: ticketTemplates = [] } = useTicketTemplates();
   const deleteTemplateMutation = useDeleteTicketTemplate();
+  const createTemplateMutation = useCreateTicketTemplate();
+
+  const handleDuplicateTemplate = async (template: TicketTemplate) => {
+    const { id, created_at, updated_at, ...rest } = template as any;
+    await createTemplateMutation.mutateAsync({ ...rest, name: `${template.name} (copia)` });
+  };
+
   
   const { data: attendees = [] } = useQuery({
     queryKey: ['attendees'],
