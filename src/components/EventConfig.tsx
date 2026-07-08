@@ -26,6 +26,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Edit, Trash2, Download } from 'lucide-react';
 import { ExportTicketsPNG } from '@/components/ExportTicketsPNG';
 import ExportTicketsPrint from '@/components/ExportTicketsPrint';
+import ExportTicketsByCategory from '@/components/ExportTicketsByCategory';
 import { CedulasAutorizadasManager } from '@/components/cedula/CedulasAutorizadasManager';
 import { EventTeamManager } from '@/components/EventTeamManager';
 import { supabase } from '@/integrations/supabase/client';
@@ -448,6 +449,19 @@ const EventConfig = () => {
               </Card>
             ) : (
               <div className="grid gap-4">
+                {selectedEvent?.id && ticketTemplates.some(t => t.event_config_id === selectedEvent.id && t.use_visual_editor) && (
+                  <Card className="bg-gray-900/50 border border-dorado/40">
+                    <CardHeader>
+                      <CardTitle className="text-dorado text-base">Exportación automática por categoría</CardTitle>
+                      <CardDescription>
+                        Genera un ZIP con subcarpetas por categoría, usando la plantilla asignada a cada una (invitados, socios, etc.).
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ExportTicketsByCategory eventId={selectedEvent.id} attendees={attendees || []} />
+                    </CardContent>
+                  </Card>
+                )}
                 {ticketTemplates.length === 0 ? (
                   <Card className="bg-gray-900/50 border border-gray-800">
                     <CardContent className="flex flex-col items-center justify-center py-12">
