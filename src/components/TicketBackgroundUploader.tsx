@@ -20,26 +20,56 @@ export const TicketBackgroundUploader = ({
   const [preview, setPreview] = useState<string | null>(currentImageUrl);
   const { toast } = useToast();
 
+  const renderPdfFirstPageToBlob = async (file: File): Promise<Blob> => {
+    const pdfjs: any = await import('pdfjs-dist');
+    // @ts-ignore - vite worker url import
+    const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: buf }).promise;
+    const page = await pdf.getPage(1);
+    // High DPI for print-quality background
+    const viewport = page.getViewport({ scale: 3 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d')!;
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    return await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No se pudo convertir el PDF'))), 'image/png', 1)
+    );
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validar tipo de archivo
-    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
+    const name = file.name.toLowerCase();
+    const isPdf = file.type === 'application/pdf' || name.endsWith('.pdf');
+    const validImageTypes = [
+      'image/png', 'image/jpeg', 'image/jpg', 'image/webp',
+      'image/svg+xml', 'image/gif', 'image/bmp', 'image/tiff',
+      'image/avif', 'image/heic', 'image/heif',
+    ];
+    const validImageExts = ['.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif', '.bmp', '.tif', '.tiff', '.avif', '.heic', '.heif'];
+    const isValidImage = validImageTypes.includes(file.type) || validImageExts.some(ext => name.endsWith(ext));
+
+    if (!isPdf && !isValidImage) {
       toast({
         title: "Formato no válido",
-        description: "Por favor sube una imagen PNG, JPG o WEBP",
+        description: "Usa PDF, PNG, JPG, WEBP, SVG, GIF, BMP, TIFF, AVIF o HEIC",
         variant: "destructive",
       });
       return;
     }
 
-    // Validar tamaño (2MB)
-    if (file.size > 2 * 1024 * 1024) {
+    // Límite: 20MB (PDFs y fuentes de alta resolución)
+    const maxMB = 20;
+    if (file.size > maxMB * 1024 * 1024) {
       toast({
         title: "Archivo muy grande",
-        description: "La imagen debe ser menor a 2MB",
+        description: `El archivo debe ser menor a ${maxMB}MB`,
         variant: "destructive",
       });
       return;
@@ -48,8 +78,15 @@ export const TicketBackgroundUploader = ({
     setUploading(true);
 
     try {
-      // Crear un nombre único para el archivo
-      const fileExt = file.name.split('.').pop();
+      let uploadBlob: Blob = file;
+      let fileExt = (file.name.split('.').pop() || 'png').toLowerCase();
+
+      if (isPdf) {
+        toast({ title: "Procesando PDF", description: "Renderizando primera página en alta resolución…" });
+        uploadBlob = await renderPdfFirstPageToBlob(file);
+        fileExt = 'png';
+      }
+
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = fileName;
 
