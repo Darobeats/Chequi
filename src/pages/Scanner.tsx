@@ -30,6 +30,9 @@ import { useOfflineAuthorization } from "@/hooks/useOfflineAuthorization";
 import { useOfflineControlLimit } from "@/hooks/useOfflineControlLimit";
 import { scanFeedback } from "@/lib/scanFeedback";
 import { supabase } from "@/integrations/supabase/client";
+import KioskProfileSelector from "@/components/scanner/KioskProfileSelector";
+import { useKioskAutoControl } from "@/hooks/useKioskAutoControl";
+import type { KioskProfile } from "@/hooks/useKioskProfiles";
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
