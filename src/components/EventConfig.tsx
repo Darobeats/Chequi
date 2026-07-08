@@ -248,6 +248,10 @@ const EventConfig = () => {
             <UsersRound className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
             <span className="text-[10px] lg:text-xs truncate max-w-full">{t('eventConfig.tabs.team')}</span>
           </TabsTrigger>
+          <TabsTrigger value="kiosk" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <Power className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">Kiosko</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="configuration" className="space-y-6">
