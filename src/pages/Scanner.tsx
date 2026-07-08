@@ -643,12 +643,22 @@ const Scanner = () => {
                   <p className="text-sm md:text-base text-gray-400">{t('scanner.cedulaScanOrManual')}</p>
                 </div>
 
+                <div className="flex justify-center">
+                  <KioskProfileSelector
+                    eventId={selectedEvent?.id}
+                    activeProfileId={activeKioskProfile?.id ?? null}
+                    onActivate={(p) => { setActiveKioskProfile(p); setKioskScanCount(0); }}
+                    scanCount={kioskScanCount}
+                  />
+                </div>
+
                 <ControlTypeSelector
                   controlTypes={controlTypes}
                   selectedControlType={selectedControlType}
                   onControlTypeChange={setSelectedControlType}
                   isLoading={controlTypesLoading}
                 />
+
 
                 <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
                   <DialogTrigger asChild>
