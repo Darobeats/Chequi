@@ -91,11 +91,12 @@ export const TicketBackgroundUploader = ({
       const filePath = fileName;
 
       // Subir a Supabase Storage
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('ticket-backgrounds')
-        .upload(filePath, file, {
+        .upload(filePath, uploadBlob, {
           cacheControl: '3600',
           upsert: false,
+          contentType: isPdf ? 'image/png' : (file.type || undefined),
         });
 
       if (uploadError) throw uploadError;
