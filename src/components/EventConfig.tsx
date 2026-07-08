@@ -567,6 +567,19 @@ const EventConfig = () => {
             </Card>
           )}
         </TabsContent>
+
+        <TabsContent value="kiosk" className="space-y-6">
+          {selectedEvent?.id ? (
+            <KioskProfilesManager eventId={selectedEvent.id} />
+          ) : (
+            <Card className="bg-gray-900/50 border border-gray-800">
+              <CardContent className="p-8 text-center">
+                <Power className="h-12 w-12 mx-auto text-hueso/30 mb-4" />
+                <p className="text-hueso/60">Selecciona un evento para configurar el modo kiosko.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
 
       {editingConfig && (
