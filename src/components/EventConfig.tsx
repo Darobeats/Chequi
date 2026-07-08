@@ -20,7 +20,8 @@ import TicketManagement from '@/components/TicketManagement';
 import AttendeeManagement from '@/components/AttendeeManagement';
 import BulkTicketAssignment from '@/components/BulkTicketAssignment';
 import TicketTemplateEditor from '@/components/TicketTemplateEditor';
-import { useTicketTemplates, useDeleteTicketTemplate, TicketTemplate } from '@/hooks/useTicketTemplates';
+import { useTicketTemplates, useDeleteTicketTemplate, useCreateTicketTemplate, TicketTemplate } from '@/hooks/useTicketTemplates';
+import KioskProfilesManager from '@/components/kiosk/KioskProfilesManager';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Edit, Trash2, Download } from 'lucide-react';
 import { ExportTicketsPNG } from '@/components/ExportTicketsPNG';
@@ -64,6 +65,13 @@ const EventConfig = () => {
   const [showTemplateEditor, setShowTemplateEditor] = useState(false);
   const { data: ticketTemplates = [] } = useTicketTemplates();
   const deleteTemplateMutation = useDeleteTicketTemplate();
+  const createTemplateMutation = useCreateTicketTemplate();
+
+  const handleDuplicateTemplate = async (template: TicketTemplate) => {
+    const { id, created_at, updated_at, ...rest } = template as any;
+    await createTemplateMutation.mutateAsync({ ...rest, name: `${template.name} (copia)` });
+  };
+
   
   const { data: attendees = [] } = useQuery({
     queryKey: ['attendees'],
@@ -207,7 +215,7 @@ const EventConfig = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 bg-gray-900/50 border border-gray-800 gap-1 h-auto">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 bg-gray-900/50 border border-gray-800 gap-1 h-auto">
           <TabsTrigger value="configuration" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
             <Settings className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
             <span className="text-[10px] lg:text-xs truncate max-w-full">{t('eventConfig.tabs.config')}</span>
@@ -239,6 +247,10 @@ const EventConfig = () => {
           <TabsTrigger value="team" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
             <UsersRound className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
             <span className="text-[10px] lg:text-xs truncate max-w-full">{t('eventConfig.tabs.team')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="kiosk" className="data-[state=active]:bg-dorado data-[state=active]:text-empresarial flex flex-col lg:flex-row items-center justify-center gap-1 min-h-[48px] px-1 lg:px-2">
+            <Power className="h-5 w-5 lg:h-4 lg:w-4 flex-shrink-0" />
+            <span className="text-[10px] lg:text-xs truncate max-w-full">Kiosko</span>
           </TabsTrigger>
         </TabsList>
 
@@ -458,6 +470,9 @@ const EventConfig = () => {
                             <Button size="sm" variant="outline" onClick={() => { setEditingTemplate(template); setShowTemplateEditor(true); }} className="border-dorado text-dorado hover:bg-dorado hover:text-empresarial">
                               <Edit className="h-4 w-4 mr-1" />{t('eventConfig.edit')}
                             </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleDuplicateTemplate(template)} title="Duplicar plantilla" className="border-gray-600 text-hueso hover:bg-gray-800">
+                              📄 Duplicar
+                            </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button size="sm" variant="destructive"><Trash2 className="h-4 w-4 mr-1" /></Button>
@@ -548,6 +563,19 @@ const EventConfig = () => {
                 <UsersRound className="h-12 w-12 mx-auto text-hueso/30 mb-4" />
                 <p className="text-hueso/60">{t('eventConfig.team.noEvent')}</p>
                 <p className="text-hueso/40 text-sm">{t('eventConfig.team.noEventDesc')}</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="kiosk" className="space-y-6">
+          {selectedEvent?.id ? (
+            <KioskProfilesManager eventId={selectedEvent.id} />
+          ) : (
+            <Card className="bg-gray-900/50 border border-gray-800">
+              <CardContent className="p-8 text-center">
+                <Power className="h-12 w-12 mx-auto text-hueso/30 mb-4" />
+                <p className="text-hueso/60">Selecciona un evento para configurar el modo kiosko.</p>
               </CardContent>
             </Card>
           )}

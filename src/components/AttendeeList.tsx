@@ -1,54 +1,36 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useAttendees, useControlUsage } from '@/hooks/useSupabaseData';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useAttendeesPage, type AttendeePageRow } from '@/hooks/useAttendeesPage';
+import { useAttendeeCounts } from '@/hooks/useAttendeeCounts';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
+import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+
+const PAGE_SIZE = 50;
 
 const AttendeeList: React.FC = () => {
+  const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: attendees = [], isLoading: loadingAttendees } = useAttendees();
-  const { data: controlUsage = [], isLoading: loadingUsage } = useControlUsage();
+  const [page, setPage] = useState(0);
+  const [qrModal, setQrModal] = useState<AttendeePageRow | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => { setSearchTerm(searchInput); setPage(0); }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const { data: pageData, isLoading } = useAttendeesPage({ page, pageSize: PAGE_SIZE, search: searchTerm });
+  const { data: counts } = useAttendeeCounts();
   const { data: events = [] } = useAllEventConfigs();
 
-  // Process attendees to add usage information
-  const processedAttendees = useMemo(() => {
-    return attendees.map(attendee => {
-      const attendeeUsage = controlUsage.filter(usage => usage.attendee_id === attendee.id);
-      const lastUsage = attendeeUsage.length > 0 ? attendeeUsage[0] : null;
-      
-      return {
-        ...attendee,
-        usage: attendeeUsage,
-        lastUsage,
-        formattedLastUsage: lastUsage 
-          ? new Date(lastUsage.used_at).toLocaleString('es-ES', {
-              hour: '2-digit',
-              minute: '2-digit',
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric'
-            })
-          : 'Sin registros'
-      };
-    });
-  }, [attendees, controlUsage]);
-
-  // Filter attendees based on search term
-  const filteredAttendees = useMemo(() => {
-    return processedAttendees.filter(attendee => {
-      const searchTermLower = searchTerm.toLowerCase();
-      return (
-        attendee.name.toLowerCase().includes(searchTermLower) ||
-        attendee.cedula?.toLowerCase().includes(searchTermLower) ||
-        attendee.ticket_id.toLowerCase().includes(searchTermLower) ||
-        attendee.qr_code?.toLowerCase().includes(searchTermLower) ||
-        attendee.ticket_category?.name.toLowerCase().includes(searchTermLower)
-      );
-    });
-  }, [processedAttendees, searchTerm]);
+  const rows = pageData?.rows ?? [];
+  const total = pageData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const getCategoryColor = (categoryName: string) => {
     switch (categoryName) {
@@ -60,32 +42,22 @@ const AttendeeList: React.FC = () => {
     }
   };
 
-  if (loadingAttendees || loadingUsage) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <p className="text-hueso">Cargando datos...</p>
-      </div>
-    );
-  }
-
-  const totalAttendees = attendees.length;
-  const attendeesWithUsage = processedAttendees.filter(a => a.usage.length > 0).length;
-
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2">
         <div className="text-sm font-medium">
-          Total Registros: <span className="text-dorado">{attendeesWithUsage}/{totalAttendees}</span>
+          Total Registros: <span className="text-dorado">{(counts?.withUsage ?? 0).toLocaleString('es-ES')}/{(counts?.total ?? 0).toLocaleString('es-ES')}</span>
+          {searchTerm && <span className="text-gray-400 ml-2">· Filtrados: {total.toLocaleString('es-ES')}</span>}
         </div>
         <Input
           type="search"
-          placeholder="Buscar por nombre, cédula, QR o categoría..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar por nombre, cédula, QR..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           className="max-w-xs bg-empresarial border-gray-800 text-hueso"
         />
       </div>
-      
+
       <div className="border border-gray-800 rounded-lg overflow-hidden">
         <Table>
           <TableHeader className="bg-gray-900">
@@ -94,68 +66,76 @@ const AttendeeList: React.FC = () => {
               <TableHead className="text-hueso">Cédula</TableHead>
               <TableHead className="text-hueso">Categoría</TableHead>
               <TableHead className="text-hueso">Código QR</TableHead>
-              <TableHead className="text-hueso">Último Uso</TableHead>
-              <TableHead className="text-hueso">Total Usos</TableHead>
               <TableHead className="text-hueso">Evento</TableHead>
               <TableHead className="text-hueso">Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredAttendees.map((attendee) => (
+            {isLoading ? (
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-400">Cargando…</TableCell></TableRow>
+            ) : rows.map((attendee) => (
               <TableRow key={attendee.id} className="border-gray-800 hover:bg-gray-900 transition-colors">
                 <TableCell className="font-medium text-hueso">{attendee.name}</TableCell>
                 <TableCell className="text-gray-300">{attendee.cedula || 'N/A'}</TableCell>
                 <TableCell>
-                  <Badge 
-                    className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}
-                  >
+                  <Badge className={`${getCategoryColor(attendee.ticket_category?.name || '')} text-white capitalize`}>
                     {attendee.ticket_category?.name || 'N/A'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex flex-col items-center gap-1">
-                    <QRCodeDisplay 
-                      value={attendee.qr_code || ''} 
-                      size={48}
-                    />
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs text-gray-400 truncate max-w-[120px]">
+                      {attendee.qr_code ? `…${attendee.qr_code.slice(-8)}` : 'Sin QR'}
+                    </span>
                     {attendee.qr_code && (
-                      <span className="font-mono text-xs text-gray-400 break-all max-w-[100px]">
-                        {attendee.qr_code}
-                      </span>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setQrModal(attendee)} title="Ver QR">
+                        <Eye className="w-4 h-4" />
+                      </Button>
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-gray-300">
-                  {attendee.formattedLastUsage}
-                </TableCell>
-                <TableCell className="text-gray-300">
-                  {attendee.usage.length}
-                </TableCell>
                 <TableCell className="text-gray-300">{events.find(e => e.id === attendee.event_id)?.event_name || 'N/A'}</TableCell>
                 <TableCell>
-                  <Badge 
-                    className={`${
-                      attendee.status === 'valid' ? 'bg-green-800/30 text-green-400' : 
-                      attendee.status === 'used' ? 'bg-yellow-800/30 text-yellow-400' :
-                      'bg-red-800/30 text-red-400'
-                    }`}
-                  >
-                    {attendee.status === 'valid' ? 'Válido' : 
-                     attendee.status === 'used' ? 'Usado' : 'Bloqueado'}
+                  <Badge className={`${
+                    attendee.status === 'valid' ? 'bg-green-800/30 text-green-400' :
+                    attendee.status === 'used' ? 'bg-yellow-800/30 text-yellow-400' :
+                    'bg-red-800/30 text-red-400'
+                  }`}>
+                    {attendee.status === 'valid' ? 'Válido' : attendee.status === 'used' ? 'Usado' : 'Bloqueado'}
                   </Badge>
                 </TableCell>
               </TableRow>
             ))}
-            {filteredAttendees.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-400">
-                  No se encontraron asistentes que coincidan con la búsqueda
-                </TableCell>
-              </TableRow>
+            {!isLoading && rows.length === 0 && (
+              <TableRow><TableCell colSpan={6} className="text-center py-8 text-gray-400">No se encontraron asistentes</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-4 text-sm text-gray-400">
+          <span>Página {page + 1} de {totalPages}</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+              <ChevronLeft className="w-4 h-4 mr-1" />Anterior
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+              Siguiente<ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={!!qrModal} onOpenChange={(o) => !o && setQrModal(null)}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-hueso max-w-sm">
+          <DialogHeader><DialogTitle>{qrModal?.name}</DialogTitle></DialogHeader>
+          <div className="flex flex-col items-center gap-3 py-2">
+            {qrModal?.qr_code && <QRCodeDisplay value={qrModal.qr_code} size={240} />}
+            <code className="font-mono text-xs text-gray-400 break-all text-center">{qrModal?.qr_code}</code>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

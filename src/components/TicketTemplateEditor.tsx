@@ -41,7 +41,8 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
     custom_fields: [],
     background_image_url: null as string | null,
     background_opacity: 0.15,
-    background_mode: 'tile' as 'tile' | 'cover' | 'contain',
+    background_mode: 'tile' as 'tile' | 'cover' | 'contain' | 'full_ticket',
+    background_transform: {} as any,
     canvas_width: 800,
     canvas_height: 600,
     elements: [] as TicketElement[],
@@ -74,6 +75,7 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         background_image_url: template.background_image_url,
         background_opacity: template.background_opacity,
         background_mode: template.background_mode,
+        background_transform: (template as any).background_transform || {},
         canvas_width: template.canvas_width || 800,
         canvas_height: template.canvas_height || 600,
         elements: template.elements || [],
@@ -213,41 +215,65 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
             elements={formData.elements}
             backgroundImageUrl={formData.background_image_url}
             backgroundOpacity={formData.background_opacity}
+            backgroundTransform={formData.background_transform}
+            backgroundMode={formData.background_mode}
             onElementsChange={(elements) => setFormData({ ...formData, elements })}
-            onCanvasSizeChange={(width, height) => 
+            onCanvasSizeChange={(width, height) =>
               setFormData({ ...formData, canvas_width: width, canvas_height: height })
             }
+            onBackgroundTransformChange={(t) => setFormData({ ...formData, background_transform: t })}
           />
 
           <Card>
             <CardHeader>
               <CardTitle>Imagen de Fondo</CardTitle>
-              <CardDescription>Opcional: Suba una imagen de fondo para los tickets</CardDescription>
+              <CardDescription>Sube tu arte y edítalo directamente en el canvas (mover, escalar, rotar) sin perder calidad.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <TicketBackgroundUploader
                 currentImageUrl={formData.background_image_url}
-                onImageUpload={(url) => setFormData({ ...formData, background_image_url: url })}
-                onImageRemove={() => setFormData({ ...formData, background_image_url: null })}
+                onImageUpload={(url) => setFormData({ ...formData, background_image_url: url, background_transform: {} })}
+                onImageRemove={() => setFormData({ ...formData, background_image_url: null, background_transform: {} })}
               />
-              
+
               {formData.background_image_url && (
-                <div className="space-y-2">
-                  <Label>
-                    Opacidad: {(formData.background_opacity * 100).toFixed(0)}%
-                  </Label>
-                  <Slider
-                    value={[formData.background_opacity]}
-                    onValueChange={(value) => setFormData({ ...formData, background_opacity: value[0] })}
-                    min={0.05}
-                    max={0.5}
-                    step={0.05}
-                  />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label>Modo de aplicación</Label>
+                    <Select
+                      value={formData.background_mode}
+                      onValueChange={(v: 'tile' | 'cover' | 'contain' | 'full_ticket') =>
+                        setFormData({ ...formData, background_mode: v, background_transform: {} })
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tile">Mosaico (marca de agua)</SelectItem>
+                        <SelectItem value="cover">Cubrir</SelectItem>
+                        <SelectItem value="contain">Contener</SelectItem>
+                        <SelectItem value="full_ticket">Ticket = Imagen completa (recomendado para artes)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      "Ticket = Imagen completa" ajusta el canvas al arte y sólo colocas QR y textos encima.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Opacidad: {(formData.background_opacity * 100).toFixed(0)}%</Label>
+                    <Slider
+                      value={[formData.background_opacity]}
+                      onValueChange={(value) => setFormData({ ...formData, background_opacity: value[0] })}
+                      min={0.05}
+                      max={1}
+                      step={0.05}
+                    />
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
         </>
+
       ) : (
         <>
           <Card>

@@ -480,6 +480,78 @@ export type Database = {
         }
         Relationships: []
       }
+      kiosk_profiles: {
+        Row: {
+          allow_operator_override: boolean
+          auto_resume_ms: number
+          auto_select_mode: string
+          control_type_ids: string[]
+          created_at: string
+          created_by: string | null
+          default_control_type_id: string | null
+          description: string | null
+          event_id: string
+          id: string
+          is_active: boolean
+          lock_ui: boolean
+          name: string
+          require_pin: string | null
+          time_schedule: Json
+          updated_at: string
+        }
+        Insert: {
+          allow_operator_override?: boolean
+          auto_resume_ms?: number
+          auto_select_mode?: string
+          control_type_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          default_control_type_id?: string | null
+          description?: string | null
+          event_id: string
+          id?: string
+          is_active?: boolean
+          lock_ui?: boolean
+          name: string
+          require_pin?: string | null
+          time_schedule?: Json
+          updated_at?: string
+        }
+        Update: {
+          allow_operator_override?: boolean
+          auto_resume_ms?: number
+          auto_select_mode?: string
+          control_type_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          default_control_type_id?: string | null
+          description?: string | null
+          event_id?: string
+          id?: string
+          is_active?: boolean
+          lock_ui?: boolean
+          name?: string
+          require_pin?: string | null
+          time_schedule?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_profiles_default_control_type_id_fkey"
+            columns: ["default_control_type_id"]
+            isOneToOne: false
+            referencedRelation: "control_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_profiles_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           attendee_id: string | null
@@ -668,11 +740,51 @@ export type Database = {
           },
         ]
       }
+      ticket_template_category_bindings: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          template_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          template_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_template_category_bindings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_template_category_bindings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_templates: {
         Row: {
           background_image_url: string | null
           background_mode: string | null
           background_opacity: number | null
+          background_transform: Json
           canvas_height: number | null
           canvas_width: number | null
           created_at: string
@@ -702,6 +814,7 @@ export type Database = {
           background_image_url?: string | null
           background_mode?: string | null
           background_opacity?: number | null
+          background_transform?: Json
           canvas_height?: number | null
           canvas_width?: number | null
           created_at?: string
@@ -731,6 +844,7 @@ export type Database = {
           background_image_url?: string | null
           background_mode?: string | null
           background_opacity?: number | null
+          background_transform?: Json
           canvas_height?: number | null
           canvas_width?: number | null
           created_at?: string
@@ -976,6 +1090,13 @@ export type Database = {
           p_time_range?: string
         }
         Returns: Json
+      }
+      get_event_attendee_counts: {
+        Args: { p_event_id: string }
+        Returns: {
+          attendees_with_usage: number
+          total_attendees: number
+        }[]
       }
       get_event_recent_activity: {
         Args: { p_event_id: string; p_limit?: number }

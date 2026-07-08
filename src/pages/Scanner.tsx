@@ -30,6 +30,9 @@ import { useOfflineAuthorization } from "@/hooks/useOfflineAuthorization";
 import { useOfflineControlLimit } from "@/hooks/useOfflineControlLimit";
 import { scanFeedback } from "@/lib/scanFeedback";
 import { supabase } from "@/integrations/supabase/client";
+import KioskProfileSelector from "@/components/scanner/KioskProfileSelector";
+import { useKioskAutoControl } from "@/hooks/useKioskAutoControl";
+import type { KioskProfile } from "@/hooks/useKioskProfiles";
 
 // Convert DD/MM/YYYY to YYYY-MM-DD for PostgreSQL
 const convertDateToISO = (dateStr: string | null | undefined): string | undefined => {
@@ -65,6 +68,8 @@ const Scanner = () => {
   
   const createCedulaMutation = useCreateCedulaRegistro();
   const createControlUsage = useCreateCedulaControlUsage();
+  const [activeKioskProfile, setActiveKioskProfile] = useState<KioskProfile | null>(null);
+  const [kioskScanCount, setKioskScanCount] = useState(0);
   const { data: controlTypes = [], isLoading: controlTypesLoading } = useControlTypes();
   
   // Use both hooks - by ID and active event as fallback
@@ -103,6 +108,10 @@ const Scanner = () => {
       toast.info(`Control seleccionado: ${defaultControl.name}`);
     }
   }, [controlTypes, selectedControlType]);
+
+  // Kiosk auto-selection driver
+  useKioskAutoControl(activeKioskProfile, setSelectedControlType, !!activeKioskProfile);
+
 
   // Debug logging for whitelist config
   useEffect(() => {
@@ -634,12 +643,22 @@ const Scanner = () => {
                   <p className="text-sm md:text-base text-gray-400">{t('scanner.cedulaScanOrManual')}</p>
                 </div>
 
+                <div className="flex justify-center">
+                  <KioskProfileSelector
+                    eventId={selectedEvent?.id}
+                    activeProfileId={activeKioskProfile?.id ?? null}
+                    onActivate={(p) => { setActiveKioskProfile(p); setKioskScanCount(0); }}
+                    scanCount={kioskScanCount}
+                  />
+                </div>
+
                 <ControlTypeSelector
                   controlTypes={controlTypes}
                   selectedControlType={selectedControlType}
                   onControlTypeChange={setSelectedControlType}
                   isLoading={controlTypesLoading}
                 />
+
 
                 <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
                   <DialogTrigger asChild>

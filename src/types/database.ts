@@ -112,7 +112,8 @@ export interface TicketTemplate {
   margin_right: number;
   background_image_url: string | null;
   background_opacity: number;
-  background_mode: 'tile' | 'cover' | 'contain';
+  background_mode: 'tile' | 'cover' | 'contain' | 'full_ticket';
+  background_transform?: { x?: number; y?: number; scaleX?: number; scaleY?: number; angle?: number; opacity?: number };
   created_at: string;
   updated_at: string;
   canvas_width?: number;
