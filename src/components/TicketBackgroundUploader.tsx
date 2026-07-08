@@ -222,7 +222,7 @@ export const TicketBackgroundUploader = ({
             id="background-upload"
             type="file"
             className="hidden"
-            accept="image/png,image/jpeg,image/jpg,image/webp"
+            accept="application/pdf,image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/gif,image/bmp,image/tiff,image/avif,image/heic,image/heif,.pdf,.svg,.tif,.tiff,.heic,.heif,.avif"
             onChange={handleFileSelect}
             disabled={uploading}
           />
