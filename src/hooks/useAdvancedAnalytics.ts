@@ -335,6 +335,7 @@ export const useAdvancedAnalytics = (filters: {
     coverageAnalysis,
     recentActivity,
     intradayInsights,
+    categoryByHour: summary?.category_by_hour ?? [],
     isLoading: summaryQuery.isLoading || recentQuery.isLoading,
     isError: summaryQuery.isError || recentQuery.isError,
   };
