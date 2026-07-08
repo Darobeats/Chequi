@@ -159,6 +159,7 @@ const ControlAnalytics = () => {
             hourlyDistribution={hourlyDistribution}
             intradayInsights={intradayInsights}
           />
+          <CategoryBreakdownChart categoryByHour={categoryByHour} />
         </TabsContent>
 
           <TabsContent value="trends" className="space-y-6">
@@ -167,6 +168,7 @@ const ControlAnalytics = () => {
               hourlyDistribution={hourlyDistribution}
               intradayInsights={intradayInsights}
             />
+            <CategoryBreakdownChart categoryByHour={categoryByHour} />
           </TabsContent>
 
         <TabsContent value="coverage" className="space-y-6">
