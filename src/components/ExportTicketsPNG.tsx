@@ -29,47 +29,75 @@ export const ExportTicketsPNG = ({ template, attendees }: ExportTicketsPNGProps)
 
   const generateTicketImage = async (attendee: Attendee): Promise<Blob> => {
     const canvas = document.createElement('canvas');
-    canvas.width = template.canvas_width || 800;
-    canvas.height = template.canvas_height || 600;
-    const ctx = canvas.getContext('2d');
+    let cw = template.canvas_width || 800;
+    let ch = template.canvas_height || 600;
 
-    if (!ctx) {
-      throw new Error('No se pudo obtener el contexto del canvas');
+    // full_ticket: canvas adopts the image's native dimensions for max fidelity
+    let bgImage: HTMLImageElement | null = null;
+    if (template.background_image_url) {
+      try { bgImage = await loadImage(template.background_image_url); } catch (e) { console.error(e); }
+    }
+    if (bgImage && template.background_mode === 'full_ticket') {
+      cw = bgImage.naturalWidth || bgImage.width;
+      ch = bgImage.naturalHeight || bgImage.height;
     }
 
-    // Fill background
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('No se pudo obtener el contexto del canvas');
+
+    ctx.imageSmoothingEnabled = true;
+    (ctx as any).imageSmoothingQuality = 'high';
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Load background image if exists
-    if (template.background_image_url) {
-      try {
-        const bgImage = await loadImage(template.background_image_url);
-        ctx.globalAlpha = template.background_opacity || 0.15;
-        
-        if (template.background_mode === 'cover') {
-          const scale = Math.max(canvas.width / bgImage.width, canvas.height / bgImage.height);
-          const x = (canvas.width - bgImage.width * scale) / 2;
-          const y = (canvas.height - bgImage.height * scale) / 2;
-          ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
-        } else if (template.background_mode === 'contain') {
-          const scale = Math.min(canvas.width / bgImage.width, canvas.height / bgImage.height);
-          const x = (canvas.width - bgImage.width * scale) / 2;
-          const y = (canvas.height - bgImage.height * scale) / 2;
-          ctx.drawImage(bgImage, x, y, bgImage.width * scale, bgImage.height * scale);
-        } else {
-          // tile
-          const pattern = ctx.createPattern(bgImage, 'repeat');
-          if (pattern) {
-            ctx.fillStyle = pattern;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (bgImage) {
+      const t = (template as any).background_transform || {};
+      ctx.globalAlpha = (typeof t.opacity === 'number' ? t.opacity : (template.background_opacity ?? 0.15));
+
+      if (template.background_mode === 'tile') {
+        const pattern = ctx.createPattern(bgImage, 'repeat');
+        if (pattern) { ctx.fillStyle = pattern; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+      } else {
+        // cover / contain / full_ticket — respect stored transform if present, otherwise auto-fit
+        let scaleX = t.scaleX;
+        let scaleY = t.scaleY;
+        let x = t.x;
+        let y = t.y;
+        const angle = t.angle || 0;
+        const bw = bgImage.width, bh = bgImage.height;
+
+        if (scaleX == null || scaleY == null) {
+          if (template.background_mode === 'contain') {
+            const s = Math.min(canvas.width / bw, canvas.height / bh);
+            scaleX = s; scaleY = s;
+            x = (canvas.width - bw * s) / 2;
+            y = (canvas.height - bh * s) / 2;
+          } else {
+            // cover or full_ticket → cover
+            const s = Math.max(canvas.width / bw, canvas.height / bh);
+            scaleX = s; scaleY = s;
+            x = (canvas.width - bw * s) / 2;
+            y = (canvas.height - bh * s) / 2;
           }
         }
-        ctx.globalAlpha = 1;
-      } catch (error) {
-        console.error('Error loading background image:', error);
+
+        if (angle) {
+          const cx = (x ?? 0) + (bw * scaleX) / 2;
+          const cy = (y ?? 0) + (bh * scaleY) / 2;
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate((angle * Math.PI) / 180);
+          ctx.drawImage(bgImage, -(bw * scaleX) / 2, -(bh * scaleY) / 2, bw * scaleX, bh * scaleY);
+          ctx.restore();
+        } else {
+          ctx.drawImage(bgImage, x ?? 0, y ?? 0, bw * scaleX, bh * scaleY);
+        }
       }
+      ctx.globalAlpha = 1;
     }
+
 
     // Draw elements
     const elements = template.elements || [];

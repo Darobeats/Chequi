@@ -10,14 +10,26 @@ import { Plus, Trash2, Image as ImageIcon, Type, QrCode, ZoomIn, ZoomOut, Grid, 
 import QRCode from 'qrcode';
 import { toast } from '@/hooks/use-toast';
 
+export interface BackgroundTransform {
+  x?: number;
+  y?: number;
+  scaleX?: number;
+  scaleY?: number;
+  angle?: number;
+  opacity?: number;
+}
+
 interface VisualTicketEditorProps {
   canvasWidth: number;
   canvasHeight: number;
   elements: TicketElement[];
   backgroundImageUrl?: string | null;
   backgroundOpacity?: number;
+  backgroundTransform?: BackgroundTransform;
+  backgroundMode?: 'tile' | 'cover' | 'contain' | 'full_ticket';
   onElementsChange: (elements: TicketElement[]) => void;
   onCanvasSizeChange: (width: number, height: number) => void;
+  onBackgroundTransformChange?: (t: BackgroundTransform) => void;
 }
 
 export const VisualTicketEditor = ({
@@ -26,14 +38,18 @@ export const VisualTicketEditor = ({
   elements,
   backgroundImageUrl,
   backgroundOpacity = 0.15,
+  backgroundTransform,
+  backgroundMode = 'tile',
   onElementsChange,
   onCanvasSizeChange,
+  onBackgroundTransformChange,
 }: VisualTicketEditorProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
+  const [bgEditable, setBgEditable] = useState(false);
 
   // Initialize Fabric canvas
   useEffect(() => {
@@ -47,51 +63,101 @@ export const VisualTicketEditor = ({
 
     canvas.on('selection:created', (e) => {
       const obj = e.selected?.[0] as any;
-      if (obj && obj.elementId) {
-        setSelectedElement(obj.elementId);
-      }
+      if (obj?.elementId) setSelectedElement(obj.elementId);
     });
-
     canvas.on('selection:updated', (e) => {
       const obj = e.selected?.[0] as any;
-      if (obj && obj.elementId) {
-        setSelectedElement(obj.elementId);
-      }
+      if (obj?.elementId) setSelectedElement(obj.elementId);
     });
-
-    canvas.on('selection:cleared', () => {
-      setSelectedElement(null);
-    });
+    canvas.on('selection:cleared', () => setSelectedElement(null));
 
     canvas.on('object:modified', (e) => {
-      syncCanvasToElements(canvas);
+      const target = e.target as any;
+      if (target?.elementType === 'background' && onBackgroundTransformChange) {
+        onBackgroundTransformChange({
+          x: target.left ?? 0,
+          y: target.top ?? 0,
+          scaleX: target.scaleX ?? 1,
+          scaleY: target.scaleY ?? 1,
+          angle: target.angle ?? 0,
+          opacity: target.opacity ?? backgroundOpacity,
+        });
+      } else {
+        syncCanvasToElements(canvas);
+      }
     });
 
     setFabricCanvas(canvas);
-
-    return () => {
-      canvas.dispose();
-    };
+    return () => { canvas.dispose(); };
   }, [canvasWidth, canvasHeight]);
 
-  // Load background image
+  // Load / update background image (as a real editable object at the back)
   useEffect(() => {
-    if (!fabricCanvas || !backgroundImageUrl) return;
+    if (!fabricCanvas) return;
 
-    FabricImage.fromURL(backgroundImageUrl, {
-      crossOrigin: 'anonymous',
-    }).then((img) => {
-      img.scaleToWidth(canvasWidth);
-      img.scaleToHeight(canvasHeight);
+    // Remove any existing bg image
+    fabricCanvas.getObjects().forEach((o: any) => {
+      if (o.elementType === 'background') fabricCanvas.remove(o);
+    });
+
+    if (!backgroundImageUrl) { fabricCanvas.renderAll(); return; }
+
+    FabricImage.fromURL(backgroundImageUrl, { crossOrigin: 'anonymous' }).then((img) => {
+      const iw = img.width || 1;
+      const ih = img.height || 1;
+      let scaleX = backgroundTransform?.scaleX ?? 1;
+      let scaleY = backgroundTransform?.scaleY ?? 1;
+      let left = backgroundTransform?.x ?? 0;
+      let top = backgroundTransform?.y ?? 0;
+      const angle = backgroundTransform?.angle ?? 0;
+
+      // Auto-fit for first load when no transform is stored
+      if (!backgroundTransform || (backgroundTransform.scaleX == null && backgroundTransform.scaleY == null)) {
+        if (backgroundMode === 'cover' || backgroundMode === 'full_ticket') {
+          const s = Math.max(canvasWidth / iw, canvasHeight / ih);
+          scaleX = s; scaleY = s;
+          left = (canvasWidth - iw * s) / 2;
+          top = (canvasHeight - ih * s) / 2;
+        } else if (backgroundMode === 'contain') {
+          const s = Math.min(canvasWidth / iw, canvasHeight / ih);
+          scaleX = s; scaleY = s;
+          left = (canvasWidth - iw * s) / 2;
+          top = (canvasHeight - ih * s) / 2;
+        } else {
+          // tile → keep native
+          scaleX = 1; scaleY = 1; left = 0; top = 0;
+        }
+      }
+
       img.set({
-        opacity: backgroundOpacity,
-        selectable: false,
-        evented: false,
+        left, top, scaleX, scaleY, angle,
+        opacity: backgroundTransform?.opacity ?? backgroundOpacity,
+        selectable: bgEditable,
+        evented: bgEditable,
+        hasControls: bgEditable,
+        lockRotation: false,
       });
-      fabricCanvas.backgroundImage = img;
+      (img as any).elementType = 'background';
+
+      fabricCanvas.add(img);
+      // Send to back so text/QR appear over it
+      try { fabricCanvas.sendObjectToBack(img); } catch { /* fabric api variance */ }
       fabricCanvas.renderAll();
     });
-  }, [fabricCanvas, backgroundImageUrl, backgroundOpacity, canvasWidth, canvasHeight]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fabricCanvas, backgroundImageUrl, backgroundOpacity, backgroundMode, bgEditable]);
+
+  // When bgEditable toggles, update object interactivity if bg already there
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    fabricCanvas.getObjects().forEach((o: any) => {
+      if (o.elementType === 'background') {
+        o.set({ selectable: bgEditable, evented: bgEditable, hasControls: bgEditable });
+      }
+    });
+    fabricCanvas.renderAll();
+  }, [fabricCanvas, bgEditable]);
+
 
   // Sync elements to canvas
   useEffect(() => {
@@ -343,9 +409,26 @@ export const VisualTicketEditor = ({
         </div>
       </Card>
 
+      {backgroundImageUrl && (
+        <Card className="p-4 border-dorado/30">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <Label className="block">Imagen de fondo</Label>
+              <p className="text-xs text-muted-foreground">
+                {bgEditable ? '✏️ Editable — arrastra, redimensiona y rota el fondo. La calidad original se preserva.' : '🔒 Bloqueada. Actívala para reposicionar/escalar.'}
+              </p>
+            </div>
+            <Button type="button" variant={bgEditable ? 'default' : 'outline'} size="sm" onClick={() => setBgEditable(!bgEditable)}>
+              {bgEditable ? '🔒 Bloquear fondo' : '🔓 Editar fondo'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
       <Card className="p-4">
         <Label className="mb-2 block">Agregar Elementos</Label>
         <div className="flex flex-wrap gap-2">
+
           <Button
             type="button"
             variant="outline"
