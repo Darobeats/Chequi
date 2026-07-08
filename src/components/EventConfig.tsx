@@ -466,6 +466,9 @@ const EventConfig = () => {
                             <Button size="sm" variant="outline" onClick={() => { setEditingTemplate(template); setShowTemplateEditor(true); }} className="border-dorado text-dorado hover:bg-dorado hover:text-empresarial">
                               <Edit className="h-4 w-4 mr-1" />{t('eventConfig.edit')}
                             </Button>
+                            <Button size="sm" variant="outline" onClick={() => handleDuplicateTemplate(template)} title="Duplicar plantilla" className="border-gray-600 text-hueso hover:bg-gray-800">
+                              📄 Duplicar
+                            </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button size="sm" variant="destructive"><Trash2 className="h-4 w-4 mr-1" /></Button>
