@@ -93,35 +93,49 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Normalize elements at save time: absorb any pending scaleX/scaleY into
-    // fontSize/width/height so the export engine renders exactly what was
-    // configured (defensive: syncCanvasToElements already does this per-edit).
-    const normalizedElements: TicketElement[] = (formData.elements || []).map((el: any) => {
+    // Flush pending Fabric canvas state into React state before reading elements
+    editorRef.current?.flushToState();
+    // Yield a tick so setState from flush applies
+    await new Promise((r) => setTimeout(r, 0));
+
+    const sourceElements = elementsRef.current || formData.elements || [];
+
+    // Normalize elements: absorb residual scaleX/scaleY into fontSize/width/height
+    // and enforce QR minimum size of 100px.
+    const normalizedElements: TicketElement[] = sourceElements.map((el: any) => {
       const sx = el.scaleX ?? 1;
       const sy = el.scaleY ?? 1;
-      if (sx === 1 && sy === 1) {
+      let out: any = el;
+      if (sx !== 1 || sy !== 1) {
+        if (el.type === 'text') {
+          const base = el.fontSize || 14;
+          const nextFontSize = Math.max(4, Math.round(base * sy));
+          out = {
+            ...el,
+            fontSize: nextFontSize,
+            width: (el.width || 0) * sx,
+            height: (el.height || 0) * sy,
+            scaleX: 1,
+            scaleY: 1,
+          };
+        } else {
+          out = {
+            ...el,
+            width: (el.width || 0) * sx,
+            height: (el.height || 0) * sy,
+            scaleX: 1,
+            scaleY: 1,
+          };
+        }
+      } else {
         const { scaleX: _sx, scaleY: _sy, ...rest } = el;
-        return rest as TicketElement;
+        out = rest;
       }
-      if (el.type === 'text') {
-        const base = el.fontSize || 14;
-        const nextFontSize = Math.max(4, Math.round(base * sy));
-        return {
-          ...el,
-          fontSize: nextFontSize,
-          width: (el.width || 0) * sx,
-          height: (el.height || 0) * sy,
-          scaleX: 1,
-          scaleY: 1,
-        };
+      if (out.type === 'qr') {
+        out.width = Math.max(100, out.width || 0);
+        out.height = Math.max(100, out.height || 0);
       }
-      return {
-        ...el,
-        width: (el.width || 0) * sx,
-        height: (el.height || 0) * sy,
-        scaleX: 1,
-        scaleY: 1,
-      };
+      return out as TicketElement;
     });
 
     const payload = { ...formData, elements: normalizedElements };
