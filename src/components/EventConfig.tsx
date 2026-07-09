@@ -26,7 +26,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Edit, Trash2, Download } from 'lucide-react';
 import { ExportTicketsPNG } from '@/components/ExportTicketsPNG';
 import ExportTicketsPrint from '@/components/ExportTicketsPrint';
-import ExportTicketsByCategory from '@/components/ExportTicketsByCategory';
+import TicketExportCenter from '@/components/TicketExportCenter';
 import { CedulasAutorizadasManager } from '@/components/cedula/CedulasAutorizadasManager';
 import { EventTeamManager } from '@/components/EventTeamManager';
 import { supabase } from '@/integrations/supabase/client';
@@ -452,13 +452,13 @@ const EventConfig = () => {
                 {selectedEvent?.id && ticketTemplates.some(t => t.event_config_id === selectedEvent.id && t.use_visual_editor) && (
                   <Card className="bg-gray-900/50 border border-dorado/40">
                     <CardHeader>
-                      <CardTitle className="text-dorado text-base">Exportación automática por categoría</CardTitle>
+                      <CardTitle className="text-dorado text-base">Centro de Exportación de Tickets</CardTitle>
                       <CardDescription>
-                        Genera un ZIP con subcarpetas por categoría, usando la plantilla asignada a cada una (invitados, socios, etc.).
+                        Filtra por categoría, plantilla o estado; selecciona uno a uno o en lote y descarga PNG individual o ZIP masivo.
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <ExportTicketsByCategory eventId={selectedEvent.id} attendees={attendees || []} />
+                      <TicketExportCenter eventId={selectedEvent.id} attendees={attendees || []} />
                     </CardContent>
                   </Card>
                 )}
