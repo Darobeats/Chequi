@@ -83,6 +83,7 @@ export const VisualTicketEditor = ({
   const bgEditableRef = useRef(bgEditable);
   const onElementsChangeRef = useRef(onElementsChange);
   const onBackgroundTransformChangeRef = useRef(onBackgroundTransformChange);
+  const onCanvasSizeChangeRef = useRef(onCanvasSizeChange);
 
   elementsRef.current = elements;
   backgroundTransformRef.current = backgroundTransform;
@@ -90,6 +91,7 @@ export const VisualTicketEditor = ({
   bgEditableRef.current = bgEditable;
   onElementsChangeRef.current = onElementsChange;
   onBackgroundTransformChangeRef.current = onBackgroundTransformChange;
+  onCanvasSizeChangeRef.current = onCanvasSizeChange;
 
   // ---------- Init canvas ----------
   useEffect(() => {
