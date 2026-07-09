@@ -779,6 +779,44 @@ export type Database = {
           },
         ]
       }
+      ticket_template_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          snapshot: Json
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          snapshot: Json
+          template_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          snapshot?: Json
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_templates: {
         Row: {
           background_image_url: string | null

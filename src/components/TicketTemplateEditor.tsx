@@ -13,6 +13,8 @@ import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { VisualTicketEditor } from './VisualTicketEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TemplateBindingsEditor from './TemplateBindingsEditor';
+import { TemplateVersionsPanel } from './TemplateVersionsPanel';
+import { TemplateDevicePreview } from './TemplateDevicePreview';
 
 interface TicketTemplateEditorProps {
   template?: TicketTemplate | null;
@@ -223,6 +225,7 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
               setFormData({ ...formData, canvas_width: width, canvas_height: height })
             }
             onBackgroundTransformChange={(t) => setFormData({ ...formData, background_transform: t })}
+            onBackgroundImageChange={(url) => setFormData({ ...formData, background_image_url: url })}
           />
 
           <Card>
@@ -429,6 +432,26 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
       {template && (
         <TemplateBindingsEditor templateId={template.id} eventId={formData.event_config_id} />
       )}
+
+      {formData.use_visual_editor && (
+        <TemplateDevicePreview
+          canvasWidth={formData.canvas_width}
+          canvasHeight={formData.canvas_height}
+          elements={formData.elements}
+          backgroundImageUrl={formData.background_image_url}
+          backgroundOpacity={formData.background_opacity}
+          backgroundTransform={formData.background_transform}
+        />
+      )}
+
+      {template && (
+        <TemplateVersionsPanel
+          templateId={template.id}
+          currentSnapshot={formData}
+          onRestore={(snapshot) => setFormData({ ...formData, ...snapshot })}
+        />
+      )}
+
 
 
 

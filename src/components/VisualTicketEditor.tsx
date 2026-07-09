@@ -1,14 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
-import { Canvas as FabricCanvas, FabricImage, Rect, Text, FabricObject } from 'fabric';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Canvas as FabricCanvas, FabricImage, Line, Text, FabricObject } from 'fabric';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TicketElement } from '@/types/database';
-import { Plus, Trash2, Image as ImageIcon, Type, QrCode, ZoomIn, ZoomOut, Grid, AlignLeft, AlignCenter, AlignRight, Bold } from 'lucide-react';
+import {
+  Trash2, Type, QrCode, ZoomIn, ZoomOut, Grid, Magnet,
+  AlignLeft, AlignCenter, AlignRight, Bold, Undo2, Redo2,
+  Download, FileText, Crop as CropIcon,
+} from 'lucide-react';
 import QRCode from 'qrcode';
+import jsPDF from 'jspdf';
 import { toast } from '@/hooks/use-toast';
+import { BackgroundCropDialog } from './BackgroundCropDialog';
 
 export interface BackgroundTransform {
   x?: number;
@@ -30,7 +36,17 @@ interface VisualTicketEditorProps {
   onElementsChange: (elements: TicketElement[]) => void;
   onCanvasSizeChange: (width: number, height: number) => void;
   onBackgroundTransformChange?: (t: BackgroundTransform) => void;
+  onBackgroundImageChange?: (url: string) => void;
 }
+
+interface HistoryEntry {
+  json: any;
+  bgTransform: BackgroundTransform | undefined;
+}
+
+const SNAP_GRID = 10;
+const SNAP_ANGLE = 15;
+const GUIDE_THRESHOLD = 5;
 
 export const VisualTicketEditor = ({
   canvasWidth,
@@ -43,22 +59,33 @@ export const VisualTicketEditor = ({
   onElementsChange,
   onCanvasSizeChange,
   onBackgroundTransformChange,
+  onBackgroundImageChange,
 }: VisualTicketEditorProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
+  const [snapEnabled, setSnapEnabled] = useState(true);
   const [bgEditable, setBgEditable] = useState(true);
+  const [cropOpen, setCropOpen] = useState(false);
 
-  // Initialize Fabric canvas
+  // Refs to avoid re-instantiating background on transform round-trip
+  const isEditingBgRef = useRef(false);
+  const suppressHistoryRef = useRef(false);
+  const guideLinesRef = useRef<Line[]>([]);
+  const historyRef = useRef<HistoryEntry[]>([]);
+  const cursorRef = useRef(-1);
+  const [historyTick, setHistoryTick] = useState(0);
+
+  // ---------- Init canvas ----------
   useEffect(() => {
     if (!canvasRef.current) return;
-
     const canvas = new FabricCanvas(canvasRef.current, {
       width: canvasWidth,
       height: canvasHeight,
       backgroundColor: '#ffffff',
+      preserveObjectStacking: true,
     });
 
     canvas.on('selection:created', (e) => {
@@ -71,31 +98,24 @@ export const VisualTicketEditor = ({
     });
     canvas.on('selection:cleared', () => setSelectedElement(null));
 
-    canvas.on('object:modified', (e) => {
-      const target = e.target as any;
-      if (target?.elementType === 'background' && onBackgroundTransformChange) {
-        onBackgroundTransformChange({
-          x: target.left ?? 0,
-          y: target.top ?? 0,
-          scaleX: target.scaleX ?? 1,
-          scaleY: target.scaleY ?? 1,
-          angle: target.angle ?? 0,
-          opacity: target.opacity ?? backgroundOpacity,
-        });
-      } else {
-        syncCanvasToElements(canvas);
-      }
-    });
-
     setFabricCanvas(canvas);
     return () => { canvas.dispose(); };
-  }, [canvasWidth, canvasHeight]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Load / update background image (as a real editable object at the back)
+  // Resize canvas when dimensions change
   useEffect(() => {
     if (!fabricCanvas) return;
+    fabricCanvas.setDimensions({ width: canvasWidth, height: canvasHeight });
+    fabricCanvas.renderAll();
+  }, [fabricCanvas, canvasWidth, canvasHeight]);
 
-    // Remove any existing bg image
+  // ---------- Background load (fix #0) ----------
+  // Only re-instantiate on URL / mode change. Skip while user is dragging.
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    if (isEditingBgRef.current) return;
+
     fabricCanvas.getObjects().forEach((o: any) => {
       if (o.elementType === 'background') fabricCanvas.remove(o);
     });
@@ -111,27 +131,25 @@ export const VisualTicketEditor = ({
       let top = backgroundTransform?.y ?? 0;
       const angle = backgroundTransform?.angle ?? 0;
 
-      // Auto-fit for first load when no transform is stored
-      if (!backgroundTransform || (backgroundTransform.scaleX == null && backgroundTransform.scaleY == null)) {
-        if (backgroundMode === 'cover' || backgroundMode === 'full_ticket') {
-          const s = Math.max(canvasWidth / iw, canvasHeight / ih);
-          scaleX = s; scaleY = s;
-          left = (canvasWidth - iw * s) / 2;
-          top = (canvasHeight - ih * s) / 2;
-        } else if (backgroundMode === 'contain') {
-          const s = Math.min(canvasWidth / iw, canvasHeight / ih);
-          scaleX = s; scaleY = s;
-          left = (canvasWidth - iw * s) / 2;
-          top = (canvasHeight - ih * s) / 2;
-        } else {
-          // tile → keep native
-          scaleX = 1; scaleY = 1; left = 0; top = 0;
-        }
+      const hasStoredTransform =
+        backgroundTransform &&
+        (backgroundTransform.scaleX != null || backgroundTransform.scaleY != null);
+
+      if (!hasStoredTransform) {
+        const s = Math.max(canvasWidth / iw, canvasHeight / ih);
+        scaleX = s; scaleY = s;
+        left = (canvasWidth - iw * s) / 2;
+        top = (canvasHeight - ih * s) / 2;
       }
+
+      // Defensive clamp: if stored position lands way off-canvas, recenter
+      const outX = left < -canvasWidth || left > canvasWidth * 2;
+      const outY = top < -canvasHeight || top > canvasHeight * 2;
+      if (outX || outY) { left = 0; top = 0; }
 
       img.set({
         left, top, scaleX, scaleY, angle,
-        opacity: backgroundTransform?.opacity ?? backgroundOpacity,
+        opacity: backgroundOpacity,
         selectable: bgEditable,
         evented: bgEditable,
         hasControls: bgEditable,
@@ -140,14 +158,24 @@ export const VisualTicketEditor = ({
       (img as any).elementType = 'background';
 
       fabricCanvas.add(img);
-      // Send to back so text/QR appear over it
       try { fabricCanvas.sendObjectToBack(img); } catch { /* fabric api variance */ }
       fabricCanvas.renderAll();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fabricCanvas, backgroundImageUrl, backgroundOpacity, backgroundMode, bgEditable]);
+  }, [fabricCanvas, backgroundImageUrl, backgroundMode]);
 
-  // When bgEditable toggles, update object interactivity if bg already there
+  // Update opacity without recreating background
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    fabricCanvas.getObjects().forEach((o: any) => {
+      if (o.elementType === 'background') {
+        o.set('opacity', backgroundOpacity);
+      }
+    });
+    fabricCanvas.renderAll();
+  }, [fabricCanvas, backgroundOpacity]);
+
+  // Toggle bg interactivity
   useEffect(() => {
     if (!fabricCanvas) return;
     fabricCanvas.getObjects().forEach((o: any) => {
@@ -158,16 +186,120 @@ export const VisualTicketEditor = ({
     fabricCanvas.renderAll();
   }, [fabricCanvas, bgEditable]);
 
+  // ---------- Snap-to-grid + alignment guides ----------
+  const clearGuides = useCallback(() => {
+    if (!fabricCanvas) return;
+    guideLinesRef.current.forEach(l => fabricCanvas.remove(l));
+    guideLinesRef.current = [];
+  }, [fabricCanvas]);
 
-  // Sync elements to canvas
+  const drawGuide = useCallback((x1: number, y1: number, x2: number, y2: number) => {
+    if (!fabricCanvas) return;
+    const line = new Line([x1, y1, x2, y2], {
+      stroke: '#ff00ff',
+      strokeWidth: 1,
+      selectable: false,
+      evented: false,
+      excludeFromExport: true,
+    });
+    (line as any).elementType = 'guide';
+    fabricCanvas.add(line);
+    guideLinesRef.current.push(line);
+  }, [fabricCanvas]);
+
   useEffect(() => {
     if (!fabricCanvas) return;
 
-    // Get current object IDs in canvas
+    const onMoving = (e: any) => {
+      const t = e.target as any;
+      if (!t) return;
+      if (t.elementType === 'background') isEditingBgRef.current = true;
+
+      if (snapEnabled) {
+        t.left = Math.round(t.left / SNAP_GRID) * SNAP_GRID;
+        t.top = Math.round(t.top / SNAP_GRID) * SNAP_GRID;
+      }
+
+      clearGuides();
+      // Alignment vs canvas center & edges
+      const cx = canvasWidth / 2;
+      const cy = canvasHeight / 2;
+      const objCx = t.left + (t.width * t.scaleX) / 2;
+      const objCy = t.top + (t.height * t.scaleY) / 2;
+      if (Math.abs(objCx - cx) < GUIDE_THRESHOLD) {
+        t.left = cx - (t.width * t.scaleX) / 2;
+        drawGuide(cx, 0, cx, canvasHeight);
+      }
+      if (Math.abs(objCy - cy) < GUIDE_THRESHOLD) {
+        t.top = cy - (t.height * t.scaleY) / 2;
+        drawGuide(0, cy, canvasWidth, cy);
+      }
+      if (Math.abs(t.left) < GUIDE_THRESHOLD) { t.left = 0; drawGuide(0, 0, 0, canvasHeight); }
+      if (Math.abs(t.top) < GUIDE_THRESHOLD) { t.top = 0; drawGuide(0, 0, canvasWidth, 0); }
+    };
+
+    const onScaling = (e: any) => {
+      const t = e.target as any;
+      if (!t) return;
+      if (t.elementType === 'background') isEditingBgRef.current = true;
+    };
+
+    const onRotating = (e: any) => {
+      const t = e.target as any;
+      if (!t) return;
+      if (t.elementType === 'background') isEditingBgRef.current = true;
+      if (snapEnabled) {
+        t.angle = Math.round(t.angle / SNAP_ANGLE) * SNAP_ANGLE;
+      }
+    };
+
+    const onModified = (e: any) => {
+      const t = e.target as any;
+      clearGuides();
+      if (t?.elementType === 'background') {
+        isEditingBgRef.current = false;
+        onBackgroundTransformChange?.({
+          x: t.left ?? 0,
+          y: t.top ?? 0,
+          scaleX: t.scaleX ?? 1,
+          scaleY: t.scaleY ?? 1,
+          angle: t.angle ?? 0,
+          // opacity omitted intentionally
+        });
+      } else {
+        syncCanvasToElements(fabricCanvas);
+      }
+      pushHistory();
+    };
+
+    const onMouseUp = () => {
+      clearGuides();
+      isEditingBgRef.current = false;
+    };
+
+    fabricCanvas.on('object:moving', onMoving);
+    fabricCanvas.on('object:scaling', onScaling);
+    fabricCanvas.on('object:rotating', onRotating);
+    fabricCanvas.on('object:modified', onModified);
+    fabricCanvas.on('mouse:up', onMouseUp);
+
+    return () => {
+      fabricCanvas.off('object:moving', onMoving);
+      fabricCanvas.off('object:scaling', onScaling);
+      fabricCanvas.off('object:rotating', onRotating);
+      fabricCanvas.off('object:modified', onModified);
+      fabricCanvas.off('mouse:up', onMouseUp);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fabricCanvas, snapEnabled, canvasWidth, canvasHeight, clearGuides, drawGuide]);
+
+  // ---------- Sync elements ----------
+  useEffect(() => {
+    if (!fabricCanvas) return;
+
     const canvasElementIds = fabricCanvas.getObjects().map(obj => (obj as any).elementId).filter(Boolean);
     const elementIds = elements.map(e => e.id);
 
-    // Remove objects that are no longer in elements
     fabricCanvas.getObjects().forEach(obj => {
       const elementId = (obj as any).elementId;
       if (elementId && !elementIds.includes(elementId)) {
@@ -175,7 +307,6 @@ export const VisualTicketEditor = ({
       }
     });
 
-    // Add new elements that are not yet in canvas
     elements.forEach(element => {
       if (!canvasElementIds.includes(element.id)) {
         addElementToCanvas(fabricCanvas, element);
@@ -189,24 +320,19 @@ export const VisualTicketEditor = ({
     let obj: FabricObject | null = null;
 
     if (element.type === 'qr') {
-      // Generate QR code
       const qrDataUrl = await QRCode.toDataURL('SAMPLE-QR-' + element.id, {
-        width: element.width,
-        margin: 0,
+        width: element.width, margin: 0,
       });
-      
       const img = await FabricImage.fromURL(qrDataUrl);
       img.set({
-        left: element.x,
-        top: element.y,
+        left: element.x, top: element.y,
         scaleX: element.width / (img.width || 1),
         scaleY: element.height / (img.height || 1),
       });
       obj = img;
     } else if (element.type === 'text') {
       const text = new Text(element.content || getSampleText(element.field), {
-        left: element.x,
-        top: element.y,
+        left: element.x, top: element.y,
         fontSize: element.fontSize || 14,
         fontFamily: element.fontFamily || 'Arial',
         fill: element.color || '#000000',
@@ -238,7 +364,6 @@ export const VisualTicketEditor = ({
     const updatedElements = elements.map(element => {
       const obj = canvas.getObjects().find(o => (o as any).elementId === element.id);
       if (!obj) return element;
-
       return {
         ...element,
         x: obj.left || 0,
@@ -247,59 +372,138 @@ export const VisualTicketEditor = ({
         height: (obj.height || 0) * (obj.scaleY || 1),
       };
     });
-
     onElementsChange(updatedElements);
   };
 
-  const addQRElement = () => {
-    // Check if QR element already exists
-    if (elements.some(e => e.type === 'qr')) {
-      toast({
-        title: 'Ya existe un código QR',
-        description: 'Solo puedes agregar un código QR por plantilla',
-        variant: 'destructive',
+  // ---------- History (undo/redo) ----------
+  const pushHistory = useCallback(() => {
+    if (!fabricCanvas) return;
+    if (suppressHistoryRef.current) return;
+    const entry: HistoryEntry = {
+      json: (fabricCanvas as any).toJSON(['elementId', 'elementType']),
+      bgTransform: backgroundTransform ? { ...backgroundTransform } : undefined,
+    };
+    // Drop redo tail
+    historyRef.current = historyRef.current.slice(0, cursorRef.current + 1);
+    historyRef.current.push(entry);
+    if (historyRef.current.length > 50) historyRef.current.shift();
+    cursorRef.current = historyRef.current.length - 1;
+    setHistoryTick(t => t + 1);
+  }, [fabricCanvas, backgroundTransform]);
+
+  // Seed history on first canvas render
+  useEffect(() => {
+    if (!fabricCanvas) return;
+    const t = setTimeout(() => pushHistory(), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fabricCanvas]);
+
+  const applyHistory = useCallback((entry: HistoryEntry) => {
+    if (!fabricCanvas) return;
+    suppressHistoryRef.current = true;
+    (fabricCanvas.loadFromJSON(entry.json) as unknown as Promise<any>).then(() => {
+      fabricCanvas.renderAll();
+      const restored: TicketElement[] = [];
+      fabricCanvas.getObjects().forEach((o: any) => {
+        if (!o.elementId) return;
+        if (o.elementType === 'qr' || o.elementType === 'text') {
+          const base = elements.find(e => e.id === o.elementId);
+          restored.push({
+            ...(base as TicketElement),
+            id: o.elementId,
+            type: o.elementType,
+            x: o.left || 0,
+            y: o.top || 0,
+            width: (o.width || 0) * (o.scaleX || 1),
+            height: (o.height || 0) * (o.scaleY || 1),
+          } as TicketElement);
+        }
       });
+      onElementsChange(restored);
+      if (entry.bgTransform && onBackgroundTransformChange) {
+        onBackgroundTransformChange(entry.bgTransform);
+      }
+      setTimeout(() => { suppressHistoryRef.current = false; }, 100);
+    });
+  }, [fabricCanvas, elements, onElementsChange, onBackgroundTransformChange]);
+
+  const undo = useCallback(() => {
+    if (cursorRef.current <= 0) return;
+    cursorRef.current -= 1;
+    applyHistory(historyRef.current[cursorRef.current]);
+    setHistoryTick(t => t + 1);
+  }, [applyHistory]);
+
+  const redo = useCallback(() => {
+    if (cursorRef.current >= historyRef.current.length - 1) return;
+    cursorRef.current += 1;
+    applyHistory(historyRef.current[cursorRef.current]);
+    setHistoryTick(t => t + 1);
+  }, [applyHistory]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement | null)?.isContentEditable) return;
+      const meta = e.metaKey || e.ctrlKey;
+      if (!meta) return;
+      if (e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undo, redo]);
+
+  // ---------- Export PNG / PDF ----------
+  const exportPNG = () => {
+    if (!fabricCanvas) return;
+    clearGuides();
+    const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 2, quality: 1 } as any);
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = `ticket-${Date.now()}.png`;
+    link.click();
+    toast({ title: 'PNG exportado', description: 'La imagen se descargó a alta resolución.' });
+  };
+
+  const exportPDF = () => {
+    if (!fabricCanvas) return;
+    clearGuides();
+    const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 2, quality: 1 } as any);
+    const pdf = new jsPDF({
+      orientation: canvasWidth > canvasHeight ? 'landscape' : 'portrait',
+      unit: 'px',
+      format: [canvasWidth, canvasHeight],
+    });
+    pdf.addImage(dataUrl, 'PNG', 0, 0, canvasWidth, canvasHeight);
+    pdf.save(`ticket-${Date.now()}.pdf`);
+    toast({ title: 'PDF exportado', description: 'El PDF del ticket se descargó correctamente.' });
+  };
+
+  // ---------- Element ops ----------
+  const addQRElement = () => {
+    if (elements.some(e => e.type === 'qr')) {
+      toast({ title: 'Ya existe un código QR', description: 'Solo puedes agregar un código QR por plantilla', variant: 'destructive' });
       return;
     }
-
-    const newElement: TicketElement = {
-      id: crypto.randomUUID(),
-      type: 'qr',
-      x: 50,
-      y: 50,
-      width: 150,
-      height: 150,
-    };
-    onElementsChange([...elements, newElement]);
+    onElementsChange([...elements, {
+      id: crypto.randomUUID(), type: 'qr', x: 50, y: 50, width: 150, height: 150,
+    }]);
   };
 
   const addTextField = (field: 'name' | 'email' | 'ticket_id' | 'category' | 'cedula') => {
-    // Check if field already exists
     if (elements.some(e => e.type === 'text' && e.field === field)) {
-      toast({
-        title: 'Campo ya existe',
-        description: `El campo "${field}" ya fue agregado a la plantilla`,
-        variant: 'destructive',
-      });
+      toast({ title: 'Campo ya existe', description: `El campo "${field}" ya fue agregado`, variant: 'destructive' });
       return;
     }
-
-    const newElement: TicketElement = {
-      id: crypto.randomUUID(),
-      type: 'text',
-      x: 50,
-      y: 220 + (elements.filter(e => e.type === 'text').length * 30),
-      width: 200,
-      height: 30,
-      field,
-      content: getSampleText(field),
-      fontSize: 14,
-      fontFamily: 'Arial',
-      textAlign: 'left',
-      color: '#000000',
-      bold: false,
-    };
-    onElementsChange([...elements, newElement]);
+    onElementsChange([...elements, {
+      id: crypto.randomUUID(), type: 'text',
+      x: 50, y: 220 + (elements.filter(e => e.type === 'text').length * 30),
+      width: 200, height: 30, field, content: getSampleText(field),
+      fontSize: 14, fontFamily: 'Arial', textAlign: 'left', color: '#000000', bold: false,
+    }]);
   };
 
   const deleteSelectedElement = () => {
@@ -310,14 +514,7 @@ export const VisualTicketEditor = ({
 
   const updateSelectedElement = (updates: Partial<TicketElement>) => {
     if (!selectedElement) return;
-    
-    const updatedElements = elements.map(el => 
-      el.id === selectedElement ? { ...el, ...updates } : el
-    );
-    
-    onElementsChange(updatedElements);
-    
-    // Update canvas object
+    onElementsChange(elements.map(el => el.id === selectedElement ? { ...el, ...updates } : el));
     if (fabricCanvas) {
       const obj = fabricCanvas.getObjects().find(o => (o as any).elementId === selectedElement);
       if (obj && obj instanceof Text) {
@@ -335,154 +532,124 @@ export const VisualTicketEditor = ({
 
   const handleZoomIn = () => {
     if (!fabricCanvas) return;
-    const newZoom = Math.min(zoom * 1.2, 3);
-    setZoom(newZoom);
-    fabricCanvas.setZoom(newZoom);
-    fabricCanvas.renderAll();
+    const nz = Math.min(zoom * 1.2, 3);
+    setZoom(nz); fabricCanvas.setZoom(nz); fabricCanvas.renderAll();
   };
-
   const handleZoomOut = () => {
     if (!fabricCanvas) return;
-    const newZoom = Math.max(zoom / 1.2, 0.3);
-    setZoom(newZoom);
-    fabricCanvas.setZoom(newZoom);
-    fabricCanvas.renderAll();
+    const nz = Math.max(zoom / 1.2, 0.3);
+    setZoom(nz); fabricCanvas.setZoom(nz); fabricCanvas.renderAll();
   };
+
+  const canUndo = cursorRef.current > 0;
+  const canRedo = cursorRef.current < historyRef.current.length - 1;
 
   return (
     <div className="space-y-4">
+      {/* TOOLBAR */}
+      <Card className="p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={undo} disabled={!canUndo} title="Deshacer (Ctrl+Z)">
+            <Undo2 className="h-4 w-4" />
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={redo} disabled={!canRedo} title="Rehacer (Ctrl+Shift+Z)">
+            <Redo2 className="h-4 w-4" />
+          </Button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <Button type="button" variant="outline" size="sm" onClick={handleZoomOut} title="Alejar">
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground min-w-[3ch] text-center">{Math.round(zoom * 100)}%</span>
+          <Button type="button" variant="outline" size="sm" onClick={handleZoomIn} title="Acercar">
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <Button type="button" variant={showGrid ? 'default' : 'outline'} size="sm" onClick={() => setShowGrid(!showGrid)} title="Grilla">
+            <Grid className="h-4 w-4" />
+          </Button>
+          <Button type="button" variant={snapEnabled ? 'default' : 'outline'} size="sm" onClick={() => setSnapEnabled(!snapEnabled)} title="Snap y guías de alineación">
+            <Magnet className="h-4 w-4" />
+          </Button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <Button type="button" variant="outline" size="sm" onClick={exportPNG} title="Exportar PNG">
+            <Download className="h-4 w-4 mr-1" /> PNG
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={exportPDF} title="Exportar PDF">
+            <FileText className="h-4 w-4 mr-1" /> PDF
+          </Button>
+        </div>
+      </Card>
+
+      {/* CANVAS SIZE */}
       <Card className="p-4">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Dimensiones del Canvas</Label>
-            <div className="flex gap-2 items-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleZoomOut}
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-muted-foreground">{Math.round(zoom * 100)}%</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleZoomIn}
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowGrid(!showGrid)}
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-            </div>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <Label>Ancho (px)</Label>
+            <Input type="number" value={canvasWidth}
+              onChange={(e) => onCanvasSizeChange(parseInt(e.target.value) || 800, canvasHeight)}
+              min={400} max={1200} />
           </div>
-          
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Label>Ancho (px)</Label>
-              <Input
-                type="number"
-                value={canvasWidth}
-                onChange={(e) => onCanvasSizeChange(parseInt(e.target.value) || 800, canvasHeight)}
-                min={400}
-                max={1200}
-              />
-            </div>
-            <div className="flex-1">
-              <Label>Alto (px)</Label>
-              <Input
-                type="number"
-                value={canvasHeight}
-                onChange={(e) => onCanvasSizeChange(canvasWidth, parseInt(e.target.value) || 600)}
-                min={300}
-                max={1200}
-              />
-            </div>
+          <div className="flex-1">
+            <Label>Alto (px)</Label>
+            <Input type="number" value={canvasHeight}
+              onChange={(e) => onCanvasSizeChange(canvasWidth, parseInt(e.target.value) || 600)}
+              min={300} max={1200} />
           </div>
         </div>
       </Card>
 
+      {/* BACKGROUND CONTROLS */}
       {backgroundImageUrl && (
-        <Card className="p-4 border-dorado/30">
+        <Card className="p-4 border-primary/30">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <Label className="block">Imagen de fondo</Label>
               <p className="text-xs text-muted-foreground">
-                {bgEditable ? '✏️ Arrastra, redimensiona y rota la imagen directamente sobre el canvas. Se conserva la calidad original.' : '🔒 Bloqueada. Actívala para reposicionar/escalar/rotar.'}
+                {bgEditable
+                  ? '✏️ Arrastra, escala y rota la imagen sobre el canvas. Se conserva la calidad original.'
+                  : '🔒 Bloqueada. Actívala para reposicionar/escalar/rotar.'}
               </p>
             </div>
-            <Button type="button" variant={bgEditable ? 'default' : 'outline'} size="sm" onClick={() => setBgEditable(!bgEditable)}>
-              {bgEditable ? '🔒 Bloquear fondo' : '🔓 Editar fondo'}
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setCropOpen(true)}>
+                <CropIcon className="h-4 w-4 mr-1" /> Recortar
+              </Button>
+              <Button type="button" variant={bgEditable ? 'default' : 'outline'} size="sm" onClick={() => setBgEditable(!bgEditable)}>
+                {bgEditable ? '🔒 Bloquear' : '🔓 Editar'}
+              </Button>
+            </div>
           </div>
         </Card>
       )}
 
+      {/* ADD ELEMENTS */}
       <Card className="p-4">
         <Label className="mb-2 block">Agregar Elementos</Label>
         <div className="flex flex-wrap gap-2">
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addQRElement}
-          >
-            <QrCode className="h-4 w-4 mr-2" />
-            Código QR
+          <Button type="button" variant="outline" size="sm" onClick={addQRElement}>
+            <QrCode className="h-4 w-4 mr-2" /> Código QR
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addTextField('name')}
-          >
-            <Type className="h-4 w-4 mr-2" />
-            Nombre
+          <Button type="button" variant="outline" size="sm" onClick={() => addTextField('name')}>
+            <Type className="h-4 w-4 mr-2" /> Nombre
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addTextField('ticket_id')}
-          >
-            <Type className="h-4 w-4 mr-2" />
-            ID Ticket
+          <Button type="button" variant="outline" size="sm" onClick={() => addTextField('ticket_id')}>
+            <Type className="h-4 w-4 mr-2" /> ID Ticket
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addTextField('category')}
-          >
-            <Type className="h-4 w-4 mr-2" />
-            Categoría
+          <Button type="button" variant="outline" size="sm" onClick={() => addTextField('category')}>
+            <Type className="h-4 w-4 mr-2" /> Categoría
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => addTextField('cedula')}
-          >
-            <Type className="h-4 w-4 mr-2" />
-            Cédula
+          <Button type="button" variant="outline" size="sm" onClick={() => addTextField('cedula')}>
+            <Type className="h-4 w-4 mr-2" /> Cédula
           </Button>
           {selectedElement && (
-            <Button
-              type="button"
-              variant="destructive"
-              size="sm"
-              onClick={deleteSelectedElement}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Eliminar
+            <Button type="button" variant="destructive" size="sm" onClick={deleteSelectedElement}>
+              <Trash2 className="h-4 w-4 mr-2" /> Eliminar
             </Button>
           )}
         </div>
@@ -495,13 +662,8 @@ export const VisualTicketEditor = ({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm mb-2 block">Fuente</Label>
-                <Select
-                  value={selectedElementData.fontFamily || 'Arial'}
-                  onValueChange={(value) => updateSelectedElement({ fontFamily: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={selectedElementData.fontFamily || 'Arial'} onValueChange={(v) => updateSelectedElement({ fontFamily: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Arial">Arial</SelectItem>
                     <SelectItem value="Times New Roman">Times New Roman</SelectItem>
@@ -512,83 +674,38 @@ export const VisualTicketEditor = ({
                   </SelectContent>
                 </Select>
               </div>
-              
               <div>
                 <Label className="text-sm mb-2 block">Tamaño</Label>
-                <Input
-                  type="number"
-                  value={selectedElementData.fontSize || 14}
+                <Input type="number" value={selectedElementData.fontSize || 14}
                   onChange={(e) => updateSelectedElement({ fontSize: parseInt(e.target.value) || 14 })}
-                  min={8}
-                  max={72}
-                />
+                  min={8} max={72} />
               </div>
             </div>
-
             <div>
               <Label className="text-sm mb-2 block">Alineación</Label>
               <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={selectedElementData.textAlign === 'left' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => updateSelectedElement({ textAlign: 'left' })}
-                >
-                  <AlignLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant={selectedElementData.textAlign === 'center' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => updateSelectedElement({ textAlign: 'center' })}
-                >
-                  <AlignCenter className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant={selectedElementData.textAlign === 'right' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => updateSelectedElement({ textAlign: 'right' })}
-                >
-                  <AlignRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant={selectedElementData.bold ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => updateSelectedElement({ bold: !selectedElementData.bold })}
-                >
-                  <Bold className="h-4 w-4" />
-                </Button>
+                <Button type="button" variant={selectedElementData.textAlign === 'left' ? 'default' : 'outline'} size="sm" onClick={() => updateSelectedElement({ textAlign: 'left' })}><AlignLeft className="h-4 w-4" /></Button>
+                <Button type="button" variant={selectedElementData.textAlign === 'center' ? 'default' : 'outline'} size="sm" onClick={() => updateSelectedElement({ textAlign: 'center' })}><AlignCenter className="h-4 w-4" /></Button>
+                <Button type="button" variant={selectedElementData.textAlign === 'right' ? 'default' : 'outline'} size="sm" onClick={() => updateSelectedElement({ textAlign: 'right' })}><AlignRight className="h-4 w-4" /></Button>
+                <Button type="button" variant={selectedElementData.bold ? 'default' : 'outline'} size="sm" onClick={() => updateSelectedElement({ bold: !selectedElementData.bold })}><Bold className="h-4 w-4" /></Button>
               </div>
             </div>
-
             <div>
               <Label className="text-sm mb-2 block">Color</Label>
               <div className="flex gap-2 items-center">
-                <Input
-                  type="color"
-                  value={selectedElementData.color || '#000000'}
-                  onChange={(e) => updateSelectedElement({ color: e.target.value })}
-                  className="w-20 h-10"
-                />
-                <Input
-                  type="text"
-                  value={selectedElementData.color || '#000000'}
-                  onChange={(e) => updateSelectedElement({ color: e.target.value })}
-                  className="flex-1"
-                  placeholder="#000000"
-                />
+                <Input type="color" value={selectedElementData.color || '#000000'} onChange={(e) => updateSelectedElement({ color: e.target.value })} className="w-20 h-10" />
+                <Input type="text" value={selectedElementData.color || '#000000'} onChange={(e) => updateSelectedElement({ color: e.target.value })} className="flex-1" placeholder="#000000" />
               </div>
             </div>
           </div>
         </Card>
       )}
 
+      {/* CANVAS */}
       <Card className="p-4">
-        <div 
+        <div
           className="relative border border-border rounded-lg overflow-auto"
-          style={{ 
+          style={{
             maxHeight: '600px',
             backgroundImage: showGrid ? 'linear-gradient(hsl(var(--muted)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--muted)) 1px, transparent 1px)' : 'none',
             backgroundSize: showGrid ? '20px 20px' : 'auto',
@@ -598,16 +715,23 @@ export const VisualTicketEditor = ({
         </div>
       </Card>
 
-      <div className="text-sm text-muted-foreground">
-        <p>💡 <strong>Instrucciones:</strong></p>
-        <ul className="list-disc list-inside space-y-1 mt-2">
-          <li>Haz clic en los botones para agregar elementos al canvas</li>
-          <li>Arrastra los elementos para posicionarlos</li>
-          <li>Redimensiona los elementos usando los controles en las esquinas</li>
-          <li>Selecciona un elemento y haz clic en "Eliminar" para quitarlo</li>
-          <li>Los elementos se guardarán automáticamente con la plantilla</li>
-        </ul>
+      <div className="text-xs text-muted-foreground">
+        💡 <strong>Atajos:</strong> Ctrl+Z deshacer · Ctrl+Shift+Z rehacer · arrastra la imagen del fondo para reposicionar · el snap alinea a la grilla y al centro.
       </div>
+
+      {/* CROP DIALOG */}
+      {backgroundImageUrl && onBackgroundImageChange && (
+        <BackgroundCropDialog
+          open={cropOpen}
+          onOpenChange={setCropOpen}
+          imageUrl={backgroundImageUrl}
+          onCropped={(newUrl) => {
+            onBackgroundImageChange(newUrl);
+            onBackgroundTransformChange?.({});
+            setCropOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };
