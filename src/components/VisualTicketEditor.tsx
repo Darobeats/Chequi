@@ -52,7 +52,11 @@ const SNAP_GRID = 10;
 const SNAP_ANGLE = 15;
 const GUIDE_THRESHOLD = 5;
 
-export const VisualTicketEditor = ({
+export interface VisualTicketEditorHandle {
+  flushToState: () => void;
+}
+
+export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTicketEditorProps>(({
   canvasWidth,
   canvasHeight,
   elements,
@@ -64,7 +68,7 @@ export const VisualTicketEditor = ({
   onCanvasSizeChange,
   onBackgroundTransformChange,
   onBackgroundImageChange,
-}: VisualTicketEditorProps) => {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
