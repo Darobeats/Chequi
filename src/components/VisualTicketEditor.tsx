@@ -415,7 +415,7 @@ export const VisualTicketEditor = ({
             <div>
               <Label className="block">Imagen de fondo</Label>
               <p className="text-xs text-muted-foreground">
-                {bgEditable ? '✏️ Editable — arrastra, redimensiona y rota el fondo. La calidad original se preserva.' : '🔒 Bloqueada. Actívala para reposicionar/escalar.'}
+                {bgEditable ? '✏️ Arrastra, redimensiona y rota la imagen directamente sobre el canvas. Se conserva la calidad original.' : '🔒 Bloqueada. Actívala para reposicionar/escalar/rotar.'}
               </p>
             </div>
             <Button type="button" variant={bgEditable ? 'default' : 'outline'} size="sm" onClick={() => setBgEditable(!bgEditable)}>
