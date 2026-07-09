@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Canvas as FabricCanvas, FabricImage, Line, Text, FabricObject } from 'fabric';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -52,7 +52,11 @@ const SNAP_GRID = 10;
 const SNAP_ANGLE = 15;
 const GUIDE_THRESHOLD = 5;
 
-export const VisualTicketEditor = ({
+export interface VisualTicketEditorHandle {
+  flushToState: () => void;
+}
+
+export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTicketEditorProps>(({
   canvasWidth,
   canvasHeight,
   elements,
@@ -64,7 +68,7 @@ export const VisualTicketEditor = ({
   onCanvasSizeChange,
   onBackgroundTransformChange,
   onBackgroundImageChange,
-}: VisualTicketEditorProps) => {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
@@ -186,6 +190,8 @@ export const VisualTicketEditor = ({
 
       img.set({
         left, top, scaleX, scaleY, angle,
+        originX: 'left',
+        originY: 'top',
         opacity: backgroundOpacityRef.current,
         selectable: bgEditableRef.current,
         evented: bgEditableRef.current,
@@ -281,6 +287,13 @@ export const VisualTicketEditor = ({
       const t = e.target as any;
       if (!t) return;
       if (t.elementType === 'background') isEditingBgRef.current = true;
+      // Enforce QR minimum size of 100px during interactive scaling
+      if (t.elementType === 'qr') {
+        const minW = 100 / (t.width || 1);
+        const minH = 100 / (t.height || 1);
+        if (t.scaleX < minW) t.scaleX = minW;
+        if (t.scaleY < minH) t.scaleY = minH;
+      }
     };
 
     const onRotating = (e: any) => {
@@ -348,13 +361,14 @@ export const VisualTicketEditor = ({
       }
     });
 
-    elements.forEach(element => {
-      if (!canvasElementIds.includes(element.id)) {
-        addElementToCanvas(fabricCanvas, element);
-      }
-    });
+    const addPromises = elements
+      .filter(element => !canvasElementIds.includes(element.id))
+      .map(element => addElementToCanvas(fabricCanvas, element));
 
-    fabricCanvas.renderAll();
+    Promise.all(addPromises).then(() => {
+      fabricCanvas.renderAll();
+      if (addPromises.length > 0) syncCanvasToElements(fabricCanvas);
+    });
   }, [fabricCanvas, elements]);
 
   const addElementToCanvas = async (canvas: FabricCanvas, element: TicketElement) => {
@@ -432,12 +446,15 @@ export const VisualTicketEditor = ({
           fontSize: newFontSize,
         });
       } else {
+        const w = (obj.width || 0) * scaleX;
+        const h = (obj.height || 0) * scaleY;
+        const isQR = element.type === 'qr';
         updated.push({
           ...element,
           x: obj.left || 0,
           y: obj.top || 0,
-          width: (obj.width || 0) * scaleX,
-          height: (obj.height || 0) * scaleY,
+          width: isQR ? Math.max(100, w) : w,
+          height: isQR ? Math.max(100, h) : h,
         });
       }
     });
@@ -599,10 +616,21 @@ export const VisualTicketEditor = ({
         if (updates.bold !== undefined) obj.set('fontWeight', updates.bold ? 'bold' : 'normal');
         if (updates.textAlign) obj.set('textAlign', updates.textAlign);
         if (updates.color) obj.set('fill', updates.color);
+        // Force Fabric to recompute intrinsic width/height for new font metrics
+        (obj as any).initDimensions?.();
+        obj.setCoords();
         fabricCanvas.renderAll();
+        // Persist recomputed width/height back into state so the exporter uses the same values
+        syncCanvasToElements(fabricCanvas);
       }
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    flushToState: () => {
+      if (fabricCanvas) syncCanvasToElements(fabricCanvas);
+    },
+  }), [fabricCanvas]);
 
   const selectedElementData = elements.find(e => e.id === selectedElement);
 
@@ -909,4 +937,5 @@ export const VisualTicketEditor = ({
       />
     </div>
   );
-};
+});
+VisualTicketEditor.displayName = 'VisualTicketEditor';
