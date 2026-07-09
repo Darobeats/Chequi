@@ -380,7 +380,7 @@ export const VisualTicketEditor = ({
     if (!fabricCanvas) return;
     if (suppressHistoryRef.current) return;
     const entry: HistoryEntry = {
-      json: fabricCanvas.toJSON(['elementId', 'elementType']),
+      json: (fabricCanvas as any).toJSON(['elementId', 'elementType']),
       bgTransform: backgroundTransform ? { ...backgroundTransform } : undefined,
     };
     // Drop redo tail
