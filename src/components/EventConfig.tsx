@@ -26,7 +26,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Edit, Trash2, Download } from 'lucide-react';
 import { ExportTicketsPNG } from '@/components/ExportTicketsPNG';
 import ExportTicketsPrint from '@/components/ExportTicketsPrint';
-import ExportTicketsByCategory from '@/components/ExportTicketsByCategory';
+import TicketExportCenter from '@/components/TicketExportCenter';
 import { CedulasAutorizadasManager } from '@/components/cedula/CedulasAutorizadasManager';
 import { EventTeamManager } from '@/components/EventTeamManager';
 import { supabase } from '@/integrations/supabase/client';
