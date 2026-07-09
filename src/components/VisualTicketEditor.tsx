@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Canvas as FabricCanvas, FabricImage, Line, Text, FabricObject } from 'fabric';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
