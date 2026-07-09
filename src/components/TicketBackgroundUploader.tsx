@@ -222,15 +222,9 @@ export const TicketBackgroundUploader = ({
               <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted">
                 <img
                   src={preview}
-                  alt="Vista previa"
-                  className="h-full w-full object-cover opacity-20"
-                  style={{ filter: 'grayscale(20%)' }}
+                  alt="Imagen actual del ticket"
+                  className="h-full w-full object-contain"
                 />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-sm text-muted-foreground">
-                    Efecto de marca de agua (vista previa)
-                  </p>
-                </div>
               </div>
               <Button
                 variant="destructive"
