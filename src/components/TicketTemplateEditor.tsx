@@ -225,6 +225,7 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
               setFormData({ ...formData, canvas_width: width, canvas_height: height })
             }
             onBackgroundTransformChange={(t) => setFormData({ ...formData, background_transform: t })}
+            onBackgroundImageChange={(url) => setFormData({ ...formData, background_image_url: url })}
           />
 
           <Card>
