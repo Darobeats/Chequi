@@ -613,10 +613,21 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
         if (updates.bold !== undefined) obj.set('fontWeight', updates.bold ? 'bold' : 'normal');
         if (updates.textAlign) obj.set('textAlign', updates.textAlign);
         if (updates.color) obj.set('fill', updates.color);
+        // Force Fabric to recompute intrinsic width/height for new font metrics
+        (obj as any).initDimensions?.();
+        obj.setCoords();
         fabricCanvas.renderAll();
+        // Persist recomputed width/height back into state so the exporter uses the same values
+        syncCanvasToElements(fabricCanvas);
       }
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    flushToState: () => {
+      if (fabricCanvas) syncCanvasToElements(fabricCanvas);
+    },
+  }), [fabricCanvas]);
 
   const selectedElementData = elements.find(e => e.id === selectedElement);
 
