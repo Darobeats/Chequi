@@ -9,15 +9,11 @@ import { TicketElement } from '@/types/database';
 import {
   Trash2, Type, QrCode, ZoomIn, ZoomOut, Grid, Magnet,
   AlignLeft, AlignCenter, AlignRight, Bold, Undo2, Redo2,
-  Download, FileText, Crop as CropIcon,
+  Crop as CropIcon,
   ChevronUp, ChevronDown, ChevronsUp, ChevronsDown,
-  GitCompare, Eye,
 } from 'lucide-react';
 import QRCode from 'qrcode';
-import jsPDF from 'jspdf';
 import { toast } from '@/hooks/use-toast';
-import { TemplateCompareDialog } from './TemplateCompareDialog';
-import { TicketTemplate } from '@/types/database';
 import { BackgroundCropDialog } from './BackgroundCropDialog';
 
 export interface BackgroundTransform {
@@ -53,7 +49,7 @@ const SNAP_ANGLE = 15;
 const GUIDE_THRESHOLD = 5;
 
 export interface VisualTicketEditorHandle {
-  flushToState: () => void;
+  flushToState: () => TicketElement[];
 }
 
 export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTicketEditorProps>(({
@@ -75,13 +71,9 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
-  const [bgEditable, setBgEditable] = useState(true);
   const [cropOpen, setCropOpen] = useState(false);
-  const [compareOpen, setCompareOpen] = useState(false);
-  const [compareExportOnly, setCompareExportOnly] = useState(false);
-  const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
 
-  // Refs to avoid re-instantiating background on transform round-trip
+  // Refs to avoid stale callbacks while Fabric owns the canvas state
   const isEditingBgRef = useRef(false);
   const suppressHistoryRef = useRef(false);
   const guideLinesRef = useRef<Line[]>([]);
@@ -91,7 +83,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
   const elementsRef = useRef(elements);
   const backgroundTransformRef = useRef(backgroundTransform);
   const backgroundOpacityRef = useRef(backgroundOpacity);
-  const bgEditableRef = useRef(bgEditable);
   const onElementsChangeRef = useRef(onElementsChange);
   const onBackgroundTransformChangeRef = useRef(onBackgroundTransformChange);
   const onCanvasSizeChangeRef = useRef(onCanvasSizeChange);
@@ -99,7 +90,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
   elementsRef.current = elements;
   backgroundTransformRef.current = backgroundTransform;
   backgroundOpacityRef.current = backgroundOpacity;
-  bgEditableRef.current = bgEditable;
   onElementsChangeRef.current = onElementsChange;
   onBackgroundTransformChangeRef.current = onBackgroundTransformChange;
   onCanvasSizeChangeRef.current = onCanvasSizeChange;
@@ -136,8 +126,8 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     fabricCanvas.renderAll();
   }, [fabricCanvas, canvasWidth, canvasHeight]);
 
-  // ---------- Background load (fix #0) ----------
-  // Only re-instantiate on URL / canvas change. Skip while user is dragging.
+  // ---------- Background load ----------
+  // The uploaded image is the ticket: it defines the canvas and always fills it 1:1.
   useEffect(() => {
     if (!fabricCanvas) return;
     if (isEditingBgRef.current) return;
@@ -159,47 +149,33 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       if (cancelled) return;
       const iw = img.width || 1;
       const ih0 = img.height || 1;
-      // Auto-fit canvas to image's natural dimensions.
       if (iw !== canvasWidth || ih0 !== canvasHeight) {
         onCanvasSizeChangeRef.current(iw, ih0);
-        return; // effect will re-run with new dimensions
+        onBackgroundTransformChangeRef.current?.({ x: 0, y: 0, scaleX: 1, scaleY: 1, angle: 0 });
+        return;
       }
-      const ih = ih0;
-      const transform = backgroundTransformRef.current;
-      let scaleX = transform?.scaleX ?? 1;
-      let scaleY = transform?.scaleY ?? 1;
-      let left = transform?.x ?? 0;
-      let top = transform?.y ?? 0;
-      const angle = transform?.angle ?? 0;
-
-      const hasStoredTransform =
-        transform &&
-        (transform.scaleX != null || transform.scaleY != null);
-
-      if (!hasStoredTransform) {
-        const s = Math.max(canvasWidth / iw, canvasHeight / ih);
-        scaleX = s; scaleY = s;
-        left = (canvasWidth - iw * s) / 2;
-        top = (canvasHeight - ih * s) / 2;
-      }
-
-      // Defensive clamp: if stored position lands way off-canvas, recenter
-      const outX = left < -canvasWidth || left > canvasWidth * 2;
-      const outY = top < -canvasHeight || top > canvasHeight * 2;
-      if (outX || outY) { left = 0; top = 0; }
 
       img.set({
-        left, top, scaleX, scaleY, angle,
+        left: 0,
+        top: 0,
+        scaleX: 1,
+        scaleY: 1,
+        angle: 0,
         originX: 'left',
         originY: 'top',
-        opacity: backgroundOpacityRef.current,
-        selectable: bgEditableRef.current,
-        evented: bgEditableRef.current,
-        hasControls: bgEditableRef.current,
-        lockRotation: false,
+        opacity: 1,
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        lockMovementX: true,
+        lockMovementY: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        lockRotation: true,
       });
       (img as any).elementType = 'background';
       (img as any).backgroundSourceUrl = backgroundImageUrl;
+      onBackgroundTransformChangeRef.current?.({ x: 0, y: 0, scaleX: 1, scaleY: 1, angle: 0 });
 
       removeBackgrounds();
       fabricCanvas.add(img);
@@ -209,27 +185,16 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     return () => { cancelled = true; };
   }, [fabricCanvas, backgroundImageUrl, canvasWidth, canvasHeight]);
 
-  // Update opacity without recreating background
+  // Keep visual-ticket backgrounds fully opaque and locked.
   useEffect(() => {
     if (!fabricCanvas) return;
     fabricCanvas.getObjects().forEach((o: any) => {
       if (o.elementType === 'background') {
-        o.set('opacity', backgroundOpacity);
+        o.set({ opacity: 1, selectable: false, evented: false, hasControls: false });
       }
     });
     fabricCanvas.renderAll();
   }, [fabricCanvas, backgroundOpacity]);
-
-  // Toggle bg interactivity
-  useEffect(() => {
-    if (!fabricCanvas) return;
-    fabricCanvas.getObjects().forEach((o: any) => {
-      if (o.elementType === 'background') {
-        o.set({ selectable: bgEditable, evented: bgEditable, hasControls: bgEditable });
-      }
-    });
-    fabricCanvas.renderAll();
-  }, [fabricCanvas, bgEditable]);
 
   // ---------- Snap-to-grid + alignment guides ----------
   const clearGuides = useCallback(() => {
