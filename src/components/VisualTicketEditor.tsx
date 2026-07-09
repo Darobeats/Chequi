@@ -10,10 +10,14 @@ import {
   Trash2, Type, QrCode, ZoomIn, ZoomOut, Grid, Magnet,
   AlignLeft, AlignCenter, AlignRight, Bold, Undo2, Redo2,
   Download, FileText, Crop as CropIcon,
+  ChevronUp, ChevronDown, ChevronsUp, ChevronsDown,
+  GitCompare, Eye,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import { toast } from '@/hooks/use-toast';
+import { TemplateCompareDialog } from './TemplateCompareDialog';
+import { TicketTemplate } from '@/types/database';
 import { BackgroundCropDialog } from './BackgroundCropDialog';
 
 export interface BackgroundTransform {
@@ -69,6 +73,9 @@ export const VisualTicketEditor = ({
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [bgEditable, setBgEditable] = useState(true);
   const [cropOpen, setCropOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareExportOnly, setCompareExportOnly] = useState(false);
+  const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
 
   // Refs to avoid re-instantiating background on transform round-trip
   const isEditingBgRef = useRef(false);
@@ -395,44 +402,52 @@ export const VisualTicketEditor = ({
   };
 
   const syncCanvasToElements = (canvas: FabricCanvas) => {
-    const updatedElements = elementsRef.current.map(element => {
-      const obj = canvas.getObjects().find(o => (o as any).elementId === element.id) as any;
-      if (!obj) return element;
+    // Preserve the visual stacking order from the Fabric canvas (bottom -> top).
+    // Background and guides are excluded; only real elements contribute to the array order.
+    const stack = canvas.getObjects()
+      .filter((o: any) => o.elementId && (o.elementType === 'qr' || o.elementType === 'text'));
+    const byId = new Map(elementsRef.current.map(e => [e.id, e]));
+
+    const updated: TicketElement[] = [];
+    stack.forEach((obj: any) => {
+      const element = byId.get(obj.elementId);
+      if (!element) return;
       const scaleX = obj.scaleX || 1;
       const scaleY = obj.scaleY || 1;
       if (element.type === 'text') {
-        // Absorb scale into fontSize/width so exported PNG matches editor visual
         const baseFontSize = element.fontSize || obj.fontSize || 14;
         const newFontSize = Math.max(4, Math.round(baseFontSize * scaleY));
         const newWidth = (obj.width || 0) * scaleX;
         const newHeight = (obj.height || 0) * scaleY;
         if (scaleX !== 1 || scaleY !== 1) {
-          obj.set({
-            fontSize: newFontSize,
-            scaleX: 1,
-            scaleY: 1,
-            width: obj.width, // keep intrinsic width
-          });
+          obj.set({ fontSize: newFontSize, scaleX: 1, scaleY: 1, width: obj.width });
           obj.setCoords();
         }
-        return {
+        updated.push({
           ...element,
           x: obj.left || 0,
           y: obj.top || 0,
           width: newWidth,
           height: newHeight,
           fontSize: newFontSize,
-        };
+        });
+      } else {
+        updated.push({
+          ...element,
+          x: obj.left || 0,
+          y: obj.top || 0,
+          width: (obj.width || 0) * scaleX,
+          height: (obj.height || 0) * scaleY,
+        });
       }
-      return {
-        ...element,
-        x: obj.left || 0,
-        y: obj.top || 0,
-        width: (obj.width || 0) * scaleX,
-        height: (obj.height || 0) * scaleY,
-      };
     });
-    onElementsChangeRef.current(updatedElements);
+
+    // Append any elements not present in canvas (safety) preserving previous order
+    elementsRef.current.forEach(el => {
+      if (!updated.find(u => u.id === el.id)) updated.push(el);
+    });
+
+    onElementsChangeRef.current(updated);
   };
 
   // ---------- History (undo/redo) ----------
@@ -605,6 +620,73 @@ export const VisualTicketEditor = ({
   const canUndo = cursorRef.current > 0;
   const canRedo = cursorRef.current < historyRef.current.length - 1;
 
+  // ---------- Layer ops ----------
+  const changeLayer = (mode: 'up' | 'down' | 'top' | 'bottom') => {
+    if (!fabricCanvas || !selectedElement) return;
+    const obj = fabricCanvas.getObjects().find(o => (o as any).elementId === selectedElement);
+    if (!obj) return;
+    try {
+      if (mode === 'up') (fabricCanvas as any).bringObjectForward(obj);
+      else if (mode === 'down') (fabricCanvas as any).sendObjectBackwards(obj);
+      else if (mode === 'top') (fabricCanvas as any).bringObjectToFront(obj);
+      else (fabricCanvas as any).sendObjectToBack(obj);
+      // Keep background at the very bottom
+      fabricCanvas.getObjects().forEach((o: any) => {
+        if (o.elementType === 'background') {
+          try { (fabricCanvas as any).sendObjectToBack(o); } catch { /* noop */ }
+        }
+      });
+      syncCanvasToElements(fabricCanvas);
+      fabricCanvas.renderAll();
+      pushHistory();
+    } catch (e) {
+      console.warn('layer op failed', e);
+    }
+  };
+
+  // ---------- Build a template snapshot for the export engine ----------
+  const buildTemplateSnapshot = (): TicketTemplate => ({
+    id: 'preview',
+    event_config_id: null,
+    name: 'Preview',
+    tickets_per_page: 1,
+    layout: '1x1',
+    show_qr: true, show_name: true, show_email: false, show_category: false, show_ticket_id: false,
+    custom_fields: [],
+    qr_size: 200,
+    font_size_name: 14, font_size_info: 10,
+    margin_top: 0, margin_bottom: 0, margin_left: 0, margin_right: 0,
+    background_image_url: backgroundImageUrl || null,
+    background_opacity: backgroundOpacity,
+    background_mode: (_backgroundMode as any) || 'tile',
+    background_transform: backgroundTransform,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    canvas_width: canvasWidth,
+    canvas_height: canvasHeight,
+    elements: elements as any,
+    use_visual_editor: true,
+  } as any);
+
+  const openCompare = () => {
+    if (!fabricCanvas) return;
+    clearGuides();
+    try {
+      const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 1, quality: 1 } as any);
+      setEditorSnapshot(dataUrl);
+    } catch {
+      setEditorSnapshot(null);
+    }
+    setCompareExportOnly(false);
+    setCompareOpen(true);
+  };
+
+  const openExportPreview = () => {
+    setEditorSnapshot(null);
+    setCompareExportOnly(true);
+    setCompareOpen(true);
+  };
+
   return (
     <div className="space-y-4">
       {/* TOOLBAR */}
@@ -643,6 +725,15 @@ export const VisualTicketEditor = ({
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={exportPDF} title="Exportar PDF">
             <FileText className="h-4 w-4 mr-1" /> PDF
+          </Button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <Button type="button" variant="outline" size="sm" onClick={openCompare} title="Comparar editor vs. motor de exportación">
+            <GitCompare className="h-4 w-4 mr-1" /> Comparar
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={openExportPreview} title="Renderizar con el motor de exportación">
+            <Eye className="h-4 w-4 mr-1" /> Render export
           </Button>
         </div>
       </Card>
@@ -708,9 +799,24 @@ export const VisualTicketEditor = ({
             <Type className="h-4 w-4 mr-2" /> Cédula
           </Button>
           {selectedElement && (
-            <Button type="button" variant="destructive" size="sm" onClick={deleteSelectedElement}>
-              <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-            </Button>
+            <>
+              <div className="w-px h-6 bg-border mx-1" />
+              <Button type="button" variant="outline" size="sm" onClick={() => changeLayer('bottom')} title="Enviar al fondo">
+                <ChevronsDown className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => changeLayer('down')} title="Bajar una capa">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => changeLayer('up')} title="Subir una capa">
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => changeLayer('top')} title="Traer al frente">
+                <ChevronsUp className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="destructive" size="sm" onClick={deleteSelectedElement}>
+                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+              </Button>
+            </>
           )}
         </div>
       </Card>
@@ -792,6 +898,15 @@ export const VisualTicketEditor = ({
           }}
         />
       )}
+
+      {/* COMPARE / EXPORT PREVIEW DIALOG */}
+      <TemplateCompareDialog
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        editorSnapshot={editorSnapshot}
+        template={buildTemplateSnapshot()}
+        exportOnly={compareExportOnly}
+      />
     </div>
   );
 };
