@@ -396,14 +396,40 @@ export const VisualTicketEditor = ({
 
   const syncCanvasToElements = (canvas: FabricCanvas) => {
     const updatedElements = elementsRef.current.map(element => {
-      const obj = canvas.getObjects().find(o => (o as any).elementId === element.id);
+      const obj = canvas.getObjects().find(o => (o as any).elementId === element.id) as any;
       if (!obj) return element;
+      const scaleX = obj.scaleX || 1;
+      const scaleY = obj.scaleY || 1;
+      if (element.type === 'text') {
+        // Absorb scale into fontSize/width so exported PNG matches editor visual
+        const baseFontSize = element.fontSize || obj.fontSize || 14;
+        const newFontSize = Math.max(4, Math.round(baseFontSize * scaleY));
+        const newWidth = (obj.width || 0) * scaleX;
+        const newHeight = (obj.height || 0) * scaleY;
+        if (scaleX !== 1 || scaleY !== 1) {
+          obj.set({
+            fontSize: newFontSize,
+            scaleX: 1,
+            scaleY: 1,
+            width: obj.width, // keep intrinsic width
+          });
+          obj.setCoords();
+        }
+        return {
+          ...element,
+          x: obj.left || 0,
+          y: obj.top || 0,
+          width: newWidth,
+          height: newHeight,
+          fontSize: newFontSize,
+        };
+      }
       return {
         ...element,
         x: obj.left || 0,
         y: obj.top || 0,
-        width: (obj.width || 0) * (obj.scaleX || 1),
-        height: (obj.height || 0) * (obj.scaleY || 1),
+        width: (obj.width || 0) * scaleX,
+        height: (obj.height || 0) * scaleY,
       };
     });
     onElementsChangeRef.current(updatedElements);
