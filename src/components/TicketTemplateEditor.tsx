@@ -220,12 +220,12 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
             backgroundOpacity={formData.background_opacity}
             backgroundTransform={formData.background_transform}
             backgroundMode={formData.background_mode}
-            onElementsChange={(elements) => setFormData({ ...formData, elements })}
+            onElementsChange={(elements) => setFormData((prev) => ({ ...prev, elements }))}
             onCanvasSizeChange={(width, height) =>
-              setFormData({ ...formData, canvas_width: width, canvas_height: height })
+              setFormData((prev) => ({ ...prev, canvas_width: width, canvas_height: height }))
             }
-            onBackgroundTransformChange={(t) => setFormData({ ...formData, background_transform: t })}
-            onBackgroundImageChange={(url) => setFormData({ ...formData, background_image_url: url })}
+            onBackgroundTransformChange={(t) => setFormData((prev) => ({ ...prev, background_transform: t }))}
+            onBackgroundImageChange={(url) => setFormData((prev) => ({ ...prev, background_image_url: url }))}
           />
 
           <Card>
@@ -236,8 +236,8 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
             <CardContent className="space-y-4">
               <TicketBackgroundUploader
                 currentImageUrl={formData.background_image_url}
-                onImageUpload={(url) => setFormData({ ...formData, background_image_url: url, background_mode: 'full_ticket', background_transform: {} })}
-                onImageRemove={() => setFormData({ ...formData, background_image_url: null, background_transform: {} })}
+                onImageUpload={(url) => setFormData((prev) => ({ ...prev, background_image_url: url, background_mode: 'full_ticket', background_transform: {} }))}
+                onImageRemove={() => setFormData((prev) => ({ ...prev, background_image_url: null, background_transform: {} }))}
               />
 
               {formData.background_image_url && (
@@ -245,7 +245,7 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
                   <Label>Opacidad: {(formData.background_opacity * 100).toFixed(0)}%</Label>
                   <Slider
                     value={[formData.background_opacity]}
-                    onValueChange={(value) => setFormData({ ...formData, background_opacity: value[0] })}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, background_opacity: value[0] }))}
                     min={0.05}
                     max={1}
                     step={0.05}
@@ -448,7 +448,7 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         <TemplateVersionsPanel
           templateId={template.id}
           currentSnapshot={formData}
-          onRestore={(snapshot) => setFormData({ ...formData, ...snapshot })}
+          onRestore={(snapshot) => setFormData((prev) => ({ ...prev, ...snapshot }))}
         />
       )}
 
