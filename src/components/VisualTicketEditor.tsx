@@ -83,6 +83,7 @@ export const VisualTicketEditor = ({
   const bgEditableRef = useRef(bgEditable);
   const onElementsChangeRef = useRef(onElementsChange);
   const onBackgroundTransformChangeRef = useRef(onBackgroundTransformChange);
+  const onCanvasSizeChangeRef = useRef(onCanvasSizeChange);
 
   elementsRef.current = elements;
   backgroundTransformRef.current = backgroundTransform;
@@ -90,6 +91,7 @@ export const VisualTicketEditor = ({
   bgEditableRef.current = bgEditable;
   onElementsChangeRef.current = onElementsChange;
   onBackgroundTransformChangeRef.current = onBackgroundTransformChange;
+  onCanvasSizeChangeRef.current = onCanvasSizeChange;
 
   // ---------- Init canvas ----------
   useEffect(() => {
@@ -145,7 +147,13 @@ export const VisualTicketEditor = ({
     FabricImage.fromURL(backgroundImageUrl, { crossOrigin: 'anonymous' }).then((img) => {
       if (cancelled) return;
       const iw = img.width || 1;
-      const ih = img.height || 1;
+      const ih0 = img.height || 1;
+      // Auto-fit canvas to image's natural dimensions.
+      if (iw !== canvasWidth || ih0 !== canvasHeight) {
+        onCanvasSizeChangeRef.current(iw, ih0);
+        return; // effect will re-run with new dimensions
+      }
+      const ih = ih0;
       const transform = backgroundTransformRef.current;
       let scaleX = transform?.scaleX ?? 1;
       let scaleY = transform?.scaleY ?? 1;
@@ -613,20 +621,19 @@ export const VisualTicketEditor = ({
         </div>
       </Card>
 
-      {/* CANVAS SIZE */}
+      {/* CANVAS SIZE (auto-derived from background image) */}
       <Card className="p-4">
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <Label>Ancho (px)</Label>
-            <Input type="number" value={canvasWidth}
-              onChange={(e) => onCanvasSizeChange(parseInt(e.target.value) || 800, canvasHeight)}
-              min={400} max={1200} />
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <Label className="block">Tamaño del ticket</Label>
+            <p className="text-xs text-muted-foreground">
+              {backgroundImageUrl
+                ? 'Definido automáticamente por la imagen de fondo.'
+                : 'Sube una imagen para definir el tamaño del ticket.'}
+            </p>
           </div>
-          <div className="flex-1">
-            <Label>Alto (px)</Label>
-            <Input type="number" value={canvasHeight}
-              onChange={(e) => onCanvasSizeChange(canvasWidth, parseInt(e.target.value) || 600)}
-              min={300} max={1200} />
+          <div className="text-sm font-mono px-3 py-1.5 rounded-md bg-muted">
+            {canvasWidth} × {canvasHeight} px
           </div>
         </div>
       </Card>
