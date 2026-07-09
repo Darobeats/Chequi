@@ -145,6 +145,12 @@ export const VisualTicketEditor = ({
     FabricImage.fromURL(backgroundImageUrl, { crossOrigin: 'anonymous' }).then((img) => {
       if (cancelled) return;
       const iw = img.width || 1;
+      const ih0 = img.height || 1;
+      // Auto-fit canvas to image's natural dimensions.
+      if (iw !== canvasWidth || ih0 !== canvasHeight) {
+        onCanvasSizeChange(iw, ih0);
+        return; // effect will re-run with new dimensions
+      }
       const ih = img.height || 1;
       const transform = backgroundTransformRef.current;
       let scaleX = transform?.scaleX ?? 1;
