@@ -433,6 +433,26 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         <TemplateBindingsEditor templateId={template.id} eventId={formData.event_config_id} />
       )}
 
+      {formData.use_visual_editor && (
+        <TemplateDevicePreview
+          canvasWidth={formData.canvas_width}
+          canvasHeight={formData.canvas_height}
+          elements={formData.elements}
+          backgroundImageUrl={formData.background_image_url}
+          backgroundOpacity={formData.background_opacity}
+          backgroundTransform={formData.background_transform}
+        />
+      )}
+
+      {template && (
+        <TemplateVersionsPanel
+          templateId={template.id}
+          currentSnapshot={formData}
+          onRestore={(snapshot) => setFormData({ ...formData, ...snapshot })}
+        />
+      )}
+
+
 
 
       <div className="flex justify-end gap-2">
