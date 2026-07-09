@@ -77,6 +77,19 @@ export const VisualTicketEditor = ({
   const historyRef = useRef<HistoryEntry[]>([]);
   const cursorRef = useRef(-1);
   const [historyTick, setHistoryTick] = useState(0);
+  const elementsRef = useRef(elements);
+  const backgroundTransformRef = useRef(backgroundTransform);
+  const backgroundOpacityRef = useRef(backgroundOpacity);
+  const bgEditableRef = useRef(bgEditable);
+  const onElementsChangeRef = useRef(onElementsChange);
+  const onBackgroundTransformChangeRef = useRef(onBackgroundTransformChange);
+
+  elementsRef.current = elements;
+  backgroundTransformRef.current = backgroundTransform;
+  backgroundOpacityRef.current = backgroundOpacity;
+  bgEditableRef.current = bgEditable;
+  onElementsChangeRef.current = onElementsChange;
+  onBackgroundTransformChangeRef.current = onBackgroundTransformChange;
 
   // ---------- Init canvas ----------
   useEffect(() => {
@@ -111,29 +124,38 @@ export const VisualTicketEditor = ({
   }, [fabricCanvas, canvasWidth, canvasHeight]);
 
   // ---------- Background load (fix #0) ----------
-  // Only re-instantiate on URL / mode change. Skip while user is dragging.
+  // Only re-instantiate on URL / canvas change. Skip while user is dragging.
   useEffect(() => {
     if (!fabricCanvas) return;
     if (isEditingBgRef.current) return;
+    let cancelled = false;
 
-    fabricCanvas.getObjects().forEach((o: any) => {
-      if (o.elementType === 'background') fabricCanvas.remove(o);
-    });
+    const removeBackgrounds = () => {
+      fabricCanvas.getObjects().forEach((o: any) => {
+        if (o.elementType === 'background') fabricCanvas.remove(o);
+      });
+    };
 
-    if (!backgroundImageUrl) { fabricCanvas.renderAll(); return; }
+    if (!backgroundImageUrl) {
+      removeBackgrounds();
+      fabricCanvas.renderAll();
+      return () => { cancelled = true; };
+    }
 
     FabricImage.fromURL(backgroundImageUrl, { crossOrigin: 'anonymous' }).then((img) => {
+      if (cancelled) return;
       const iw = img.width || 1;
       const ih = img.height || 1;
-      let scaleX = backgroundTransform?.scaleX ?? 1;
-      let scaleY = backgroundTransform?.scaleY ?? 1;
-      let left = backgroundTransform?.x ?? 0;
-      let top = backgroundTransform?.y ?? 0;
-      const angle = backgroundTransform?.angle ?? 0;
+      const transform = backgroundTransformRef.current;
+      let scaleX = transform?.scaleX ?? 1;
+      let scaleY = transform?.scaleY ?? 1;
+      let left = transform?.x ?? 0;
+      let top = transform?.y ?? 0;
+      const angle = transform?.angle ?? 0;
 
       const hasStoredTransform =
-        backgroundTransform &&
-        (backgroundTransform.scaleX != null || backgroundTransform.scaleY != null);
+        transform &&
+        (transform.scaleX != null || transform.scaleY != null);
 
       if (!hasStoredTransform) {
         const s = Math.max(canvasWidth / iw, canvasHeight / ih);
@@ -149,20 +171,23 @@ export const VisualTicketEditor = ({
 
       img.set({
         left, top, scaleX, scaleY, angle,
-        opacity: backgroundOpacity,
-        selectable: bgEditable,
-        evented: bgEditable,
-        hasControls: bgEditable,
+        opacity: backgroundOpacityRef.current,
+        selectable: bgEditableRef.current,
+        evented: bgEditableRef.current,
+        hasControls: bgEditableRef.current,
         lockRotation: false,
       });
       (img as any).elementType = 'background';
+      (img as any).backgroundSourceUrl = backgroundImageUrl;
 
+      removeBackgrounds();
       fabricCanvas.add(img);
       try { fabricCanvas.sendObjectToBack(img); } catch { /* fabric api variance */ }
       fabricCanvas.renderAll();
     });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fabricCanvas, backgroundImageUrl, backgroundMode]);
+  }, [fabricCanvas, backgroundImageUrl, canvasWidth, canvasHeight]);
 
   // Update opacity without recreating background
   useEffect(() => {
@@ -258,7 +283,7 @@ export const VisualTicketEditor = ({
       clearGuides();
       if (t?.elementType === 'background') {
         isEditingBgRef.current = false;
-        onBackgroundTransformChange?.({
+        onBackgroundTransformChangeRef.current?.({
           x: t.left ?? 0,
           y: t.top ?? 0,
           scaleX: t.scaleX ?? 1,
@@ -381,7 +406,7 @@ export const VisualTicketEditor = ({
     if (suppressHistoryRef.current) return;
     const entry: HistoryEntry = {
       json: (fabricCanvas as any).toJSON(['elementId', 'elementType']),
-      bgTransform: backgroundTransform ? { ...backgroundTransform } : undefined,
+      bgTransform: backgroundTransformRef.current ? { ...backgroundTransformRef.current } : undefined,
     };
     // Drop redo tail
     historyRef.current = historyRef.current.slice(0, cursorRef.current + 1);
@@ -389,7 +414,7 @@ export const VisualTicketEditor = ({
     if (historyRef.current.length > 50) historyRef.current.shift();
     cursorRef.current = historyRef.current.length - 1;
     setHistoryTick(t => t + 1);
-  }, [fabricCanvas, backgroundTransform]);
+  }, [fabricCanvas]);
 
   // Seed history on first canvas render
   useEffect(() => {
@@ -408,7 +433,7 @@ export const VisualTicketEditor = ({
       fabricCanvas.getObjects().forEach((o: any) => {
         if (!o.elementId) return;
         if (o.elementType === 'qr' || o.elementType === 'text') {
-          const base = elements.find(e => e.id === o.elementId);
+          const base = elementsRef.current.find(e => e.id === o.elementId);
           restored.push({
             ...(base as TicketElement),
             id: o.elementId,
@@ -420,13 +445,13 @@ export const VisualTicketEditor = ({
           } as TicketElement);
         }
       });
-      onElementsChange(restored);
-      if (entry.bgTransform && onBackgroundTransformChange) {
-        onBackgroundTransformChange(entry.bgTransform);
+      onElementsChangeRef.current(restored);
+      if (entry.bgTransform) {
+        onBackgroundTransformChangeRef.current?.(entry.bgTransform);
       }
       setTimeout(() => { suppressHistoryRef.current = false; }, 100);
     });
-  }, [fabricCanvas, elements, onElementsChange, onBackgroundTransformChange]);
+  }, [fabricCanvas]);
 
   const undo = useCallback(() => {
     if (cursorRef.current <= 0) return;

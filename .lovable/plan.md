@@ -1,73 +1,49 @@
-# Editor de Plantillas: versiones, exportación, previews, controles avanzados + fix de fondo
+## Diagnóstico
 
-Cinco mejoras al editor visual de tickets, más un fix crítico de estabilidad del fondo. Se agrupa así para minimizar cambios cruzados.
+La falla más probable está en una combinación de cierres obsoletos entre `VisualTicketEditor` y `TicketTemplateEditor`:
 
-## 0. FIX: la imagen de fondo desaparece al moverla (bloqueante)
+- En `VisualTicketEditor`, el listener de Fabric `object:modified` se registra dentro de un `useEffect` que no depende de `onBackgroundTransformChange`.
+- Ese listener conserva una versión antigua del callback del padre.
+- En `TicketTemplateEditor`, el callback usa `setFormData({ ...formData, background_transform: t })`, lo que depende del `formData` capturado en ese render.
+- Si el callback capturado corresponde a un estado previo a la carga del fondo, al mover la imagen puede reescribir `formData` con `background_image_url: null` o datos viejos. Resultado: React vuelve a renderizar sin URL de fondo, el efecto de fondo remueve la imagen y parece que “desaparece”.
 
-**Síntoma reportado**: al subir el fondo se puede arrastrar, pero al soltar/mover la imagen desaparece del canvas y ya no se puede seguir editando.
+## Plan de corrección
 
-**Causa probable en `VisualTicketEditor.tsx`**: el `useEffect` de carga del fondo tiene como dependencias `backgroundImageUrl`, `backgroundOpacity`, `backgroundMode`, `bgEditable`. Cuando el usuario mueve la imagen, `object:modified` llama a `onBackgroundTransformChange`, que hace `setFormData({..., background_opacity})` implícitamente (porque el objeto guarda `opacity` en el transform) y el padre re-renderiza pasando un `backgroundOpacity` recalculado. Ese cambio dispara de nuevo el `useEffect`, que primero llama `remove(bg)` y luego intenta reinstanciar `FabricImage.fromURL(...)` de forma asíncrona — durante esa ventana el objeto queda desmontado. Además, si el `background_transform` recién guardado tiene `left/top` fuera del área visible del canvas, la imagen se reinstancia fuera de vista.
+1. **Eliminar el estado obsoleto en callbacks del padre**
+   - Cambiar los setters pasados a `VisualTicketEditor` para usar actualizaciones funcionales:
+     - `setFormData(prev => ({ ...prev, background_transform: t }))`
+     - `setFormData(prev => ({ ...prev, elements }))`
+     - `setFormData(prev => ({ ...prev, canvas_width: width, canvas_height: height }))`
+     - `setFormData(prev => ({ ...prev, background_image_url: url, ... }))`
+   - Esto evita que cualquier evento del canvas restaure una versión vieja de `formData`.
 
-**Fix**:
-1. Sacar `backgroundOpacity` de las dependencias del effect y actualizarla en un effect separado que solo hace `bg.set('opacity', ...)` + `renderAll()` sin recrear el objeto.
-2. Añadir un `useRef<boolean>` `isUserEditingBgRef` que se pone a `true` en `object:moving/scaling/rotating` del fondo y a `false` en `mouse:up`, y hacer que el effect de carga haga `return` temprano si ese ref está activo.
-3. En `onBackgroundTransformChange`, NO mandar `opacity` de vuelta al padre (solo x/y/scale/angle) para romper el ciclo.
-4. Clampeo defensivo: al reinstanciar, si `left`/`top` caen fuera de `[-canvasWidth, canvasWidth*2]`, resetear a 0.
+2. **Blindar listeners de Fabric contra callbacks viejos**
+   - En `VisualTicketEditor`, guardar los callbacks más recientes (`onBackgroundTransformChange`, `onElementsChange`, etc.) en refs.
+   - Hacer que los listeners de Fabric llamen siempre a esos refs actuales, sin depender del callback capturado al montar el listener.
+   - Mantener los listeners estables para no reinstalarlos innecesariamente durante drag/scale/rotate.
 
-Este fix va primero porque desbloquea todo lo demás (snap, guías, undo/redo también dependen de que el objeto siga vivo).
+3. **Separar edición visual del ciclo de recarga del fondo**
+   - Confirmar que el efecto que carga/recrea la imagen solo se dispare por cambio real de URL o canvas, no por cada movimiento.
+   - Mantener la actualización de opacidad en un efecto independiente que no remueva ni reinstancie la imagen.
+   - Al guardar transformaciones, persistir solo posición, escala y rotación; no mezclar opacidad dentro de `background_transform`.
 
-## 1. Versiones de plantilla + exportación PNG/PDF
+4. **Evitar que el fondo se pierda por reinstanciación asíncrona**
+   - Añadir una protección contra cargas asíncronas viejas de `FabricImage.fromURL`: si cambia la URL o se desmonta el canvas mientras carga, ignorar la respuesta anterior.
+   - Antes de remover/recrear el fondo, verificar si realmente cambió la URL; si es la misma imagen, actualizar propiedades sobre el objeto existente en lugar de eliminarlo.
 
-**Backend**
-- Nueva tabla `ticket_template_versions` (migración): `id`, `template_id` (FK a `ticket_templates`), `version_number`, `snapshot` (jsonb con todo el estado: elements, canvas_*, background_*, show_*, qr_size, fuentes, márgenes), `label`, `created_by`, `created_at`.
-- GRANTs + RLS igual que `ticket_templates`. Guardado explícito (botón "Guardar versión").
+5. **Validación funcional**
+   - Probar el flujo real en el preview:
+     - abrir Plantillas,
+     - cargar una imagen de fondo,
+     - moverla varias veces,
+     - soltarla,
+     - escalarla/rotarla,
+     - confirmar que sigue visible y editable,
+     - guardar la plantilla y volver a abrirla para verificar que la posición persiste.
 
-**Frontend**
-- `useTicketTemplateVersions(templateId)` con `list`, `create(label)`, `restore(versionId)`.
-- `TemplateVersionsPanel` dentro de `TicketTemplateEditor` (cuando `template` existe): lista con fecha/label + "Restaurar" + "Descargar PNG/PDF".
-- Exportación cliente:
-  - PNG: `fabricCanvas.toDataURL({ format:'png', multiplier: 2 })`.
-  - PDF: `jspdf` (nueva dep), una página con el PNG a tamaño real.
-  - Botones "📥 PNG" y "📄 PDF" en toolbar del `VisualTicketEditor`, sin requerir versión guardada.
+## Archivos a modificar
 
-## 2. Panel de vista previa por dispositivo
+- `src/components/TicketTemplateEditor.tsx`
+- `src/components/VisualTicketEditor.tsx`
 
-- `TemplateDevicePreview` como Card colapsable al final del editor.
-- Tabs: **Móvil** (375x812), **Tablet** (768x1024), **Impresión** (A4 con la grilla `layout`).
-- Renderiza el canvas Fabric en un nodo oculto, exporta PNG y lo pinta escalado dentro del marco simulado (debounced 400ms).
-- Aviso si el QR queda < 150 px en el marco simulado.
-
-## 3. Recorte de fondo con preview
-
-- `BackgroundCropDialog` accesible desde nuevo botón "✂️ Recortar" en `VisualTicketEditor`.
-- `react-easy-crop` (nueva dep) sobre la URL ORIGINAL del bucket (no el thumbnail del canvas).
-- Al aceptar: canvas del recorte a resolución nativa → sube como `<templateId>-crop-<timestamp>.png` a `ticket-backgrounds` → reemplaza `background_image_url` y resetea `background_transform`.
-
-## 4. Guías de alineación + snap-to-grid
-
-- En `VisualTicketEditor`, escuchar `object:moving/scaling/rotating`:
-  - **Snap**: si toggle "🧲 Snap" activo, redondear left/top al múltiplo de 10 px y ángulo al múltiplo de 15°.
-  - **Guías**: comparar con centros/bordes de otros objetos y del canvas; si diff < 5 px, pegar y dibujar `Line` magenta temporal (limpiada en `mouse:up`).
-- Se aplica también al fondo (respetando el fix #0).
-
-## 5. Undo / Redo (Ctrl+Z / Ctrl+Shift+Z)
-
-- Stack en `useRef<HistoryEntry[]>` + cursor.
-- Cada entrada = `fabricCanvas.toJSON(['elementId','elementType'])` + `background_transform`.
-- Push tras cada `object:modified` (debounce 200ms).
-- Botones "↶ Deshacer" y "↷ Rehacer" en toolbar + atajos globales `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z` (ignora si foco en input/textarea).
-- Historial se resetea al cambiar de plantilla o al restaurar versión.
-
-## Detalles técnicos
-
-- Dependencias nuevas: `jspdf`, `react-easy-crop`.
-- Sin cambios en edge functions ni en `ExportTicketsByCategory` / `ExportTicketsPNG`.
-- Archivos afectados:
-  - Migración: `ticket_template_versions`.
-  - Modificados: `src/components/VisualTicketEditor.tsx` (fix fondo, toolbar, historial, snap/guías, export, recorte), `src/components/TicketTemplateEditor.tsx` (integración panels).
-  - Nuevos: `src/hooks/useTicketTemplateVersions.ts`, `src/components/TemplateVersionsPanel.tsx`, `src/components/TemplateDevicePreview.tsx`, `src/components/BackgroundCropDialog.tsx`.
-
-## Fuera de alcance
-- Undo/redo persistente en servidor (solo versiones lo son).
-- Colaboración en tiempo real.
-- PDF multi-página.
+No se tocarán otros módulos ni se cambiará el alcance de versiones/exportación/preview/recorte salvo lo necesario para estabilizar el fondo.
