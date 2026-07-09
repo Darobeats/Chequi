@@ -1,0 +1,2 @@
+ALTER TABLE public.ticket_templates DROP CONSTRAINT IF EXISTS ticket_templates_background_mode_check;
+ALTER TABLE public.ticket_templates ADD CONSTRAINT ticket_templates_background_mode_check CHECK (background_mode IN ('tile','cover','contain','full_ticket'));
