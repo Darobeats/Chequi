@@ -73,6 +73,9 @@ export const VisualTicketEditor = ({
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [bgEditable, setBgEditable] = useState(true);
   const [cropOpen, setCropOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareExportOnly, setCompareExportOnly] = useState(false);
+  const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
 
   // Refs to avoid re-instantiating background on transform round-trip
   const isEditingBgRef = useRef(false);
