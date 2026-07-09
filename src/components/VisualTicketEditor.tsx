@@ -190,6 +190,8 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
 
       img.set({
         left, top, scaleX, scaleY, angle,
+        originX: 'left',
+        originY: 'top',
         opacity: backgroundOpacityRef.current,
         selectable: bgEditableRef.current,
         evented: bgEditableRef.current,
