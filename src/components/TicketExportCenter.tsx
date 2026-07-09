@@ -1,14 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Download, Package, Filter, Search, X, ChevronDown, FileDown } from 'lucide-react';
+import { Loader2, Download, Package, Filter, Search, X, ChevronDown, FileDown, Eye, Wand2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -53,6 +54,14 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [lastReport, setLastReport] = useState<{ ok: number; skipped: string[]; errors: string[] } | null>(null);
+  const [autoSync, setAutoSync] = useState(false);
+
+  // Preview dialog state
+  const [previewFor, setPreviewFor] = useState<{ attendee: Attendee; template: TicketTemplate } | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewFilename, setPreviewFilename] = useState('');
+  const previewBlobRef = useRef<Blob | null>(null);
 
   const eventTemplates = useMemo(
     () => templates.filter((t) => t.event_config_id === eventId && t.use_visual_editor && (t.elements?.length ?? 0) > 0),
@@ -70,7 +79,6 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     return defaultTemplate;
   };
 
-  // Unique categories present in attendees
   const categories = useMemo(() => {
     const map = new Map<string, { id: string; name: string; color: string; count: number }>();
     for (const a of attendees) {
@@ -87,15 +95,10 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [attendees]);
 
-  // Enriched rows
   const rows = useMemo(() => {
-    return attendees.map((a) => {
-      const tpl = resolveTemplate(a.category_id);
-      return { attendee: a, template: tpl };
-    });
+    return attendees.map((a) => ({ attendee: a, template: resolveTemplate(a.category_id) }));
   }, [attendees, bindings, eventTemplates]);
 
-  // Filtered rows
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     return rows.filter(({ attendee: a, template: tpl }) => {
@@ -113,10 +116,25 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     });
   }, [rows, search, selectedCategories, selectedTemplates, statusFilter]);
 
-  const filteredIds = useMemo(() => new Set(filtered.map((r) => r.attendee.id)), [filtered]);
+  // Auto-sync: keep selection = filtered rows with template
+  useEffect(() => {
+    if (!autoSync) return;
+    setSelectedIds(new Set(filtered.filter((r) => r.template).map((r) => r.attendee.id)));
+  }, [autoSync, filtered]);
+
+  const applyFiltersToSelection = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      filtered.forEach((r) => { if (r.template) next.add(r.attendee.id); });
+      return next;
+    });
+    toast({ title: 'Selección actualizada', description: `${filtered.filter((r) => r.template).length} tickets añadidos` });
+  };
+
   const allVisibleSelected = filtered.length > 0 && filtered.every((r) => selectedIds.has(r.attendee.id));
 
   const toggleAll = () => {
+    if (autoSync) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allVisibleSelected) filtered.forEach((r) => next.delete(r.attendee.id));
@@ -126,6 +144,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   };
 
   const toggleOne = (id: string) => {
+    if (autoSync) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
@@ -134,18 +153,10 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   };
 
   const toggleCatFilter = (id: string) => {
-    setSelectedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    setSelectedCategories((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
   const toggleTplFilter = (id: string) => {
-    setSelectedTemplates((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    setSelectedTemplates((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   };
 
   const clearFilters = () => {
@@ -164,6 +175,39 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
       setDownloadingId(null);
     }
   };
+
+  const openPreview = async (a: Attendee, tpl?: TicketTemplate) => {
+    if (!tpl) { toast({ title: 'Sin plantilla asignada', variant: 'destructive' }); return; }
+    setPreviewFor({ attendee: a, template: tpl });
+    setPreviewFilename(buildFilename(a, nameFormat));
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+    try {
+      const blob = await renderTicket(tpl, a);
+      previewBlobRef.current = blob;
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch (e: any) {
+      toast({ title: 'Error al generar preview', description: e?.message, variant: 'destructive' });
+      setPreviewFor(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closePreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewFor(null);
+    previewBlobRef.current = null;
+  };
+
+  const downloadFromPreview = () => {
+    if (!previewBlobRef.current) return;
+    const name = previewFilename.trim().endsWith('.png') ? previewFilename.trim() : `${previewFilename.trim() || 'ticket'}.png`;
+    saveAs(previewBlobRef.current, name);
+  };
+
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
 
   const runBulkExport = async (source: 'selected' | 'filtered') => {
     const target = source === 'selected'
@@ -185,11 +229,8 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
           const blob = await renderTicket(tpl, a);
           const fname = buildFilename(a, nameFormat);
           let path = fname;
-          if (zipStructure === 'category') {
-            path = `${sanitize(a.ticket_category?.name || 'sin_categoria')}/${fname}`;
-          } else if (zipStructure === 'template') {
-            path = `${sanitize(tpl.name || 'plantilla')}/${fname}`;
-          }
+          if (zipStructure === 'category') path = `${sanitize(a.ticket_category?.name || 'sin_categoria')}/${fname}`;
+          else if (zipStructure === 'template') path = `${sanitize(tpl.name || 'plantilla')}/${fname}`;
           zip.file(path, blob);
           ok++;
         } catch (e: any) {
@@ -221,10 +262,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button
-            disabled={eventTemplates.length === 0}
-            className="w-full bg-dorado text-empresarial hover:bg-dorado/90"
-          >
+          <Button disabled={eventTemplates.length === 0} className="w-full bg-dorado text-empresarial hover:bg-dorado/90">
             <FileDown className="h-4 w-4 mr-2" />
             Abrir Centro de Exportación ({attendees.length} tickets)
           </Button>
@@ -235,7 +273,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
               <Package className="h-5 w-5" /> Centro de Exportación de Tickets
             </DialogTitle>
             <DialogDescription>
-              Filtra, selecciona y descarga tickets individualmente o en lote como ZIP.
+              Filtra, previsualiza, selecciona y descarga tickets individualmente o en lote como ZIP.
             </DialogDescription>
           </DialogHeader>
 
@@ -246,20 +284,15 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                 <Label className="text-xs text-hueso/70">Buscar</Label>
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Nombre, cédula o ticket ID..."
-                    className="pl-8 bg-gray-800 border-gray-700 text-hueso"
-                  />
+                  <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Nombre, cédula o ticket ID..." className="pl-8 bg-gray-800 border-gray-700 text-hueso" />
                 </div>
               </div>
 
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="border-gray-700">
-                    <Filter className="h-4 w-4 mr-1" />
-                    Categorías {selectedCategories.size > 0 && <Badge className="ml-1 bg-dorado text-empresarial">{selectedCategories.size}</Badge>}
+                    <Filter className="h-4 w-4 mr-1" /> Categorías
+                    {selectedCategories.size > 0 && <Badge className="ml-1 bg-dorado text-empresarial">{selectedCategories.size}</Badge>}
                     <ChevronDown className="h-4 w-4 ml-1" />
                   </Button>
                 </PopoverTrigger>
@@ -282,8 +315,8 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="border-gray-700">
-                    <Filter className="h-4 w-4 mr-1" />
-                    Plantillas {selectedTemplates.size > 0 && <Badge className="ml-1 bg-dorado text-empresarial">{selectedTemplates.size}</Badge>}
+                    <Filter className="h-4 w-4 mr-1" /> Plantillas
+                    {selectedTemplates.size > 0 && <Badge className="ml-1 bg-dorado text-empresarial">{selectedTemplates.size}</Badge>}
                     <ChevronDown className="h-4 w-4 ml-1" />
                   </Button>
                 </PopoverTrigger>
@@ -323,11 +356,22 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <Button size="sm" variant="outline" className="border-gray-700 h-7" onClick={toggleAll}>
+            {/* Selection controls */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+              <div className="flex items-center gap-2 px-2 py-1 rounded bg-gray-800/60 border border-gray-700">
+                <Switch id="auto-sync" checked={autoSync} onCheckedChange={setAutoSync} />
+                <Label htmlFor="auto-sync" className="text-xs text-hueso cursor-pointer flex items-center gap-1">
+                  <Wand2 className="h-3 w-3" /> Sincronizar selección con filtros
+                </Label>
+                {autoSync && <Badge className="bg-dorado text-empresarial text-[10px] h-4">AUTO</Badge>}
+              </div>
+              <Button size="sm" variant="outline" className="border-gray-700 h-7" onClick={applyFiltersToSelection} disabled={autoSync}>
+                Añadir filtrados a selección
+              </Button>
+              <Button size="sm" variant="outline" className="border-gray-700 h-7" onClick={toggleAll} disabled={autoSync}>
                 {allVisibleSelected ? 'Deseleccionar visibles' : 'Seleccionar visibles'}
               </Button>
-              <Button size="sm" variant="ghost" className="h-7" onClick={() => setSelectedIds(new Set())}>
+              <Button size="sm" variant="ghost" className="h-7" onClick={() => setSelectedIds(new Set())} disabled={autoSync}>
                 Limpiar selección
               </Button>
               <span className="ml-auto">
@@ -341,13 +385,13 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-gray-900 z-10">
                 <tr className="text-left text-hueso/70 border-b border-gray-800">
-                  <th className="p-2 w-10"><Checkbox checked={allVisibleSelected} onCheckedChange={toggleAll} /></th>
+                  <th className="p-2 w-10"><Checkbox checked={allVisibleSelected} onCheckedChange={toggleAll} disabled={autoSync} /></th>
                   <th className="p-2">Nombre</th>
                   <th className="p-2">Cédula</th>
                   <th className="p-2">Ticket ID</th>
                   <th className="p-2">Categoría</th>
                   <th className="p-2">Plantilla</th>
-                  <th className="p-2 text-right">Acción</th>
+                  <th className="p-2 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -356,11 +400,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                 ) : filtered.slice(0, 1000).map(({ attendee: a, template: tpl }) => (
                   <tr key={a.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
                     <td className="p-2">
-                      <Checkbox
-                        checked={selectedIds.has(a.id)}
-                        disabled={!tpl}
-                        onCheckedChange={() => toggleOne(a.id)}
-                      />
+                      <Checkbox checked={selectedIds.has(a.id)} disabled={!tpl || autoSync} onCheckedChange={() => toggleOne(a.id)} />
                     </td>
                     <td className="p-2 text-hueso">{a.name}</td>
                     <td className="p-2 text-gray-400">{a.cedula || '—'}</td>
@@ -373,22 +413,32 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                     <td className="p-2">
                       {tpl ? <span className="text-hueso/80 text-xs">{tpl.name}</span> : <Badge variant="destructive" className="text-xs">Sin plantilla</Badge>}
                     </td>
-                    <td className="p-2 text-right">
-                      <Button
-                        size="sm" variant="outline" className="h-7 border-gray-700"
-                        disabled={!tpl || downloadingId === a.id || bulkBusy}
-                        onClick={() => downloadSingle(a, tpl)}
-                      >
-                        {downloadingId === a.id
-                          ? <Loader2 className="h-3 w-3 animate-spin" />
-                          : <><Download className="h-3 w-3 mr-1" /> PNG</>}
-                      </Button>
+                    <td className="p-2">
+                      <div className="flex gap-1 justify-end">
+                        <Button
+                          size="sm" variant="outline" className="h-7 border-gray-700"
+                          disabled={!tpl || bulkBusy}
+                          onClick={() => openPreview(a, tpl)}
+                          title="Vista previa"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm" variant="outline" className="h-7 border-gray-700"
+                          disabled={!tpl || downloadingId === a.id || bulkBusy}
+                          onClick={() => downloadSingle(a, tpl)}
+                        >
+                          {downloadingId === a.id
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <><Download className="h-3 w-3 mr-1" /> PNG</>}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {filtered.length > 1000 && (
                   <tr><td colSpan={7} className="p-3 text-center text-xs text-yellow-500">
-                    Mostrando 1000 de {filtered.length}. Usa los filtros para acotar o exporta directamente todos los filtrados.
+                    Mostrando 1000 de {filtered.length}. Refina filtros o usa "Descargar filtrados".
                   </td></tr>
                 )}
               </tbody>
@@ -445,25 +495,62 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                 {selectedCount > 0 && <>{selectedCount} seleccionados · {catsInSelection} categorías · {tplsInSelection} plantillas</>}
               </div>
 
-              <Button
-                variant="outline" className="border-gray-700"
-                disabled={bulkBusy || filtered.length === 0}
-                onClick={() => runBulkExport('filtered')}
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Descargar filtrados ({filtered.length})
+              <Button variant="outline" className="border-gray-700" disabled={bulkBusy || filtered.length === 0} onClick={() => runBulkExport('filtered')}>
+                <Package className="h-4 w-4 mr-2" /> Descargar filtrados ({filtered.length})
               </Button>
-              <Button
-                className="bg-dorado text-empresarial hover:bg-dorado/90"
-                disabled={bulkBusy || selectedCount === 0}
-                onClick={() => runBulkExport('selected')}
-              >
+              <Button className="bg-dorado text-empresarial hover:bg-dorado/90" disabled={bulkBusy || selectedCount === 0} onClick={() => runBulkExport('selected')}>
                 {bulkBusy
                   ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {progress}%</>
                   : <><Download className="h-4 w-4 mr-2" /> Descargar seleccionados ({selectedCount})</>}
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview dialog */}
+      <Dialog open={!!previewFor} onOpenChange={(v) => { if (!v) closePreview(); }}>
+        <DialogContent className="max-w-3xl bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-dorado flex items-center gap-2">
+              <Eye className="h-5 w-5" /> Vista previa del ticket
+            </DialogTitle>
+            <DialogDescription>
+              Revisa el contenido antes de descargar. Puedes editar el nombre del archivo.
+            </DialogDescription>
+          </DialogHeader>
+          {previewFor && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div><span className="text-gray-500">Asistente:</span> <span className="text-hueso">{previewFor.attendee.name}</span></div>
+                <div><span className="text-gray-500">Cédula:</span> <span className="text-hueso">{previewFor.attendee.cedula || '—'}</span></div>
+                <div><span className="text-gray-500">Ticket ID:</span> <span className="text-hueso font-mono">{previewFor.attendee.ticket_id}</span></div>
+                <div><span className="text-gray-500">Categoría:</span> <span className="text-hueso">{previewFor.attendee.ticket_category?.name || 'N/A'}</span></div>
+                <div><span className="text-gray-500">Plantilla:</span> <span className="text-hueso">{previewFor.template.name}</span></div>
+                <div><span className="text-gray-500">Tamaño:</span> <span className="text-hueso">{previewFor.template.canvas_width}×{previewFor.template.canvas_height}px</span></div>
+              </div>
+
+              <div className="flex items-center justify-center bg-gray-800/50 rounded p-4 min-h-[300px] max-h-[50vh] overflow-auto">
+                {previewLoading || !previewUrl ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-dorado" />
+                ) : (
+                  <img src={previewUrl} alt="Preview ticket" className="max-w-full h-auto shadow-lg" />
+                )}
+              </div>
+
+              <div>
+                <Label className="text-xs text-hueso/70">Nombre del archivo</Label>
+                <Input value={previewFilename} onChange={(e) => setPreviewFilename(e.target.value)} className="bg-gray-800 border-gray-700 text-hueso font-mono text-sm" />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" className="border-gray-700" onClick={closePreview}>Cerrar</Button>
+                <Button className="bg-dorado text-empresarial hover:bg-dorado/90" disabled={previewLoading || !previewBlobRef.current} onClick={downloadFromPreview}>
+                  <Download className="h-4 w-4 mr-2" /> Descargar este ticket
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
