@@ -402,9 +402,8 @@ export const VisualTicketEditor = ({
   const applyHistory = useCallback((entry: HistoryEntry) => {
     if (!fabricCanvas) return;
     suppressHistoryRef.current = true;
-    fabricCanvas.loadFromJSON(entry.json, () => {
+    (fabricCanvas.loadFromJSON(entry.json) as unknown as Promise<any>).then(() => {
       fabricCanvas.renderAll();
-      // Rebuild elements array from canvas
       const restored: TicketElement[] = [];
       fabricCanvas.getObjects().forEach((o: any) => {
         if (!o.elementId) return;
