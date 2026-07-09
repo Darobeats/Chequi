@@ -9,15 +9,11 @@ import { TicketElement } from '@/types/database';
 import {
   Trash2, Type, QrCode, ZoomIn, ZoomOut, Grid, Magnet,
   AlignLeft, AlignCenter, AlignRight, Bold, Undo2, Redo2,
-  Download, FileText, Crop as CropIcon,
+  Crop as CropIcon,
   ChevronUp, ChevronDown, ChevronsUp, ChevronsDown,
-  GitCompare, Eye,
 } from 'lucide-react';
 import QRCode from 'qrcode';
-import jsPDF from 'jspdf';
 import { toast } from '@/hooks/use-toast';
-import { TemplateCompareDialog } from './TemplateCompareDialog';
-import { TicketTemplate } from '@/types/database';
 import { BackgroundCropDialog } from './BackgroundCropDialog';
 
 export interface BackgroundTransform {
@@ -53,7 +49,7 @@ const SNAP_ANGLE = 15;
 const GUIDE_THRESHOLD = 5;
 
 export interface VisualTicketEditorHandle {
-  flushToState: () => void;
+  flushToState: () => TicketElement[];
 }
 
 export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTicketEditorProps>(({
@@ -75,13 +71,9 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
-  const [bgEditable, setBgEditable] = useState(true);
   const [cropOpen, setCropOpen] = useState(false);
-  const [compareOpen, setCompareOpen] = useState(false);
-  const [compareExportOnly, setCompareExportOnly] = useState(false);
-  const [editorSnapshot, setEditorSnapshot] = useState<string | null>(null);
 
-  // Refs to avoid re-instantiating background on transform round-trip
+  // Refs to avoid stale callbacks while Fabric owns the canvas state
   const isEditingBgRef = useRef(false);
   const suppressHistoryRef = useRef(false);
   const guideLinesRef = useRef<Line[]>([]);
@@ -91,7 +83,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
   const elementsRef = useRef(elements);
   const backgroundTransformRef = useRef(backgroundTransform);
   const backgroundOpacityRef = useRef(backgroundOpacity);
-  const bgEditableRef = useRef(bgEditable);
   const onElementsChangeRef = useRef(onElementsChange);
   const onBackgroundTransformChangeRef = useRef(onBackgroundTransformChange);
   const onCanvasSizeChangeRef = useRef(onCanvasSizeChange);
@@ -99,7 +90,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
   elementsRef.current = elements;
   backgroundTransformRef.current = backgroundTransform;
   backgroundOpacityRef.current = backgroundOpacity;
-  bgEditableRef.current = bgEditable;
   onElementsChangeRef.current = onElementsChange;
   onBackgroundTransformChangeRef.current = onBackgroundTransformChange;
   onCanvasSizeChangeRef.current = onCanvasSizeChange;
@@ -136,8 +126,8 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     fabricCanvas.renderAll();
   }, [fabricCanvas, canvasWidth, canvasHeight]);
 
-  // ---------- Background load (fix #0) ----------
-  // Only re-instantiate on URL / canvas change. Skip while user is dragging.
+  // ---------- Background load ----------
+  // The uploaded image is the ticket: it defines the canvas and always fills it 1:1.
   useEffect(() => {
     if (!fabricCanvas) return;
     if (isEditingBgRef.current) return;
@@ -159,47 +149,33 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       if (cancelled) return;
       const iw = img.width || 1;
       const ih0 = img.height || 1;
-      // Auto-fit canvas to image's natural dimensions.
       if (iw !== canvasWidth || ih0 !== canvasHeight) {
         onCanvasSizeChangeRef.current(iw, ih0);
-        return; // effect will re-run with new dimensions
+        onBackgroundTransformChangeRef.current?.({ x: 0, y: 0, scaleX: 1, scaleY: 1, angle: 0 });
+        return;
       }
-      const ih = ih0;
-      const transform = backgroundTransformRef.current;
-      let scaleX = transform?.scaleX ?? 1;
-      let scaleY = transform?.scaleY ?? 1;
-      let left = transform?.x ?? 0;
-      let top = transform?.y ?? 0;
-      const angle = transform?.angle ?? 0;
-
-      const hasStoredTransform =
-        transform &&
-        (transform.scaleX != null || transform.scaleY != null);
-
-      if (!hasStoredTransform) {
-        const s = Math.max(canvasWidth / iw, canvasHeight / ih);
-        scaleX = s; scaleY = s;
-        left = (canvasWidth - iw * s) / 2;
-        top = (canvasHeight - ih * s) / 2;
-      }
-
-      // Defensive clamp: if stored position lands way off-canvas, recenter
-      const outX = left < -canvasWidth || left > canvasWidth * 2;
-      const outY = top < -canvasHeight || top > canvasHeight * 2;
-      if (outX || outY) { left = 0; top = 0; }
 
       img.set({
-        left, top, scaleX, scaleY, angle,
+        left: 0,
+        top: 0,
+        scaleX: 1,
+        scaleY: 1,
+        angle: 0,
         originX: 'left',
         originY: 'top',
-        opacity: backgroundOpacityRef.current,
-        selectable: bgEditableRef.current,
-        evented: bgEditableRef.current,
-        hasControls: bgEditableRef.current,
-        lockRotation: false,
+        opacity: 1,
+        selectable: false,
+        evented: false,
+        hasControls: false,
+        lockMovementX: true,
+        lockMovementY: true,
+        lockScalingX: true,
+        lockScalingY: true,
+        lockRotation: true,
       });
       (img as any).elementType = 'background';
       (img as any).backgroundSourceUrl = backgroundImageUrl;
+      onBackgroundTransformChangeRef.current?.({ x: 0, y: 0, scaleX: 1, scaleY: 1, angle: 0 });
 
       removeBackgrounds();
       fabricCanvas.add(img);
@@ -209,27 +185,16 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     return () => { cancelled = true; };
   }, [fabricCanvas, backgroundImageUrl, canvasWidth, canvasHeight]);
 
-  // Update opacity without recreating background
+  // Keep visual-ticket backgrounds fully opaque and locked.
   useEffect(() => {
     if (!fabricCanvas) return;
     fabricCanvas.getObjects().forEach((o: any) => {
       if (o.elementType === 'background') {
-        o.set('opacity', backgroundOpacity);
+        o.set({ opacity: 1, selectable: false, evented: false, hasControls: false });
       }
     });
     fabricCanvas.renderAll();
   }, [fabricCanvas, backgroundOpacity]);
-
-  // Toggle bg interactivity
-  useEffect(() => {
-    if (!fabricCanvas) return;
-    fabricCanvas.getObjects().forEach((o: any) => {
-      if (o.elementType === 'background') {
-        o.set({ selectable: bgEditable, evented: bgEditable, hasControls: bgEditable });
-      }
-    });
-    fabricCanvas.renderAll();
-  }, [fabricCanvas, bgEditable]);
 
   // ---------- Snap-to-grid + alignment guides ----------
   const clearGuides = useCallback(() => {
@@ -429,12 +394,13 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       const scaleX = obj.scaleX || 1;
       const scaleY = obj.scaleY || 1;
       if (element.type === 'text') {
-        const baseFontSize = element.fontSize || obj.fontSize || 14;
+        const baseFontSize = obj.fontSize || element.fontSize || 14;
         const newFontSize = Math.max(4, Math.round(baseFontSize * scaleY));
         const newWidth = (obj.width || 0) * scaleX;
         const newHeight = (obj.height || 0) * scaleY;
         if (scaleX !== 1 || scaleY !== 1) {
-          obj.set({ fontSize: newFontSize, scaleX: 1, scaleY: 1, width: obj.width });
+          obj.set({ fontSize: newFontSize, scaleX: 1, scaleY: 1 });
+          (obj as any).initDimensions?.();
           obj.setCoords();
         }
         updated.push({
@@ -449,12 +415,18 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
         const w = (obj.width || 0) * scaleX;
         const h = (obj.height || 0) * scaleY;
         const isQR = element.type === 'qr';
+        const nextWidth = isQR ? Math.max(100, w) : w;
+        const nextHeight = isQR ? Math.max(100, h) : h;
+        if (isQR && (nextWidth !== w || nextHeight !== h)) {
+          obj.set({ scaleX: nextWidth / (obj.width || 1), scaleY: nextHeight / (obj.height || 1) });
+          obj.setCoords();
+        }
         updated.push({
           ...element,
           x: obj.left || 0,
           y: obj.top || 0,
-          width: isQR ? Math.max(100, w) : w,
-          height: isQR ? Math.max(100, h) : h,
+          width: nextWidth,
+          height: nextHeight,
         });
       }
     });
@@ -465,6 +437,7 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     });
 
     onElementsChangeRef.current(updated);
+    return updated;
   };
 
   // ---------- History (undo/redo) ----------
@@ -549,32 +522,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo]);
 
-  // ---------- Export PNG / PDF ----------
-  const exportPNG = () => {
-    if (!fabricCanvas) return;
-    clearGuides();
-    const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 2, quality: 1 } as any);
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `ticket-${Date.now()}.png`;
-    link.click();
-    toast({ title: 'PNG exportado', description: 'La imagen se descargó a alta resolución.' });
-  };
-
-  const exportPDF = () => {
-    if (!fabricCanvas) return;
-    clearGuides();
-    const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 2, quality: 1 } as any);
-    const pdf = new jsPDF({
-      orientation: canvasWidth > canvasHeight ? 'landscape' : 'portrait',
-      unit: 'px',
-      format: [canvasWidth, canvasHeight],
-    });
-    pdf.addImage(dataUrl, 'PNG', 0, 0, canvasWidth, canvasHeight);
-    pdf.save(`ticket-${Date.now()}.pdf`);
-    toast({ title: 'PDF exportado', description: 'El PDF del ticket se descargó correctamente.' });
-  };
-
   // ---------- Element ops ----------
   const addQRElement = () => {
     if (elements.some(e => e.type === 'qr')) {
@@ -628,7 +575,8 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
 
   useImperativeHandle(ref, () => ({
     flushToState: () => {
-      if (fabricCanvas) syncCanvasToElements(fabricCanvas);
+      if (fabricCanvas) return syncCanvasToElements(fabricCanvas);
+      return elementsRef.current;
     },
   }), [fabricCanvas]);
 
@@ -672,49 +620,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     }
   };
 
-  // ---------- Build a template snapshot for the export engine ----------
-  const buildTemplateSnapshot = (): TicketTemplate => ({
-    id: 'preview',
-    event_config_id: null,
-    name: 'Preview',
-    tickets_per_page: 1,
-    layout: '1x1',
-    show_qr: true, show_name: true, show_email: false, show_category: false, show_ticket_id: false,
-    custom_fields: [],
-    qr_size: 200,
-    font_size_name: 14, font_size_info: 10,
-    margin_top: 0, margin_bottom: 0, margin_left: 0, margin_right: 0,
-    background_image_url: backgroundImageUrl || null,
-    background_opacity: backgroundOpacity,
-    background_mode: (_backgroundMode as any) || 'tile',
-    background_transform: backgroundTransform,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    canvas_width: canvasWidth,
-    canvas_height: canvasHeight,
-    elements: elements as any,
-    use_visual_editor: true,
-  } as any);
-
-  const openCompare = () => {
-    if (!fabricCanvas) return;
-    clearGuides();
-    try {
-      const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 1, quality: 1 } as any);
-      setEditorSnapshot(dataUrl);
-    } catch {
-      setEditorSnapshot(null);
-    }
-    setCompareExportOnly(false);
-    setCompareOpen(true);
-  };
-
-  const openExportPreview = () => {
-    setEditorSnapshot(null);
-    setCompareExportOnly(true);
-    setCompareOpen(true);
-  };
-
   return (
     <div className="space-y-4">
       {/* TOOLBAR */}
@@ -746,23 +651,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
             <Magnet className="h-4 w-4" />
           </Button>
 
-          <div className="w-px h-6 bg-border mx-1" />
-
-          <Button type="button" variant="outline" size="sm" onClick={exportPNG} title="Exportar PNG">
-            <Download className="h-4 w-4 mr-1" /> PNG
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={exportPDF} title="Exportar PDF">
-            <FileText className="h-4 w-4 mr-1" /> PDF
-          </Button>
-
-          <div className="w-px h-6 bg-border mx-1" />
-
-          <Button type="button" variant="outline" size="sm" onClick={openCompare} title="Comparar editor vs. motor de exportación">
-            <GitCompare className="h-4 w-4 mr-1" /> Comparar
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={openExportPreview} title="Renderizar con el motor de exportación">
-            <Eye className="h-4 w-4 mr-1" /> Render export
-          </Button>
         </div>
       </Card>
 
@@ -790,17 +678,12 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
             <div>
               <Label className="block">Imagen de fondo</Label>
               <p className="text-xs text-muted-foreground">
-                {bgEditable
-                  ? '✏️ Arrastra, escala y rota la imagen sobre el canvas. Se conserva la calidad original.'
-                  : '🔒 Bloqueada. Actívala para reposicionar/escalar/rotar.'}
+                La imagen subida es el ticket completo: ocupa el 100% del canvas y queda bloqueada.
               </p>
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setCropOpen(true)}>
                 <CropIcon className="h-4 w-4 mr-1" /> Recortar
-              </Button>
-              <Button type="button" variant={bgEditable ? 'default' : 'outline'} size="sm" onClick={() => setBgEditable(!bgEditable)}>
-                {bgEditable ? '🔒 Bloquear' : '🔓 Editar'}
               </Button>
             </div>
           </div>
@@ -910,7 +793,7 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       </Card>
 
       <div className="text-xs text-muted-foreground">
-        💡 <strong>Atajos:</strong> Ctrl+Z deshacer · Ctrl+Shift+Z rehacer · arrastra la imagen del fondo para reposicionar · el snap alinea a la grilla y al centro.
+        💡 <strong>Atajos:</strong> Ctrl+Z deshacer · Ctrl+Shift+Z rehacer · el snap alinea QR y textos a la grilla y al centro.
       </div>
 
       {/* CROP DIALOG */}
@@ -927,14 +810,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
         />
       )}
 
-      {/* COMPARE / EXPORT PREVIEW DIALOG */}
-      <TemplateCompareDialog
-        open={compareOpen}
-        onOpenChange={setCompareOpen}
-        editorSnapshot={editorSnapshot}
-        template={buildTemplateSnapshot()}
-        exportOnly={compareExportOnly}
-      />
     </div>
   );
 });

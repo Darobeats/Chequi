@@ -11,10 +11,8 @@ import { TicketBackgroundUploader } from './TicketBackgroundUploader';
 import { QrCode, Type, Tag, Hash, Palette } from 'lucide-react';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { VisualTicketEditor, type VisualTicketEditorHandle } from './VisualTicketEditor';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TemplateBindingsEditor from './TemplateBindingsEditor';
 import { TemplateVersionsPanel } from './TemplateVersionsPanel';
-import { TemplateDevicePreview } from './TemplateDevicePreview';
 
 interface TicketTemplateEditorProps {
   template?: TicketTemplate | null;
@@ -93,12 +91,9 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Flush pending Fabric canvas state into React state before reading elements
-    editorRef.current?.flushToState();
-    // Yield a tick so setState from flush applies
-    await new Promise((r) => setTimeout(r, 0));
-
-    const sourceElements = elementsRef.current || formData.elements || [];
+    // Read pending Fabric state directly so save does not depend on stale React state.
+    const flushedElements = editorRef.current?.flushToState();
+    const sourceElements = flushedElements || elementsRef.current || formData.elements || [];
 
     // Normalize elements: absorb residual scaleX/scaleY into fontSize/width/height
     // and enforce QR minimum size of 100px.
@@ -138,7 +133,15 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
       return out as TicketElement;
     });
 
-    const payload = { ...formData, elements: normalizedElements };
+    const payload = {
+      ...formData,
+      background_mode: formData.use_visual_editor ? 'full_ticket' as const : formData.background_mode,
+      background_opacity: formData.use_visual_editor ? 1 : formData.background_opacity,
+      background_transform: formData.use_visual_editor
+        ? { x: 0, y: 0, scaleX: 1, scaleY: 1, angle: 0 }
+        : formData.background_transform,
+      elements: normalizedElements,
+    };
 
     try {
       if (template) {
@@ -282,30 +285,20 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
           <Card>
             <CardHeader>
               <CardTitle>Imagen de Fondo</CardTitle>
-              <CardDescription>Sube tu arte y edítalo directamente en el canvas (mover, escalar, rotar) sin perder calidad.</CardDescription>
+              <CardDescription>La imagen subida define el tamaño completo del ticket y queda fija al 100% del canvas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <TicketBackgroundUploader
                 currentImageUrl={formData.background_image_url}
-                onImageUpload={(url) => setFormData((prev) => ({ ...prev, background_image_url: url, background_mode: 'full_ticket', background_transform: {} }))}
+                onImageUpload={(url) => setFormData((prev) => ({
+                  ...prev,
+                  background_image_url: url,
+                  background_mode: 'full_ticket',
+                  background_opacity: 1,
+                  background_transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, angle: 0 },
+                }))}
                 onImageRemove={() => setFormData((prev) => ({ ...prev, background_image_url: null, background_transform: {} }))}
               />
-
-              {formData.background_image_url && (
-                <div className="space-y-2">
-                  <Label>Opacidad: {(formData.background_opacity * 100).toFixed(0)}%</Label>
-                  <Slider
-                    value={[formData.background_opacity]}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, background_opacity: value[0] }))}
-                    min={0.05}
-                    max={1}
-                    step={0.05}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Arrastra, escala y rota la imagen directamente sobre el canvas de arriba.
-                  </p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </>
@@ -482,17 +475,6 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
 
       {template && (
         <TemplateBindingsEditor templateId={template.id} eventId={formData.event_config_id} />
-      )}
-
-      {formData.use_visual_editor && (
-        <TemplateDevicePreview
-          canvasWidth={formData.canvas_width}
-          canvasHeight={formData.canvas_height}
-          elements={formData.elements}
-          backgroundImageUrl={formData.background_image_url}
-          backgroundOpacity={formData.background_opacity}
-          backgroundTransform={formData.background_transform}
-        />
       )}
 
       {template && (

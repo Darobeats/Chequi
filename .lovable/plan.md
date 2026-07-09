@@ -1,54 +1,58 @@
+## Objetivo
+Dejar solo dos visuales: la plantilla que se edita y el PNG final que se imprime/descarga. Ambos deben salir del mismo modelo de datos y del mismo motor de render para que no existan 3 resultados diferentes.
 
-## Problema 1 — El PNG descargado no coincide con "Editar Plantilla"
+## Plan definitivo
 
-Tras revisar `VisualTicketEditor.tsx`, `renderTicket.ts`, `TicketTemplateEditor.tsx` y `TicketExportCenter.tsx`, las causas más probables del desajuste son:
+1. **Eliminar previews redundantes y contradictorios**
+   - Quitar del editor los botones **Comparar** y **Render export**.
+   - Quitar la **Vista previa por dispositivo** del editor de plantilla.
+   - Mantener solo:
+     - **Editor de plantilla**: donde se ubican fondo, QR y textos.
+     - **Vista previa/descarga final** en el Centro de Exportación: el PNG real que se imprimirá o descargará.
 
-1. **`updateSelectedElement` desincroniza el texto**: cuando cambias fuente, tamaño, negrita o alineación desde el panel de propiedades, se muta el objeto Fabric (`obj.set(...)`) pero **no** se vuelve a calcular `width/height` del elemento. Fabric autorredimensiona el texto, pero en el estado guardado queda el `width` viejo. El exportador usa ese `width` para alinear al centro/derecha (`el.x + el.width/2`) → el texto sale corrido respecto al editor.
-2. **Cambios recientes no se guardan si no hay `object:modified`**: si el usuario edita solo desde los inputs del panel y guarda, no se dispara `syncCanvasToElements`. Falta un "flush" final antes de `handleSubmit` para volcar el estado real del canvas Fabric al `formData.elements`.
-3. **Orden de capas al añadir un elemento**: `syncCanvasToElements` corre en `object:modified` y en operaciones de capa, pero no cuando se **añade** un elemento nuevo. El array en el estado queda con orden distinto al del canvas.
-4. **Snapshot de fondo del editor vs. export**: en el editor el fondo Fabric se dibuja con `opacity` como propiedad del objeto; el exportador usa `globalAlpha`. Cuando `background_mode === 'full_ticket'` y el canvas ya coincide con la imagen, ambos deberían coincidir, pero si el usuario mueve/escala y guarda con `angle=0` se ha visto que Fabric guarda `left/top` levemente distintos por el origen. Debe forzarse `originX/originY = 'left'/'top'` en el fondo (que ya es el default) y persistir explícitamente `width/height` sin escalar.
+2. **Convertir la imagen subida en el ticket completo**
+   - Cuando se suba una imagen de fondo, el canvas tomará exactamente el ancho/alto natural de esa imagen.
+   - La imagen se colocará en `x=0`, `y=0`, `scaleX=1`, `scaleY=1`, `angle=0`, ocupando el 100% del ticket.
+   - El fondo quedará bloqueado por defecto; no se podrá mover accidentalmente ni “centrar” manualmente.
+   - Se eliminará la idea de `cover/contain/tile` para el editor visual: si hay imagen, esa imagen es el ticket completo.
+   - Si se necesita modificar el arte, se hace cambiando/subiendo otra imagen o usando recorte, no arrastrando el fondo dentro del canvas.
 
-### Cambios propuestos
+3. **Un solo render para vista final y descarga**
+   - Ajustar `renderTicket` para que en plantillas visuales dibuje siempre:
+     1. fondo exacto al tamaño del canvas,
+     2. elementos en el orden guardado,
+     3. QR/textos con las mismas coordenadas y dimensiones absolutas.
+   - La vista previa del Centro de Exportación y la descarga usarán el mismo `Blob` generado por `renderTicket`, como ya hacen, pero con una plantilla saneada y consistente.
 
-- **`VisualTicketEditor.tsx`**
-  - En `updateSelectedElement`, además de mutar el Fabric, llamar a `syncCanvasToElements(fabricCanvas)` para recalcular `width/height` reales.
-  - Exponer un método `flushToState()` (via `useImperativeHandle` con `forwardRef`) que fuerce `syncCanvasToElements` sincronamente.
-  - Ejecutar `syncCanvasToElements` justo después de `addElementToCanvas` para persistir el orden de capas de todos los elementos, no solo el añadido.
-  - Asegurar `originX/originY: 'left'/'top'` explícitos en el fondo cuando se instancia `FabricImage`.
+4. **Sincronización fuerte al guardar**
+   - Antes de guardar, forzar lectura directa del canvas Fabric y persistir:
+     - posición absoluta,
+     - ancho/alto absoluto,
+     - fontSize final,
+     - orden visual de capas,
+     - QR mínimo 100×100.
+   - Evitar depender de estados React atrasados después de editar con controles o arrastrar elementos.
 
-- **`TicketTemplateEditor.tsx`**
-  - Convertir a `ref` el `VisualTicketEditor` y en `handleSubmit`, antes de la normalización, invocar `editorRef.current?.flushToState()` y esperar un tick (`await new Promise(r => setTimeout(r, 0))`) para que el `setState` de `elements` se aplique antes de leer `formData.elements`.
-  - Al leer `formData.elements` dentro de `handleSubmit`, usar una ref reactiva (o mover la lectura tras el flush) para no capturar el valor stale del closure.
+5. **QR mínimo real de 100px**
+   - Mantener QR nuevo en 150×150.
+   - Bloquear escalado interactivo por debajo de 100×100.
+   - Reforzar el mínimo al guardar y al renderizar, para plantillas antiguas también.
+   - Eliminar el aviso de “QR pequeño” porque ya no debe existir un QR de diseño menor a 100px.
 
-- **`renderTicket.ts`**
-  - Ninguna lógica nueva; ya está correcta tras el fix previo (baseline `top`). Solo agregar un log de diagnóstico opcional detrás de `import.meta.env.DEV`.
-
-## Problema 2 — Tamaño mínimo del QR = 100px
-
-El aviso amarillo ("El QR queda pequeño ({n}px) — recomendado ≥100px") se dispara en `TemplateDevicePreview.tsx` cuando `qr.width * scale < 100`. El usuario quiere que **por defecto** el QR nunca pueda ser menor a 100px en el diseño.
-
-### Cambios propuestos
-
-- **`VisualTicketEditor.tsx`**
-  - `addQRElement`: crear el QR con `width/height = 150` (ya es 150, mantener).
-  - En el handler `onScaling`, si `obj.elementType === 'qr'`, forzar `obj.width * obj.scaleX >= 100` y `obj.height * obj.scaleY >= 100` (clamp durante escalado interactivo).
-  - En `syncCanvasToElements`, para elementos QR: `width = Math.max(100, newWidth)`, `height = Math.max(100, newHeight)`.
-
-- **`TicketTemplateEditor.tsx`**
-  - Slider `Tamaño del QR`: ya tiene `min={100}` — dejar igual.
-  - En la normalización del `handleSubmit`, forzar `width/height >= 100` para cualquier elemento `type === 'qr'` (defensa en profundidad para plantillas antiguas).
-
-- **`TemplateDevicePreview.tsx`**
-  - El aviso sigue mostrándose si el escalado del dispositivo hace que se vea <100px en pantalla; eso es informativo del render final del dispositivo y no del diseño, así que **se conserva** (útil para el usuario). Si se prefiere ocultarlo, se puede desactivar cuando `qr.width >= 100` en el canvas real.
+6. **Limpieza de UI y mensajes**
+   - Cambiar los textos del editor para reflejar el flujo correcto: “la imagen subida define el ticket completo”.
+   - Quitar instrucciones de mover/rotar/escalar fondo, porque esa opción es parte de la causa del problema.
+   - Mantener controles de capas solo para QR/textos, no para el fondo.
 
 ## Archivos a modificar
-
-- `src/components/VisualTicketEditor.tsx` — flush ref, sync en updateSelectedElement/add, clamp de QR ≥100px, `originX/originY` en fondo.
-- `src/components/TicketTemplateEditor.tsx` — `useRef` al editor, `await flushToState()` en `handleSubmit`, clamp de QR en normalización.
-- `src/lib/renderTicket.ts` — sin cambios funcionales (verificación).
+- `src/components/VisualTicketEditor.tsx`
+- `src/components/TicketTemplateEditor.tsx`
+- `src/components/TemplateDevicePreview.tsx` o retirar su uso
+- `src/components/TemplateCompareDialog.tsx` o retirar su uso
+- `src/lib/renderTicket.ts`
 
 ## Validación
-
-1. Abrir "Editar Plantilla", ajustar tamaño de fuente y alineación de un texto sólo desde el panel de propiedades → **Guardar** → en el Centro de Exportación abrir vista previa: debe coincidir píxel a píxel con el editor.
-2. Agregar QR, intentar redimensionarlo por debajo de 100px con los handles → debe quedar clavado en 100×100.
-3. Añadir un elemento nuevo, subirlo/bajarlo de capa, guardar y verificar en la exportación que el orden se respeta.
+- Subir una imagen: el canvas debe quedar exactamente del tamaño de esa imagen y el fondo debe ocupar 100% sin moverlo.
+- Editar QR/textos, guardar, abrir Centro de Exportación: la vista previa debe coincidir con el diseño guardado.
+- Descargar el PNG desde esa vista previa: debe ser el mismo PNG que se estaba viendo.
+- Intentar reducir QR bajo 100px: no debe permitirlo ni mostrar advertencia.
