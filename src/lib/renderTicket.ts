@@ -32,7 +32,8 @@ export async function renderTicket(template: TicketTemplate, attendee: Attendee)
   if (template.background_image_url) {
     try { bgImage = await loadImage(template.background_image_url); } catch { /* noop */ }
   }
-  if (bgImage && template.background_mode === 'full_ticket') {
+  const isVisualFullTicket = !!bgImage && (template.use_visual_editor || template.background_mode === 'full_ticket');
+  if (isVisualFullTicket) {
     cw = bgImage.naturalWidth || bgImage.width;
     ch = bgImage.naturalHeight || bgImage.height;
   }
@@ -44,12 +45,18 @@ export async function renderTicket(template: TicketTemplate, attendee: Attendee)
   ctx.fillRect(0, 0, cw, ch);
 
   if (bgImage) {
-    const t: any = (template as any).background_transform || {};
-    ctx.globalAlpha = typeof t.opacity === 'number' ? t.opacity : (template.background_opacity ?? 0.15);
-    if (template.background_mode === 'tile') {
+    if (isVisualFullTicket) {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(bgImage, 0, 0, cw, ch);
+    } else if (template.background_mode === 'tile') {
+      const t: any = (template as any).background_transform || {};
+      ctx.globalAlpha = typeof t.opacity === 'number' ? t.opacity : (template.background_opacity ?? 0.15);
       const p = ctx.createPattern(bgImage, 'repeat');
       if (p) { ctx.fillStyle = p; ctx.fillRect(0, 0, cw, ch); }
+      ctx.globalAlpha = 1;
     } else {
+      const t: any = (template as any).background_transform || {};
+      ctx.globalAlpha = typeof t.opacity === 'number' ? t.opacity : (template.background_opacity ?? 0.15);
       let scaleX = t.scaleX, scaleY = t.scaleY, x = t.x, y = t.y;
       const bw = bgImage.width, bh = bgImage.height;
       if (scaleX == null || scaleY == null) {
@@ -71,16 +78,18 @@ export async function renderTicket(template: TicketTemplate, attendee: Attendee)
       } else {
         ctx.drawImage(bgImage, x ?? 0, y ?? 0, bw * scaleX, bh * scaleY);
       }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
   }
 
   for (const el of template.elements || []) {
     if (el.type === 'qr') {
       const data = attendee.qr_code || attendee.ticket_id;
-      const url = await QRCode.toDataURL(data, { width: el.width, margin: 0, errorCorrectionLevel: 'M' });
+      const qrWidth = Math.max(100, Math.round(el.width || 100));
+      const qrHeight = Math.max(100, Math.round(el.height || qrWidth));
+      const url = await QRCode.toDataURL(data, { width: qrWidth, margin: 0, errorCorrectionLevel: 'M' });
       const img = await loadImage(url);
-      ctx.drawImage(img, el.x, el.y, el.width, el.height);
+      ctx.drawImage(img, el.x, el.y, qrWidth, qrHeight);
     } else if (el.type === 'text') {
       const fontSize = el.fontSize || 14;
       ctx.font = `${el.bold ? 'bold' : 'normal'} ${fontSize}px ${el.fontFamily || 'Arial'}`;
