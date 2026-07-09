@@ -285,6 +285,13 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       const t = e.target as any;
       if (!t) return;
       if (t.elementType === 'background') isEditingBgRef.current = true;
+      // Enforce QR minimum size of 100px during interactive scaling
+      if (t.elementType === 'qr') {
+        const minW = 100 / (t.width || 1);
+        const minH = 100 / (t.height || 1);
+        if (t.scaleX < minW) t.scaleX = minW;
+        if (t.scaleY < minH) t.scaleY = minH;
+      }
     };
 
     const onRotating = (e: any) => {
