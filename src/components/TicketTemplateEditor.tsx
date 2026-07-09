@@ -263,6 +263,7 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
       {formData.use_visual_editor ? (
         <>
           <VisualTicketEditor
+            ref={editorRef}
             canvasWidth={formData.canvas_width}
             canvasHeight={formData.canvas_height}
             elements={formData.elements}
