@@ -82,14 +82,16 @@ export async function renderTicket(template: TicketTemplate, attendee: Attendee)
       const img = await loadImage(url);
       ctx.drawImage(img, el.x, el.y, el.width, el.height);
     } else if (el.type === 'text') {
-      ctx.font = `${el.bold ? 'bold' : 'normal'} ${el.fontSize || 14}px ${el.fontFamily || 'Arial'}`;
+      const fontSize = el.fontSize || 14;
+      ctx.font = `${el.bold ? 'bold' : 'normal'} ${fontSize}px ${el.fontFamily || 'Arial'}`;
       ctx.fillStyle = el.color || '#000000';
       ctx.textAlign = (el.textAlign || 'left') as CanvasTextAlign;
-      const text = getFieldValue(attendee, el.field);
+      ctx.textBaseline = 'top';
+      const text = el.content || getFieldValue(attendee, el.field);
       const tx = el.textAlign === 'center'
         ? el.x + el.width / 2
         : el.textAlign === 'right' ? el.x + el.width : el.x;
-      ctx.fillText(text, tx, el.y + (el.fontSize || 14));
+      ctx.fillText(text, tx, el.y);
     }
   }
 
