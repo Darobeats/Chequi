@@ -898,6 +898,15 @@ export const VisualTicketEditor = ({
           }}
         />
       )}
+
+      {/* COMPARE / EXPORT PREVIEW DIALOG */}
+      <TemplateCompareDialog
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        editorSnapshot={editorSnapshot}
+        template={buildTemplateSnapshot()}
+        exportOnly={compareExportOnly}
+      />
     </div>
   );
 };
