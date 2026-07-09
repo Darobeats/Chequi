@@ -10,10 +10,14 @@ import {
   Trash2, Type, QrCode, ZoomIn, ZoomOut, Grid, Magnet,
   AlignLeft, AlignCenter, AlignRight, Bold, Undo2, Redo2,
   Download, FileText, Crop as CropIcon,
+  ChevronUp, ChevronDown, ChevronsUp, ChevronsDown,
+  GitCompare, Eye,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import { toast } from '@/hooks/use-toast';
+import { TemplateCompareDialog } from './TemplateCompareDialog';
+import { TicketTemplate } from '@/types/database';
 import { BackgroundCropDialog } from './BackgroundCropDialog';
 
 export interface BackgroundTransform {
