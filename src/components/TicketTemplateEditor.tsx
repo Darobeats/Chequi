@@ -233,43 +233,24 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
             <CardContent className="space-y-4">
               <TicketBackgroundUploader
                 currentImageUrl={formData.background_image_url}
-                onImageUpload={(url) => setFormData({ ...formData, background_image_url: url, background_transform: {} })}
+                onImageUpload={(url) => setFormData({ ...formData, background_image_url: url, background_mode: 'full_ticket', background_transform: {} })}
                 onImageRemove={() => setFormData({ ...formData, background_image_url: null, background_transform: {} })}
               />
 
               {formData.background_image_url && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Modo de aplicación</Label>
-                    <Select
-                      value={formData.background_mode}
-                      onValueChange={(v: 'tile' | 'cover' | 'contain' | 'full_ticket') =>
-                        setFormData({ ...formData, background_mode: v, background_transform: {} })
-                      }
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tile">Mosaico (marca de agua)</SelectItem>
-                        <SelectItem value="cover">Cubrir</SelectItem>
-                        <SelectItem value="contain">Contener</SelectItem>
-                        <SelectItem value="full_ticket">Ticket = Imagen completa (recomendado para artes)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      "Ticket = Imagen completa" ajusta el canvas al arte y sólo colocas QR y textos encima.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Opacidad: {(formData.background_opacity * 100).toFixed(0)}%</Label>
-                    <Slider
-                      value={[formData.background_opacity]}
-                      onValueChange={(value) => setFormData({ ...formData, background_opacity: value[0] })}
-                      min={0.05}
-                      max={1}
-                      step={0.05}
-                    />
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label>Opacidad: {(formData.background_opacity * 100).toFixed(0)}%</Label>
+                  <Slider
+                    value={[formData.background_opacity]}
+                    onValueChange={(value) => setFormData({ ...formData, background_opacity: value[0] })}
+                    min={0.05}
+                    max={1}
+                    step={0.05}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Arrastra, escala y rota la imagen directamente sobre el canvas de arriba.
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -442,61 +423,6 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Imagen de Fondo (Arte del Ticket)</CardTitle>
-          <CardDescription>
-            Suba una imagen que se aplicará como marca de agua en mosaico sobre cada ticket.
-            La imagen se mostrará con baja opacidad para no interferir con la legibilidad del QR.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <TicketBackgroundUploader
-            currentImageUrl={formData.background_image_url}
-            onImageUpload={(url) => setFormData({ ...formData, background_image_url: url })}
-            onImageRemove={() => setFormData({ ...formData, background_image_url: null })}
-          />
-
-          <div className="space-y-2">
-            <Label>
-              Opacidad de Fondo: {(formData.background_opacity * 100).toFixed(0)}%
-            </Label>
-            <Slider
-              value={[formData.background_opacity]}
-              onValueChange={(value) => setFormData({ ...formData, background_opacity: value[0] })}
-              min={0.05}
-              max={0.5}
-              step={0.05}
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground">
-              La opacidad baja asegura que el código QR sea escaneable
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="background_mode">Modo de Aplicación</Label>
-            <Select
-              value={formData.background_mode}
-              onValueChange={(value: 'tile' | 'cover' | 'contain') =>
-                setFormData({ ...formData, background_mode: value })
-              }
-            >
-              <SelectTrigger id="background_mode">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="tile">Mosaico (Repetir x4 - Recomendado)</SelectItem>
-                <SelectItem value="cover">Cubrir Completo</SelectItem>
-                <SelectItem value="contain">Contener</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Mosaico: La imagen se repite una vez por cada ticket (4 veces en total)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
         </>
       )}
 
