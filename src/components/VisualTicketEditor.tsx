@@ -443,12 +443,15 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
           fontSize: newFontSize,
         });
       } else {
+        const w = (obj.width || 0) * scaleX;
+        const h = (obj.height || 0) * scaleY;
+        const isQR = element.type === 'qr';
         updated.push({
           ...element,
           x: obj.left || 0,
           y: obj.top || 0,
-          width: (obj.width || 0) * scaleX,
-          height: (obj.height || 0) * scaleY,
+          width: isQR ? Math.max(100, w) : w,
+          height: isQR ? Math.max(100, h) : h,
         });
       }
     });
