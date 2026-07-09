@@ -726,6 +726,15 @@ export const VisualTicketEditor = ({
           <Button type="button" variant="outline" size="sm" onClick={exportPDF} title="Exportar PDF">
             <FileText className="h-4 w-4 mr-1" /> PDF
           </Button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <Button type="button" variant="outline" size="sm" onClick={openCompare} title="Comparar editor vs. motor de exportación">
+            <GitCompare className="h-4 w-4 mr-1" /> Comparar
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={openExportPreview} title="Renderizar con el motor de exportación">
+            <Eye className="h-4 w-4 mr-1" /> Render export
+          </Button>
         </div>
       </Card>
 
