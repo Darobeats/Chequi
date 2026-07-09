@@ -394,12 +394,13 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       const scaleX = obj.scaleX || 1;
       const scaleY = obj.scaleY || 1;
       if (element.type === 'text') {
-        const baseFontSize = element.fontSize || obj.fontSize || 14;
+        const baseFontSize = obj.fontSize || element.fontSize || 14;
         const newFontSize = Math.max(4, Math.round(baseFontSize * scaleY));
         const newWidth = (obj.width || 0) * scaleX;
         const newHeight = (obj.height || 0) * scaleY;
         if (scaleX !== 1 || scaleY !== 1) {
-          obj.set({ fontSize: newFontSize, scaleX: 1, scaleY: 1, width: obj.width });
+          obj.set({ fontSize: newFontSize, scaleX: 1, scaleY: 1 });
+          (obj as any).initDimensions?.();
           obj.setCoords();
         }
         updated.push({
@@ -414,12 +415,18 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
         const w = (obj.width || 0) * scaleX;
         const h = (obj.height || 0) * scaleY;
         const isQR = element.type === 'qr';
+        const nextWidth = isQR ? Math.max(100, w) : w;
+        const nextHeight = isQR ? Math.max(100, h) : h;
+        if (isQR && (nextWidth !== w || nextHeight !== h)) {
+          obj.set({ scaleX: nextWidth / (obj.width || 1), scaleY: nextHeight / (obj.height || 1) });
+          obj.setCoords();
+        }
         updated.push({
           ...element,
           x: obj.left || 0,
           y: obj.top || 0,
-          width: isQR ? Math.max(100, w) : w,
-          height: isQR ? Math.max(100, h) : h,
+          width: nextWidth,
+          height: nextHeight,
         });
       }
     });
@@ -430,6 +437,7 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     });
 
     onElementsChangeRef.current(updated);
+    return updated;
   };
 
   // ---------- History (undo/redo) ----------
