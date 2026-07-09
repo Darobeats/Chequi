@@ -54,6 +54,9 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
 
   const createMutation = useCreateTicketTemplate();
   const updateMutation = useUpdateTicketTemplate();
+  const editorRef = useRef<VisualTicketEditorHandle>(null);
+  const elementsRef = useRef<TicketElement[]>([]);
+  elementsRef.current = formData.elements;
 
   useEffect(() => {
     if (template) {
