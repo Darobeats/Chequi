@@ -13,6 +13,8 @@ import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { VisualTicketEditor } from './VisualTicketEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TemplateBindingsEditor from './TemplateBindingsEditor';
+import { TemplateVersionsPanel } from './TemplateVersionsPanel';
+import { TemplateDevicePreview } from './TemplateDevicePreview';
 
 interface TicketTemplateEditorProps {
   template?: TicketTemplate | null;
