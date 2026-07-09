@@ -913,4 +913,5 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       />
     </div>
   );
-};
+});
+VisualTicketEditor.displayName = 'VisualTicketEditor';
