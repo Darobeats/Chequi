@@ -94,13 +94,13 @@ export async function renderTicket(template: TicketTemplate, attendee: Attendee)
       const fontSize = el.fontSize || 14;
       ctx.font = `${el.bold ? 'bold' : 'normal'} ${fontSize}px ${el.fontFamily || 'Arial'}`;
       ctx.fillStyle = el.color || '#000000';
-      ctx.textAlign = (el.textAlign || 'left') as CanvasTextAlign;
+      // Fabric Text in the editor is positioned by its left/top bounding box;
+      // for single-line labels textAlign does not move that box. Draw from x
+      // so export matches the editor instead of re-centering/re-right-aligning.
+      ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const text = el.content || getFieldValue(attendee, el.field);
-      const tx = el.textAlign === 'center'
-        ? el.x + el.width / 2
-        : el.textAlign === 'right' ? el.x + el.width : el.x;
-      ctx.fillText(text, tx, el.y);
+      ctx.fillText(text, el.x, el.y);
     }
   }
 
