@@ -1,56 +1,65 @@
-## Objetivo
+## Objetivos
 
-Reemplazar el botón único "Exportar N tickets por categoría" por un **Centro de Exportación de Tickets** con filtros, búsqueda, selección y descargas individuales o masivas.
+Tres mejoras independientes:
 
-## Nuevo componente: `src/components/TicketExportCenter.tsx`
+### 1. Vista previa por ticket (Centro de Exportación)
 
-Sustituye a `ExportTicketsByCategory` en `EventConfig.tsx`. Reutiliza la función `renderTicket()` (extraída a `src/lib/renderTicket.ts` para compartirla).
+En `TicketExportCenter.tsx`:
 
-### UI (Dialog "Exportar Tickets")
+- Añadir botón "👁 Ver" por fila (junto a "PNG"). Al click abre un `Dialog` con:
+  - Preview del PNG renderizado en vivo (usando `renderTicket()` → `URL.createObjectURL(blob)`).
+  - Nombre de archivo resuelto según `nameFormat` actual (editable inline en el diálogo — sólo afecta esta descarga).
+  - Metadatos: categoría, plantilla usada, dimensiones, ticket_id, cédula.
+  - Botones: "Descargar este ticket" y "Cerrar".
+- Cache local (Map por `attendee.id + template.id + nameFormat`) para no re-renderizar si vuelve a abrir el mismo preview.
+- Loader mientras renderiza. Liberar `URL.createObjectURL` al cerrar/desmontar.
 
-Se abre desde un botón "Exportar Tickets" en la misma tarjeta donde vive hoy el export. Dentro del diálogo:
+### 2. Selección automática por filtros combinados
 
-**Barra de filtros (arriba):**
+En la barra de acciones del Centro de Exportación:
+
+- Nuevo bloque "Auto-selección" con toggle **"Sincronizar selección con filtros"**.
+- Cuando está ON: cada cambio en búsqueda/categorías/plantillas/estado actualiza `selectedIds` = ids filtrados que tengan plantilla. Los checkboxes manuales quedan deshabilitados (badge "auto").
+- Cuando está OFF (default): comportamiento actual manual.
+- Además, un botón separado "Aplicar filtros a selección" (one-shot) para quienes no quieran el modo automático.
+- Contador ya existente muestra "auto: N seleccionados por filtros".
+
+### 3. Módulo "Asignar" — selección masiva con filtros
+
+Reemplazar la UI actual de `BulkTicketAssignment.tsx` por una versión con:
+
+**Filtros combinados (arriba):**
 - Buscador por nombre / cédula / ticket_id.
-- Multi-select de **Categorías** (checkboxes con conteo por categoría).
-- Multi-select de **Plantilla asignada** (útil cuando varias categorías comparten plantilla o para detectar categorías sin plantilla).
-- Filtro de **Estado** (`valid` / `used` / `blocked`).
-- Botones: "Limpiar filtros", "Seleccionar todos los filtrados", "Deseleccionar todo".
+- Multi-select de **Categoría actual** (checkboxes con conteo, incluye opción "Sin categoría").
+- Filtro de **Estado** (`valid` / `used` / `blocked` / todos).
+- Filtro rápido: "Solo sin categoría" (mantiene el existente como shortcut).
+- Botón "Limpiar filtros".
 
-**Tabla de asistentes (centro, virtualizada si >500):**
-Columnas: checkbox · Nombre · Cédula · Ticket ID · Categoría (chip color) · Plantilla resuelta · Acción (botón "Descargar PNG" individual).
+**Acciones de selección:**
+- Checkbox master en header aplica sólo a filas visibles.
+- Botones: "Seleccionar visibles" · "Deseleccionar todos" · "Invertir selección".
+- Contador "X de Y visibles · Z seleccionados".
 
-- Checkbox por fila + checkbox master en el header (aplica sólo a filas visibles/filtradas).
-- Filas sin plantilla resuelta se marcan con badge rojo "Sin plantilla" y quedan deshabilitadas para descarga.
+**Tabla:**
+- Igual estructura actual (Nombre / Cédula / Categoría actual / Ticket ID) + checkbox por fila.
+- Scroll vertical con `max-h-[500px]` y header sticky.
+- Si >1000 filas visibles, mostrar aviso "Mostrando primeros 1000 — refina filtros" (asignación masiva sigue procesando toda la selección real, no sólo lo pintado).
 
-**Barra de acciones (abajo, sticky):**
-- Contador: "X de Y seleccionados · Z categorías · N plantillas".
-- Selector de **estructura del ZIP**: `Por categoría` (default, subcarpetas) · `Por plantilla` · `Plano` (todo en la raíz).
-- Selector de **formato de nombre**: `{cedula}_{nombre}` · `{ticket_id}_{nombre}` · `{nombre}` · `{ticket_id}`.
-- Botón primario: **"Descargar seleccionados (ZIP)"** con progreso y % en vivo.
-- Botón secundario: **"Descargar filtrados"** (ignora selección, usa lo que muestra la tabla).
+**Barra inferior sticky (acción):**
+- Select "Nueva categoría de destino" (obligatorio).
+- Botón "Asignar a N asistentes" con progreso (%) durante el `for` loop.
+- Reporte final: OK vs. errores.
+- Al terminar exitosamente: `queryClient.invalidateQueries(['attendees'])` (ya lo hace el hook).
 
-### Descarga individual
-Click en "Descargar PNG" de una fila → genera un solo PNG con `renderTicket()` y dispara `saveAs()` (sin ZIP). Muestra loader inline en el botón.
+**Optimización:**
+- El `for` loop actual actualiza uno a uno; mantener eso pero mostrar progreso (`setProgress(((i+1)/N)*100)`).
 
-### Descarga masiva
-- Usa la lógica actual de `ExportTicketsByCategory.handleExport` (JSZip + `renderTicket` + progreso).
-- Cambia el armado de rutas según la estructura elegida.
-- Reporte final: total generados, omitidos por falta de plantilla, y errores de render (con listado colapsable).
+## Archivos a modificar
 
-## Refactor menor
-
-- Extraer `renderTicket`, `loadImage`, `sanitize`, `getFieldValue` de `ExportTicketsByCategory.tsx` a `src/lib/renderTicket.ts` para reutilizarlos en el nuevo componente sin duplicar código.
-- `ExportTicketsByCategory.tsx` puede eliminarse (o dejarse como wrapper deprecado) tras montar el nuevo Centro.
-
-## Archivos a modificar / crear
-
-- **Crear** `src/lib/renderTicket.ts` (extracción pura del renderer actual).
-- **Crear** `src/components/TicketExportCenter.tsx` (nuevo diálogo con filtros, tabla, selección y export).
-- **Editar** `src/components/EventConfig.tsx` para reemplazar `<ExportTicketsByCategory />` por `<TicketExportCenter />`.
-- **Eliminar** `src/components/ExportTicketsByCategory.tsx` una vez migrado.
+- `src/components/TicketExportCenter.tsx` — añadir diálogo preview + toggle auto-selección.
+- `src/components/BulkTicketAssignment.tsx` — reescritura con filtros combinados, búsqueda, selección avanzada y barra de progreso.
 
 ## Fuera de alcance
 
-- No se cambia el editor visual, ni las plantillas, ni los bindings, ni el pipeline de render.
-- No se toca DB ni RLS.
+- No se cambia el renderer, ni bindings, ni la lógica DB, ni RLS.
+- No se tocan hooks existentes.
