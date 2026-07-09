@@ -55,7 +55,7 @@ export const VisualTicketEditor = ({
   backgroundImageUrl,
   backgroundOpacity = 0.15,
   backgroundTransform,
-  backgroundMode = 'tile',
+  backgroundMode: _backgroundMode = 'tile',
   onElementsChange,
   onCanvasSizeChange,
   onBackgroundTransformChange,
@@ -386,7 +386,7 @@ export const VisualTicketEditor = ({
   };
 
   const syncCanvasToElements = (canvas: FabricCanvas) => {
-    const updatedElements = elements.map(element => {
+    const updatedElements = elementsRef.current.map(element => {
       const obj = canvas.getObjects().find(o => (o as any).elementId === element.id);
       if (!obj) return element;
       return {
@@ -397,7 +397,7 @@ export const VisualTicketEditor = ({
         height: (obj.height || 0) * (obj.scaleY || 1),
       };
     });
-    onElementsChange(updatedElements);
+    onElementsChangeRef.current(updatedElements);
   };
 
   // ---------- History (undo/redo) ----------
