@@ -621,20 +621,19 @@ export const VisualTicketEditor = ({
         </div>
       </Card>
 
-      {/* CANVAS SIZE */}
+      {/* CANVAS SIZE (auto-derived from background image) */}
       <Card className="p-4">
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <Label>Ancho (px)</Label>
-            <Input type="number" value={canvasWidth}
-              onChange={(e) => onCanvasSizeChange(parseInt(e.target.value) || 800, canvasHeight)}
-              min={400} max={1200} />
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <Label className="block">Tamaño del ticket</Label>
+            <p className="text-xs text-muted-foreground">
+              {backgroundImageUrl
+                ? 'Definido automáticamente por la imagen de fondo.'
+                : 'Sube una imagen para definir el tamaño del ticket.'}
+            </p>
           </div>
-          <div className="flex-1">
-            <Label>Alto (px)</Label>
-            <Input type="number" value={canvasHeight}
-              onChange={(e) => onCanvasSizeChange(canvasWidth, parseInt(e.target.value) || 600)}
-              min={300} max={1200} />
+          <div className="text-sm font-mono px-3 py-1.5 rounded-md bg-muted">
+            {canvasWidth} × {canvasHeight} px
           </div>
         </div>
       </Card>
