@@ -1,49 +1,30 @@
-## Diagnóstico
+## Objetivo
 
-La falla más probable está en una combinación de cierres obsoletos entre `VisualTicketEditor` y `TicketTemplateEditor`:
+Eliminar los inputs manuales de Ancho/Alto del editor visual. Las dimensiones del ticket (canvas) se definirán automáticamente por la imagen de fondo subida.
 
-- En `VisualTicketEditor`, el listener de Fabric `object:modified` se registra dentro de un `useEffect` que no depende de `onBackgroundTransformChange`.
-- Ese listener conserva una versión antigua del callback del padre.
-- En `TicketTemplateEditor`, el callback usa `setFormData({ ...formData, background_transform: t })`, lo que depende del `formData` capturado en ese render.
-- Si el callback capturado corresponde a un estado previo a la carga del fondo, al mover la imagen puede reescribir `formData` con `background_image_url: null` o datos viejos. Resultado: React vuelve a renderizar sin URL de fondo, el efecto de fondo remueve la imagen y parece que “desaparece”.
+## Cambios
 
-## Plan de corrección
+### 1. `src/components/VisualTicketEditor.tsx`
+- Quitar los `Input` de "Ancho (px)" y "Alto (px)" del toolbar (líneas ~619-630).
+- Mostrar en su lugar una etiqueta informativa de solo lectura: `Ticket: {canvasWidth} × {canvasHeight} px (definido por la imagen)`.
+- En el `useEffect` que carga la imagen de fondo: al resolver `FabricImage.fromURL`, llamar a `onCanvasSizeChange(iw, ih)` con las dimensiones naturales de la imagen antes de posicionarla. La imagen se colocará en `left: 0, top: 0, scaleX: 1, scaleY: 1` cubriendo el canvas 1:1 (sin recorte, sin zoom), preservando calidad nativa.
+- Si no hay imagen de fondo, mantener las dimensiones actuales (o un default 800×600) hasta que se cargue una.
 
-1. **Eliminar el estado obsoleto en callbacks del padre**
-   - Cambiar los setters pasados a `VisualTicketEditor` para usar actualizaciones funcionales:
-     - `setFormData(prev => ({ ...prev, background_transform: t }))`
-     - `setFormData(prev => ({ ...prev, elements }))`
-     - `setFormData(prev => ({ ...prev, canvas_width: width, canvas_height: height }))`
-     - `setFormData(prev => ({ ...prev, background_image_url: url, ... }))`
-   - Esto evita que cualquier evento del canvas restaure una versión vieja de `formData`.
+### 2. `src/components/TicketTemplateEditor.tsx`
+- Mantener `canvas_width` / `canvas_height` en `formData` (necesarios para persistencia, export PDF/PNG, preview y versiones), pero ya no editables por el usuario.
+- Al subir una nueva imagen desde `TicketBackgroundUploader`, no reiniciar transform (ya se hace) y dejar que `VisualTicketEditor` reporte las nuevas dimensiones vía `onCanvasSizeChange`.
 
-2. **Blindar listeners de Fabric contra callbacks viejos**
-   - En `VisualTicketEditor`, guardar los callbacks más recientes (`onBackgroundTransformChange`, `onElementsChange`, etc.) en refs.
-   - Hacer que los listeners de Fabric llamen siempre a esos refs actuales, sin depender del callback capturado al montar el listener.
-   - Mantener los listeners estables para no reinstalarlos innecesariamente durante drag/scale/rotate.
+### 3. Sin cambios funcionales en:
+- `TemplateDevicePreview.tsx` (sigue leyendo `canvasWidth/Height`).
+- Export PNG/PDF (usa dimensiones actuales del canvas).
+- Versiones, bindings, cropping, snap-to-grid, undo/redo.
 
-3. **Separar edición visual del ciclo de recarga del fondo**
-   - Confirmar que el efecto que carga/recrea la imagen solo se dispare por cambio real de URL o canvas, no por cada movimiento.
-   - Mantener la actualización de opacidad en un efecto independiente que no remueva ni reinstancie la imagen.
-   - Al guardar transformaciones, persistir solo posición, escala y rotación; no mezclar opacidad dentro de `background_transform`.
+## Comportamiento resultante
 
-4. **Evitar que el fondo se pierda por reinstanciación asíncrona**
-   - Añadir una protección contra cargas asíncronas viejas de `FabricImage.fromURL`: si cambia la URL o se desmonta el canvas mientras carga, ignorar la respuesta anterior.
-   - Antes de remover/recrear el fondo, verificar si realmente cambió la URL; si es la misma imagen, actualizar propiedades sobre el objeto existente en lugar de eliminarlo.
-
-5. **Validación funcional**
-   - Probar el flujo real en el preview:
-     - abrir Plantillas,
-     - cargar una imagen de fondo,
-     - moverla varias veces,
-     - soltarla,
-     - escalarla/rotarla,
-     - confirmar que sigue visible y editable,
-     - guardar la plantilla y volver a abrirla para verificar que la posición persiste.
+- Sin imagen: canvas por defecto (800×600), editor funcional pero mostrando aviso "Sube una imagen para definir el tamaño del ticket".
+- Al subir imagen: el canvas se redimensiona exactamente a las dimensiones naturales de la imagen, ésta se coloca ocupando 100% del canvas, y los elementos (QR, texto) se superponen sobre ella.
+- Si se recorta la imagen con `BackgroundCropDialog`, la imagen resultante define el nuevo tamaño del canvas al recargarse.
 
 ## Archivos a modificar
-
-- `src/components/TicketTemplateEditor.tsx`
 - `src/components/VisualTicketEditor.tsx`
-
-No se tocarán otros módulos ni se cambiará el alcance de versiones/exportación/preview/recorte salvo lo necesario para estabilizar el fondo.
+- `src/components/TicketTemplateEditor.tsx` (mínimo: solo asegurar que el flujo de subida no fije tamaño manual)
