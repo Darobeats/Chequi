@@ -283,14 +283,16 @@ export const VisualTicketEditor = ({
       clearGuides();
       if (t?.elementType === 'background') {
         isEditingBgRef.current = false;
-        onBackgroundTransformChangeRef.current?.({
+        const nextTransform = {
           x: t.left ?? 0,
           y: t.top ?? 0,
           scaleX: t.scaleX ?? 1,
           scaleY: t.scaleY ?? 1,
           angle: t.angle ?? 0,
           // opacity omitted intentionally
-        });
+        };
+        backgroundTransformRef.current = nextTransform;
+        onBackgroundTransformChangeRef.current?.(nextTransform);
       } else {
         syncCanvasToElements(fabricCanvas);
       }
@@ -447,6 +449,7 @@ export const VisualTicketEditor = ({
       });
       onElementsChangeRef.current(restored);
       if (entry.bgTransform) {
+        backgroundTransformRef.current = entry.bgTransform;
         onBackgroundTransformChangeRef.current?.(entry.bgTransform);
       }
       setTimeout(() => { suppressHistoryRef.current = false; }, 100);

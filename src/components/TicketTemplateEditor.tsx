@@ -448,7 +448,7 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         <TemplateVersionsPanel
           templateId={template.id}
           currentSnapshot={formData}
-          onRestore={(snapshot) => setFormData({ ...formData, ...snapshot })}
+          onRestore={(snapshot) => setFormData((prev) => ({ ...prev, ...snapshot }))}
         />
       )}
 
