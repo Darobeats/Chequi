@@ -522,32 +522,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo]);
 
-  // ---------- Export PNG / PDF ----------
-  const exportPNG = () => {
-    if (!fabricCanvas) return;
-    clearGuides();
-    const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 2, quality: 1 } as any);
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `ticket-${Date.now()}.png`;
-    link.click();
-    toast({ title: 'PNG exportado', description: 'La imagen se descargó a alta resolución.' });
-  };
-
-  const exportPDF = () => {
-    if (!fabricCanvas) return;
-    clearGuides();
-    const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 2, quality: 1 } as any);
-    const pdf = new jsPDF({
-      orientation: canvasWidth > canvasHeight ? 'landscape' : 'portrait',
-      unit: 'px',
-      format: [canvasWidth, canvasHeight],
-    });
-    pdf.addImage(dataUrl, 'PNG', 0, 0, canvasWidth, canvasHeight);
-    pdf.save(`ticket-${Date.now()}.pdf`);
-    toast({ title: 'PDF exportado', description: 'El PDF del ticket se descargó correctamente.' });
-  };
-
   // ---------- Element ops ----------
   const addQRElement = () => {
     if (elements.some(e => e.type === 'qr')) {
@@ -601,7 +575,8 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
 
   useImperativeHandle(ref, () => ({
     flushToState: () => {
-      if (fabricCanvas) syncCanvasToElements(fabricCanvas);
+      if (fabricCanvas) return syncCanvasToElements(fabricCanvas);
+      return elementsRef.current;
     },
   }), [fabricCanvas]);
 
@@ -645,49 +620,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     }
   };
 
-  // ---------- Build a template snapshot for the export engine ----------
-  const buildTemplateSnapshot = (): TicketTemplate => ({
-    id: 'preview',
-    event_config_id: null,
-    name: 'Preview',
-    tickets_per_page: 1,
-    layout: '1x1',
-    show_qr: true, show_name: true, show_email: false, show_category: false, show_ticket_id: false,
-    custom_fields: [],
-    qr_size: 200,
-    font_size_name: 14, font_size_info: 10,
-    margin_top: 0, margin_bottom: 0, margin_left: 0, margin_right: 0,
-    background_image_url: backgroundImageUrl || null,
-    background_opacity: backgroundOpacity,
-    background_mode: (_backgroundMode as any) || 'tile',
-    background_transform: backgroundTransform,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    canvas_width: canvasWidth,
-    canvas_height: canvasHeight,
-    elements: elements as any,
-    use_visual_editor: true,
-  } as any);
-
-  const openCompare = () => {
-    if (!fabricCanvas) return;
-    clearGuides();
-    try {
-      const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 1, quality: 1 } as any);
-      setEditorSnapshot(dataUrl);
-    } catch {
-      setEditorSnapshot(null);
-    }
-    setCompareExportOnly(false);
-    setCompareOpen(true);
-  };
-
-  const openExportPreview = () => {
-    setEditorSnapshot(null);
-    setCompareExportOnly(true);
-    setCompareOpen(true);
-  };
-
   return (
     <div className="space-y-4">
       {/* TOOLBAR */}
@@ -719,23 +651,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
             <Magnet className="h-4 w-4" />
           </Button>
 
-          <div className="w-px h-6 bg-border mx-1" />
-
-          <Button type="button" variant="outline" size="sm" onClick={exportPNG} title="Exportar PNG">
-            <Download className="h-4 w-4 mr-1" /> PNG
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={exportPDF} title="Exportar PDF">
-            <FileText className="h-4 w-4 mr-1" /> PDF
-          </Button>
-
-          <div className="w-px h-6 bg-border mx-1" />
-
-          <Button type="button" variant="outline" size="sm" onClick={openCompare} title="Comparar editor vs. motor de exportación">
-            <GitCompare className="h-4 w-4 mr-1" /> Comparar
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={openExportPreview} title="Renderizar con el motor de exportación">
-            <Eye className="h-4 w-4 mr-1" /> Render export
-          </Button>
         </div>
       </Card>
 
@@ -763,17 +678,12 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
             <div>
               <Label className="block">Imagen de fondo</Label>
               <p className="text-xs text-muted-foreground">
-                {bgEditable
-                  ? '✏️ Arrastra, escala y rota la imagen sobre el canvas. Se conserva la calidad original.'
-                  : '🔒 Bloqueada. Actívala para reposicionar/escalar/rotar.'}
+                La imagen subida es el ticket completo: ocupa el 100% del canvas y queda bloqueada.
               </p>
             </div>
             <div className="flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setCropOpen(true)}>
                 <CropIcon className="h-4 w-4 mr-1" /> Recortar
-              </Button>
-              <Button type="button" variant={bgEditable ? 'default' : 'outline'} size="sm" onClick={() => setBgEditable(!bgEditable)}>
-                {bgEditable ? '🔒 Bloquear' : '🔓 Editar'}
               </Button>
             </div>
           </div>
@@ -883,7 +793,7 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       </Card>
 
       <div className="text-xs text-muted-foreground">
-        💡 <strong>Atajos:</strong> Ctrl+Z deshacer · Ctrl+Shift+Z rehacer · arrastra la imagen del fondo para reposicionar · el snap alinea a la grilla y al centro.
+        💡 <strong>Atajos:</strong> Ctrl+Z deshacer · Ctrl+Shift+Z rehacer · el snap alinea QR y textos a la grilla y al centro.
       </div>
 
       {/* CROP DIALOG */}
@@ -900,14 +810,6 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
         />
       )}
 
-      {/* COMPARE / EXPORT PREVIEW DIALOG */}
-      <TemplateCompareDialog
-        open={compareOpen}
-        onOpenChange={setCompareOpen}
-        editorSnapshot={editorSnapshot}
-        template={buildTemplateSnapshot()}
-        exportOnly={compareExportOnly}
-      />
     </div>
   );
 });
