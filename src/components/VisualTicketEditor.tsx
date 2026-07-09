@@ -150,10 +150,10 @@ export const VisualTicketEditor = ({
       const ih0 = img.height || 1;
       // Auto-fit canvas to image's natural dimensions.
       if (iw !== canvasWidth || ih0 !== canvasHeight) {
-        onCanvasSizeChange(iw, ih0);
+        onCanvasSizeChangeRef.current(iw, ih0);
         return; // effect will re-run with new dimensions
       }
-      const ih = img.height || 1;
+      const ih = ih0;
       const transform = backgroundTransformRef.current;
       let scaleX = transform?.scaleX ?? 1;
       let scaleY = transform?.scaleY ?? 1;
