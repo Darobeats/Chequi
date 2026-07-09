@@ -359,13 +359,14 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       }
     });
 
-    elements.forEach(element => {
-      if (!canvasElementIds.includes(element.id)) {
-        addElementToCanvas(fabricCanvas, element);
-      }
-    });
+    const addPromises = elements
+      .filter(element => !canvasElementIds.includes(element.id))
+      .map(element => addElementToCanvas(fabricCanvas, element));
 
-    fabricCanvas.renderAll();
+    Promise.all(addPromises).then(() => {
+      fabricCanvas.renderAll();
+      if (addPromises.length > 0) syncCanvasToElements(fabricCanvas);
+    });
   }, [fabricCanvas, elements]);
 
   const addElementToCanvas = async (canvas: FabricCanvas, element: TicketElement) => {
