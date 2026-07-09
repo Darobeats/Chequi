@@ -799,9 +799,24 @@ export const VisualTicketEditor = ({
             <Type className="h-4 w-4 mr-2" /> Cédula
           </Button>
           {selectedElement && (
-            <Button type="button" variant="destructive" size="sm" onClick={deleteSelectedElement}>
-              <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-            </Button>
+            <>
+              <div className="w-px h-6 bg-border mx-1" />
+              <Button type="button" variant="outline" size="sm" onClick={() => changeLayer('bottom')} title="Enviar al fondo">
+                <ChevronsDown className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => changeLayer('down')} title="Bajar una capa">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => changeLayer('up')} title="Subir una capa">
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => changeLayer('top')} title="Traer al frente">
+                <ChevronsUp className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="destructive" size="sm" onClick={deleteSelectedElement}>
+                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+              </Button>
+            </>
           )}
         </div>
       </Card>
