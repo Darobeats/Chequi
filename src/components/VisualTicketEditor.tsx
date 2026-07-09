@@ -399,44 +399,52 @@ export const VisualTicketEditor = ({
   };
 
   const syncCanvasToElements = (canvas: FabricCanvas) => {
-    const updatedElements = elementsRef.current.map(element => {
-      const obj = canvas.getObjects().find(o => (o as any).elementId === element.id) as any;
-      if (!obj) return element;
+    // Preserve the visual stacking order from the Fabric canvas (bottom -> top).
+    // Background and guides are excluded; only real elements contribute to the array order.
+    const stack = canvas.getObjects()
+      .filter((o: any) => o.elementId && (o.elementType === 'qr' || o.elementType === 'text'));
+    const byId = new Map(elementsRef.current.map(e => [e.id, e]));
+
+    const updated: TicketElement[] = [];
+    stack.forEach((obj: any) => {
+      const element = byId.get(obj.elementId);
+      if (!element) return;
       const scaleX = obj.scaleX || 1;
       const scaleY = obj.scaleY || 1;
       if (element.type === 'text') {
-        // Absorb scale into fontSize/width so exported PNG matches editor visual
         const baseFontSize = element.fontSize || obj.fontSize || 14;
         const newFontSize = Math.max(4, Math.round(baseFontSize * scaleY));
         const newWidth = (obj.width || 0) * scaleX;
         const newHeight = (obj.height || 0) * scaleY;
         if (scaleX !== 1 || scaleY !== 1) {
-          obj.set({
-            fontSize: newFontSize,
-            scaleX: 1,
-            scaleY: 1,
-            width: obj.width, // keep intrinsic width
-          });
+          obj.set({ fontSize: newFontSize, scaleX: 1, scaleY: 1, width: obj.width });
           obj.setCoords();
         }
-        return {
+        updated.push({
           ...element,
           x: obj.left || 0,
           y: obj.top || 0,
           width: newWidth,
           height: newHeight,
           fontSize: newFontSize,
-        };
+        });
+      } else {
+        updated.push({
+          ...element,
+          x: obj.left || 0,
+          y: obj.top || 0,
+          width: (obj.width || 0) * scaleX,
+          height: (obj.height || 0) * scaleY,
+        });
       }
-      return {
-        ...element,
-        x: obj.left || 0,
-        y: obj.top || 0,
-        width: (obj.width || 0) * scaleX,
-        height: (obj.height || 0) * scaleY,
-      };
     });
-    onElementsChangeRef.current(updatedElements);
+
+    // Append any elements not present in canvas (safety) preserving previous order
+    elementsRef.current.forEach(el => {
+      if (!updated.find(u => u.id === el.id)) updated.push(el);
+    });
+
+    onElementsChangeRef.current(updated);
   };
 
   // ---------- History (undo/redo) ----------
