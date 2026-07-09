@@ -620,6 +620,73 @@ export const VisualTicketEditor = ({
   const canUndo = cursorRef.current > 0;
   const canRedo = cursorRef.current < historyRef.current.length - 1;
 
+  // ---------- Layer ops ----------
+  const changeLayer = (mode: 'up' | 'down' | 'top' | 'bottom') => {
+    if (!fabricCanvas || !selectedElement) return;
+    const obj = fabricCanvas.getObjects().find(o => (o as any).elementId === selectedElement);
+    if (!obj) return;
+    try {
+      if (mode === 'up') (fabricCanvas as any).bringObjectForward(obj);
+      else if (mode === 'down') (fabricCanvas as any).sendObjectBackwards(obj);
+      else if (mode === 'top') (fabricCanvas as any).bringObjectToFront(obj);
+      else (fabricCanvas as any).sendObjectToBack(obj);
+      // Keep background at the very bottom
+      fabricCanvas.getObjects().forEach((o: any) => {
+        if (o.elementType === 'background') {
+          try { (fabricCanvas as any).sendObjectToBack(o); } catch { /* noop */ }
+        }
+      });
+      syncCanvasToElements(fabricCanvas);
+      fabricCanvas.renderAll();
+      pushHistory();
+    } catch (e) {
+      console.warn('layer op failed', e);
+    }
+  };
+
+  // ---------- Build a template snapshot for the export engine ----------
+  const buildTemplateSnapshot = (): TicketTemplate => ({
+    id: 'preview',
+    event_config_id: null,
+    name: 'Preview',
+    tickets_per_page: 1,
+    layout: '1x1',
+    show_qr: true, show_name: true, show_email: false, show_category: false, show_ticket_id: false,
+    custom_fields: [],
+    qr_size: 200,
+    font_size_name: 14, font_size_info: 10,
+    margin_top: 0, margin_bottom: 0, margin_left: 0, margin_right: 0,
+    background_image_url: backgroundImageUrl || null,
+    background_opacity: backgroundOpacity,
+    background_mode: (_backgroundMode as any) || 'tile',
+    background_transform: backgroundTransform,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    canvas_width: canvasWidth,
+    canvas_height: canvasHeight,
+    elements: elements as any,
+    use_visual_editor: true,
+  } as any);
+
+  const openCompare = () => {
+    if (!fabricCanvas) return;
+    clearGuides();
+    try {
+      const dataUrl = fabricCanvas.toDataURL({ format: 'png', multiplier: 1, quality: 1 } as any);
+      setEditorSnapshot(dataUrl);
+    } catch {
+      setEditorSnapshot(null);
+    }
+    setCompareExportOnly(false);
+    setCompareOpen(true);
+  };
+
+  const openExportPreview = () => {
+    setEditorSnapshot(null);
+    setCompareExportOnly(true);
+    setCompareOpen(true);
+  };
+
   return (
     <div className="space-y-4">
       {/* TOOLBAR */}
