@@ -10,7 +10,7 @@ import { TicketTemplate, TicketElement, useCreateTicketTemplate, useUpdateTicket
 import { TicketBackgroundUploader } from './TicketBackgroundUploader';
 import { QrCode, Type, Tag, Hash, Palette } from 'lucide-react';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
-import { VisualTicketEditor } from './VisualTicketEditor';
+import { VisualTicketEditor, type VisualTicketEditorHandle } from './VisualTicketEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TemplateBindingsEditor from './TemplateBindingsEditor';
 import { TemplateVersionsPanel } from './TemplateVersionsPanel';
