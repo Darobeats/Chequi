@@ -89,12 +89,45 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Normalize elements at save time: absorb any pending scaleX/scaleY into
+    // fontSize/width/height so the export engine renders exactly what was
+    // configured (defensive: syncCanvasToElements already does this per-edit).
+    const normalizedElements: TicketElement[] = (formData.elements || []).map((el: any) => {
+      const sx = el.scaleX ?? 1;
+      const sy = el.scaleY ?? 1;
+      if (sx === 1 && sy === 1) {
+        const { scaleX: _sx, scaleY: _sy, ...rest } = el;
+        return rest as TicketElement;
+      }
+      if (el.type === 'text') {
+        const base = el.fontSize || 14;
+        const nextFontSize = Math.max(4, Math.round(base * sy));
+        return {
+          ...el,
+          fontSize: nextFontSize,
+          width: (el.width || 0) * sx,
+          height: (el.height || 0) * sy,
+          scaleX: 1,
+          scaleY: 1,
+        };
+      }
+      return {
+        ...el,
+        width: (el.width || 0) * sx,
+        height: (el.height || 0) * sy,
+        scaleX: 1,
+        scaleY: 1,
+      };
+    });
+
+    const payload = { ...formData, elements: normalizedElements };
+
     try {
       if (template) {
-        await updateMutation.mutateAsync({ id: template.id, ...formData });
+        await updateMutation.mutateAsync({ id: template.id, ...payload });
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync(payload);
       }
       onSuccess();
     } catch (error) {
