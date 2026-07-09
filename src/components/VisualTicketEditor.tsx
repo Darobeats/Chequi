@@ -186,7 +186,6 @@ export const VisualTicketEditor = ({
       fabricCanvas.renderAll();
     });
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fabricCanvas, backgroundImageUrl, canvasWidth, canvasHeight]);
 
   // Update opacity without recreating background
