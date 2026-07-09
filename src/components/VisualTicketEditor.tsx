@@ -49,7 +49,7 @@ export const VisualTicketEditor = ({
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [showGrid, setShowGrid] = useState(true);
-  const [bgEditable, setBgEditable] = useState(false);
+  const [bgEditable, setBgEditable] = useState(true);
 
   // Initialize Fabric canvas
   useEffect(() => {
