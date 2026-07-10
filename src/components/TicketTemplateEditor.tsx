@@ -127,8 +127,9 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         out = rest;
       }
       if (out.type === 'qr') {
-        out.width = Math.max(100, out.width || 0);
-        out.height = Math.max(100, out.height || 0);
+        const qrSize = Math.max(100, Math.round(out.width || 0), Math.round(out.height || 0));
+        out.width = qrSize;
+        out.height = qrSize;
       }
       return out as TicketElement;
     });

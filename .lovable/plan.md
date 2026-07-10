@@ -1,58 +1,35 @@
-## Objetivo
-Dejar solo dos visuales: la plantilla que se edita y el PNG final que se imprime/descarga. Ambos deben salir del mismo modelo de datos y del mismo motor de render para que no existan 3 resultados diferentes.
+Implementaré esto como corrección cerrada con validación interna antes de marcarlo como resuelto.
 
-## Plan definitivo
+1. Unificar definitivamente todos los exports de ticket
+- Eliminar el motor alterno que aún existe en `ExportTicketsPNG`.
+- Hacer que cualquier descarga PNG/ZIP use exclusivamente `renderTicket`.
+- Mantener solo dos visuales funcionales: editor y resultado final exportado.
+- Retirar/ignorar componentes viejos de comparación o preview alternativo que puedan seguir mostrando resultados distintos.
 
-1. **Eliminar previews redundantes y contradictorios**
-   - Quitar del editor los botones **Comparar** y **Render export**.
-   - Quitar la **Vista previa por dispositivo** del editor de plantilla.
-   - Mantener solo:
-     - **Editor de plantilla**: donde se ubican fondo, QR y textos.
-     - **Vista previa/descarga final** en el Centro de Exportación: el PNG real que se imprimirá o descargará.
+2. Hacer que la imagen subida sea el ticket completo
+- La imagen de fondo quedará siempre fija en `0,0`, sin escala editable, sin centrado manual y sin opacidad.
+- El canvas guardado tomará las dimensiones naturales de la imagen.
+- El export usará exactamente esas mismas dimensiones.
 
-2. **Convertir la imagen subida en el ticket completo**
-   - Cuando se suba una imagen de fondo, el canvas tomará exactamente el ancho/alto natural de esa imagen.
-   - La imagen se colocará en `x=0`, `y=0`, `scaleX=1`, `scaleY=1`, `angle=0`, ocupando el 100% del ticket.
-   - El fondo quedará bloqueado por defecto; no se podrá mover accidentalmente ni “centrar” manualmente.
-   - Se eliminará la idea de `cover/contain/tile` para el editor visual: si hay imagen, esa imagen es el ticket completo.
-   - Si se necesita modificar el arte, se hace cambiando/subiendo otra imagen o usando recorte, no arrastrando el fondo dentro del canvas.
+3. Corregir QR para legibilidad real, sin cambiar los códigos ya existentes
+- No cambiaré el valor del QR: seguirá usando `attendee.qr_code || attendee.ticket_id`, por lo que los códigos ya distribuidos siguen apuntando al mismo dato.
+- Cambiaré la generación visual del QR para que tenga zona blanca de seguridad obligatoria. La causa crítica encontrada es que hoy se genera con `margin: 0`, lo cual puede volverlo ilegible al imprimirse sobre fondos de diseño.
+- Mantendré tamaño mínimo real de 100px, pero con margen interno blanco para que el scanner lo detecte.
+- Usaré alto contraste fijo negro/blanco para QR, sin depender del fondo.
 
-3. **Un solo render para vista final y descarga**
-   - Ajustar `renderTicket` para que en plantillas visuales dibuje siempre:
-     1. fondo exacto al tamaño del canvas,
-     2. elementos en el orden guardado,
-     3. QR/textos con las mismas coordenadas y dimensiones absolutas.
-   - La vista previa del Centro de Exportación y la descarga usarán el mismo `Blob` generado por `renderTicket`, como ya hacen, pero con una plantilla saneada y consistente.
+4. Sincronizar medidas/capas desde Fabric al guardado
+- Al guardar, leeré directamente el canvas Fabric y persistiré coordenadas, tamaños, fuente y orden visual final.
+- Normalizaré escala residual en valores absolutos para que el export no interprete distinto el diseño.
+- El orden de `template.elements` será el orden real de capas del editor.
 
-4. **Sincronización fuerte al guardar**
-   - Antes de guardar, forzar lectura directa del canvas Fabric y persistir:
-     - posición absoluta,
-     - ancho/alto absoluto,
-     - fontSize final,
-     - orden visual de capas,
-     - QR mínimo 100×100.
-   - Evitar depender de estados React atrasados después de editar con controles o arrastrar elementos.
+5. Pruebas internas obligatorias antes de finalizar
+- Generaré un ticket PNG desde `renderTicket` con datos de prueba equivalentes a los asistentes reales.
+- Decodificaré el QR generado con la misma librería de lectura usada por el scanner (`qr-scanner`) en navegador/Playwright.
+- Verificaré que el texto decodificado sea exactamente el mismo valor (`qr_code` o `ticket_id`) que se imprimió.
+- Validaré que la preview del Centro de Exportación y la descarga usan el mismo Blob/render.
+- Ejecutaré verificación técnica de TypeScript/build solo después de aplicar cambios.
 
-5. **QR mínimo real de 100px**
-   - Mantener QR nuevo en 150×150.
-   - Bloquear escalado interactivo por debajo de 100×100.
-   - Reforzar el mínimo al guardar y al renderizar, para plantillas antiguas también.
-   - Eliminar el aviso de “QR pequeño” porque ya no debe existir un QR de diseño menor a 100px.
-
-6. **Limpieza de UI y mensajes**
-   - Cambiar los textos del editor para reflejar el flujo correcto: “la imagen subida define el ticket completo”.
-   - Quitar instrucciones de mover/rotar/escalar fondo, porque esa opción es parte de la causa del problema.
-   - Mantener controles de capas solo para QR/textos, no para el fondo.
-
-## Archivos a modificar
-- `src/components/VisualTicketEditor.tsx`
-- `src/components/TicketTemplateEditor.tsx`
-- `src/components/TemplateDevicePreview.tsx` o retirar su uso
-- `src/components/TemplateCompareDialog.tsx` o retirar su uso
-- `src/lib/renderTicket.ts`
-
-## Validación
-- Subir una imagen: el canvas debe quedar exactamente del tamaño de esa imagen y el fondo debe ocupar 100% sin moverlo.
-- Editar QR/textos, guardar, abrir Centro de Exportación: la vista previa debe coincidir con el diseño guardado.
-- Descargar el PNG desde esa vista previa: debe ser el mismo PNG que se estaba viendo.
-- Intentar reducir QR bajo 100px: no debe permitirlo ni mostrar advertencia.
+6. Resultado esperado
+- Lo que se edita es lo que se imprime.
+- No habrá tres vistas con resultados diferentes.
+- Los QR exportados tendrán zona blanca y tamaño mínimo, y se probará internamente que sean legibles antes de decir que quedó solucionado.

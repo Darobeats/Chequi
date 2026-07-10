@@ -47,6 +47,9 @@ interface HistoryEntry {
 const SNAP_GRID = 10;
 const SNAP_ANGLE = 15;
 const GUIDE_THRESHOLD = 5;
+const QR_MIN_SIZE = 100;
+const QR_DEFAULT_SIZE = 150;
+const QR_QUIET_ZONE_MODULES = 4;
 
 export interface VisualTicketEditorHandle {
   flushToState: () => TicketElement[];
@@ -254,10 +257,10 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       if (t.elementType === 'background') isEditingBgRef.current = true;
       // Enforce QR minimum size of 100px during interactive scaling
       if (t.elementType === 'qr') {
-        const minW = 100 / (t.width || 1);
-        const minH = 100 / (t.height || 1);
-        if (t.scaleX < minW) t.scaleX = minW;
-        if (t.scaleY < minH) t.scaleY = minH;
+        const minScale = QR_MIN_SIZE / (t.width || 1);
+        const nextScale = Math.max(t.scaleX || 1, t.scaleY || 1, minScale);
+        t.scaleX = nextScale;
+        t.scaleY = nextScale;
       }
     };
 
@@ -340,14 +343,21 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     let obj: FabricObject | null = null;
 
     if (element.type === 'qr') {
+      const qrSize = Math.max(QR_MIN_SIZE, Math.round(element.width || QR_DEFAULT_SIZE), Math.round(element.height || QR_DEFAULT_SIZE));
       const qrDataUrl = await QRCode.toDataURL('SAMPLE-QR-' + element.id, {
-        width: element.width, margin: 0,
+        width: qrSize,
+        margin: QR_QUIET_ZONE_MODULES,
+        errorCorrectionLevel: 'M',
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
       });
       const img = await FabricImage.fromURL(qrDataUrl);
       img.set({
         left: element.x, top: element.y,
-        scaleX: element.width / (img.width || 1),
-        scaleY: element.height / (img.height || 1),
+        scaleX: qrSize / (img.width || 1),
+        scaleY: qrSize / (img.height || 1),
       });
       obj = img;
     } else if (element.type === 'text') {
@@ -415,8 +425,9 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
         const w = (obj.width || 0) * scaleX;
         const h = (obj.height || 0) * scaleY;
         const isQR = element.type === 'qr';
-        const nextWidth = isQR ? Math.max(100, w) : w;
-        const nextHeight = isQR ? Math.max(100, h) : h;
+        const qrSize = Math.max(QR_MIN_SIZE, Math.round(w), Math.round(h));
+        const nextWidth = isQR ? qrSize : w;
+        const nextHeight = isQR ? qrSize : h;
         if (isQR && (nextWidth !== w || nextHeight !== h)) {
           obj.set({ scaleX: nextWidth / (obj.width || 1), scaleY: nextHeight / (obj.height || 1) });
           obj.setCoords();
@@ -529,7 +540,7 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
       return;
     }
     onElementsChange([...elements, {
-      id: crypto.randomUUID(), type: 'qr', x: 50, y: 50, width: 150, height: 150,
+      id: crypto.randomUUID(), type: 'qr', x: 50, y: 50, width: QR_DEFAULT_SIZE, height: QR_DEFAULT_SIZE,
     }]);
   };
 

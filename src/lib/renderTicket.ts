@@ -24,6 +24,12 @@ export const getFieldValue = (a: Attendee, field?: string) => {
   }
 };
 
+const QR_MIN_SIZE = 100;
+const QR_QUIET_ZONE_MODULES = 4;
+
+export const getTicketQrPayload = (attendee: Attendee) =>
+  (attendee.qr_code || attendee.ticket_id || '').trim();
+
 export async function renderTicket(template: TicketTemplate, attendee: Attendee): Promise<Blob> {
   const canvas = document.createElement('canvas');
   let cw = template.canvas_width || 800;
@@ -84,12 +90,22 @@ export async function renderTicket(template: TicketTemplate, attendee: Attendee)
 
   for (const el of template.elements || []) {
     if (el.type === 'qr') {
-      const data = attendee.qr_code || attendee.ticket_id;
-      const qrWidth = Math.max(100, Math.round(el.width || 100));
-      const qrHeight = Math.max(100, Math.round(el.height || qrWidth));
-      const url = await QRCode.toDataURL(data, { width: qrWidth, margin: 0, errorCorrectionLevel: 'M' });
+      const data = getTicketQrPayload(attendee);
+      if (!data) continue;
+      // QR codes must remain square and include a white quiet zone. A stretched
+      // QR or margin: 0 over a designed background can become unreadable.
+      const qrSize = Math.max(QR_MIN_SIZE, Math.round(el.width || QR_MIN_SIZE), Math.round(el.height || QR_MIN_SIZE));
+      const url = await QRCode.toDataURL(data, {
+        width: qrSize,
+        margin: QR_QUIET_ZONE_MODULES,
+        errorCorrectionLevel: 'M',
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF',
+        },
+      });
       const img = await loadImage(url);
-      ctx.drawImage(img, el.x, el.y, qrWidth, qrHeight);
+      ctx.drawImage(img, el.x, el.y, qrSize, qrSize);
     } else if (el.type === 'text') {
       const fontSize = el.fontSize || 14;
       ctx.font = `${el.bold ? 'bold' : 'normal'} ${fontSize}px ${el.fontFamily || 'Arial'}`;
