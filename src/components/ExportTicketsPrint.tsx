@@ -11,6 +11,7 @@ import { Printer, FileDown } from 'lucide-react';
 import * as ExcelJS from 'exceljs';
 import QRCode from 'qrcode';
 import { Attendee } from '@/types/database';
+import { getTicketQrPayload } from '@/lib/renderTicket';
 
 const ExportTicketsPrint: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -259,12 +260,14 @@ const ExportTicketsPrint: React.FC = () => {
           const startCol = col + 1;
 
           // Generate QR Code (larger and centered)
-          if (template.show_qr && attendee.qr_code) {
+          const qrPayload = getTicketQrPayload(attendee);
+          if (template.show_qr && qrPayload) {
             try {
               const qrSize = Math.max(template.qr_size * 1.2, 200); // Minimum 200px, 20% larger
-              const qrDataURL = await QRCode.toDataURL(attendee.qr_code, {
+              const qrDataURL = await QRCode.toDataURL(qrPayload, {
                 width: qrSize,
-                margin: 2,
+                margin: 4,
+                errorCorrectionLevel: 'M',
                 color: {
                   dark: '#000000',
                   light: '#FFFFFF'
