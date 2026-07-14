@@ -238,7 +238,7 @@ const BulkTicketAssignment: React.FC = () => {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center text-gray-500 py-8">No hay asistentes con esos filtros.</TableCell></TableRow>
-              ) : filtered.slice(0, 1000).map((a) => (
+              ) : filtered.map((a) => (
                 <TableRow key={a.id} className="border-gray-800">
                   <TableCell>
                     <Checkbox checked={selected.has(a.id)} onCheckedChange={() => toggleOne(a.id)} />
@@ -258,13 +258,6 @@ const BulkTicketAssignment: React.FC = () => {
                   <TableCell className="text-gray-400 font-mono text-xs">{a.ticket_id}</TableCell>
                 </TableRow>
               ))}
-              {filtered.length > 1000 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-xs text-yellow-500 py-2">
-                    Mostrando 1000 de {filtered.length}. La selección procesa todos los seleccionados.
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </div>
