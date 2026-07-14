@@ -77,8 +77,10 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
 
   const resolveTemplate = (categoryId: string): TicketTemplate | undefined => {
     const b = bindings.find((b) => b.category_id === categoryId);
-    if (b) return eventTemplates.find((t) => t.id === b.template_id);
-    return defaultTemplate;
+    const bound = b ? eventTemplates.find((t) => t.id === b.template_id) : undefined;
+    // Fallback to default template when the binding points to an archived
+    // or non-visual template (would otherwise silently drop tickets in ZIP).
+    return bound ?? defaultTemplate;
   };
 
   const categories = useMemo(() => {
