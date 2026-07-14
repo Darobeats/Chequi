@@ -367,9 +367,9 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                     <ChevronDown className="h-4 w-4 ml-1" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64 bg-gray-900 border-gray-700">
-                  <ScrollArea className="max-h-64">
-                    <div className="space-y-1">
+                <PopoverContent className="w-64 bg-gray-900 border-gray-700 p-2">
+                  <ScrollArea className="h-72">
+                    <div className="space-y-1 pr-3">
                       {eventTemplates.map((t) => (
                         <label key={t.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-800 cursor-pointer">
                           <Checkbox checked={selectedTemplates.has(t.id)} onCheckedChange={() => toggleTplFilter(t.id)} />
@@ -383,6 +383,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                     </div>
                   </ScrollArea>
                 </PopoverContent>
+
               </Popover>
 
               <div>
