@@ -220,20 +220,41 @@ export function getOfflineDB(): Promise<IDBPDatabase<ChequiOfflineDB>> {
 }
 
 // ---------------- whitelist helpers ----------------
-export async function putWhitelistEntries(eventId: string, rows: CachedWhitelistEntry[]) {
+const IDB_CHUNK = 2000;
+
+async function yieldToUI() {
+  await new Promise((r) => setTimeout(r, 0));
+}
+
+export async function putWhitelistEntries(
+  eventId: string,
+  rows: CachedWhitelistEntry[],
+  onProgress?: (written: number, total: number) => void,
+) {
   const db = await getOfflineDB();
-  const tx = db.transaction("whitelist", "readwrite");
-  // Clear previous whitelist for this event then refill
-  const idx = tx.store.index("byEvent");
-  let cursor = await idx.openCursor(IDBKeyRange.only(eventId));
-  while (cursor) {
-    await cursor.delete();
-    cursor = await cursor.continue();
+  // Clear previous whitelist for this event in its own transaction so we
+  // don't hold a long-running readwrite while iterating large arrays.
+  {
+    const tx = db.transaction("whitelist", "readwrite");
+    const idx = tx.store.index("byEvent");
+    let cursor = await idx.openCursor(IDBKeyRange.only(eventId));
+    while (cursor) {
+      await cursor.delete();
+      cursor = await cursor.continue();
+    }
+    await tx.done;
   }
-  for (const row of rows) {
-    await tx.store.put({ ...row, __key: `${row.event_id}|${row.numero_cedula}` } as any);
+  const total = rows.length;
+  for (let i = 0; i < total; i += IDB_CHUNK) {
+    const slice = rows.slice(i, i + IDB_CHUNK);
+    const tx = db.transaction("whitelist", "readwrite");
+    for (const row of slice) {
+      tx.store.put({ ...row, __key: `${row.event_id}|${row.numero_cedula}` } as any);
+    }
+    await tx.done;
+    onProgress?.(Math.min(i + slice.length, total), total);
+    await yieldToUI();
   }
-  await tx.done;
 }
 
 export async function findWhitelistEntry(
@@ -246,17 +267,31 @@ export async function findWhitelistEntry(
 }
 
 // ---------------- attendees helpers ----------------
-export async function putAttendees(eventId: string, rows: CachedAttendee[]) {
+export async function putAttendees(
+  eventId: string,
+  rows: CachedAttendee[],
+  onProgress?: (written: number, total: number) => void,
+) {
   const db = await getOfflineDB();
-  const tx = db.transaction("attendees", "readwrite");
-  const idx = tx.store.index("byEvent");
-  let cursor = await idx.openCursor(IDBKeyRange.only(eventId));
-  while (cursor) {
-    await cursor.delete();
-    cursor = await cursor.continue();
+  {
+    const tx = db.transaction("attendees", "readwrite");
+    const idx = tx.store.index("byEvent");
+    let cursor = await idx.openCursor(IDBKeyRange.only(eventId));
+    while (cursor) {
+      await cursor.delete();
+      cursor = await cursor.continue();
+    }
+    await tx.done;
   }
-  for (const row of rows) await tx.store.put(row);
-  await tx.done;
+  const total = rows.length;
+  for (let i = 0; i < total; i += IDB_CHUNK) {
+    const slice = rows.slice(i, i + IDB_CHUNK);
+    const tx = db.transaction("attendees", "readwrite");
+    for (const row of slice) tx.store.put(row);
+    await tx.done;
+    onProgress?.(Math.min(i + slice.length, total), total);
+    await yieldToUI();
+  }
 }
 
 export async function findAttendeeByTicket(
