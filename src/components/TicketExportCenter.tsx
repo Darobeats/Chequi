@@ -218,36 +218,58 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     if (target.length === 0) { toast({ title: 'Nada para exportar', variant: 'destructive' }); return; }
 
     setBulkBusy(true); setProgress(0); setLastReport(null);
-    const zip = new JSZip();
     const skipped: string[] = [];
     const errors: string[] = [];
     let ok = 0;
 
+    // Batch to avoid OOM in the tab. Each batch produces its own ZIP.
+    const size = Math.max(100, Math.min(5000, batchSize || 1000));
+    const totalBatches = Math.ceil(target.length / size);
+    const ts = new Date().toISOString().split('T')[0];
+
     try {
-      for (let i = 0; i < target.length; i++) {
-        const { attendee: a, template: tpl } = target[i];
-        if (!tpl) { skipped.push(a.name); setProgress(Math.round(((i + 1) / target.length) * 100)); continue; }
-        try {
-          const blob = await renderTicket(tpl, a);
-          const fname = buildFilename(a, nameFormat);
-          let path = fname;
-          if (zipStructure === 'category') path = `${sanitize(a.ticket_category?.name || 'sin_categoria')}/${fname}`;
-          else if (zipStructure === 'template') path = `${sanitize(tpl.name || 'plantilla')}/${fname}`;
-          zip.file(path, blob);
-          ok++;
-        } catch (e: any) {
-          errors.push(`${a.name}: ${e?.message || 'error'}`);
+      for (let b = 0; b < totalBatches; b++) {
+        const batch = target.slice(b * size, (b + 1) * size);
+        const zip = new JSZip();
+
+        for (let i = 0; i < batch.length; i++) {
+          const { attendee: a, template: tpl } = batch[i];
+          if (!tpl) { skipped.push(a.name); continue; }
+          try {
+            const blob = await renderTicket(tpl, a);
+            const fname = buildFilename(a, nameFormat);
+            let path = fname;
+            if (zipStructure === 'category') path = `${sanitize(a.ticket_category?.name || 'sin_categoria')}/${fname}`;
+            else if (zipStructure === 'template') path = `${sanitize(tpl.name || 'plantilla')}/${fname}`;
+            zip.file(path, blob);
+            ok++;
+          } catch (e: any) {
+            errors.push(`${a.name}: ${e?.message || 'error'}`);
+          }
+          // Throttle progress updates (every 25 items) to reduce re-renders
+          if (i % 25 === 0 || i === batch.length - 1) {
+            const done = b * size + i + 1;
+            setProgress(Math.round((done / target.length) * 100));
+            // Yield to the event loop so the UI stays responsive
+            await new Promise((r) => setTimeout(r, 0));
+          }
         }
-        setProgress(Math.round(((i + 1) / target.length) * 100));
+
+        const zipBlob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 },
+        });
+        const suffix = totalBatches > 1 ? `_lote_${String(b + 1).padStart(2, '0')}de${String(totalBatches).padStart(2, '0')}` : '';
+        saveAs(zipBlob, `tickets_${zipStructure}_${ts}${suffix}.zip`);
+        // Small pause between downloads so the browser saves them individually
+        if (b < totalBatches - 1) await new Promise((r) => setTimeout(r, 600));
       }
 
-      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-      const ts = new Date().toISOString().split('T')[0];
-      saveAs(zipBlob, `tickets_${zipStructure}_${ts}.zip`);
       setLastReport({ ok, skipped, errors });
       toast({
         title: 'Exportación completa',
-        description: `${ok} generados · ${skipped.length} sin plantilla · ${errors.length} errores`,
+        description: `${ok} generados en ${totalBatches} ZIP · ${skipped.length} sin plantilla · ${errors.length} errores`,
       });
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'No se pudo generar', variant: 'destructive' });
