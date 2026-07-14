@@ -464,6 +464,20 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label className="text-xs text-hueso/70">Lote por ZIP</Label>
+                <Select value={String(batchSize)} onValueChange={(v) => setBatchSize(parseInt(v, 10))}>
+                  <SelectTrigger className="w-[130px] bg-gray-800 border-gray-700 text-hueso"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700">
+                    <SelectItem value="250">250</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
+                    <SelectItem value="1000">1000</SelectItem>
+                    <SelectItem value="2000">2000</SelectItem>
+                    <SelectItem value="5000">5000</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
 
               <div className="flex-1 text-xs text-gray-400 min-w-[200px]">
                 {selectedCount > 0 && <>{selectedCount} seleccionados · {catsInSelection} categorías · {tplsInSelection} plantillas</>}
