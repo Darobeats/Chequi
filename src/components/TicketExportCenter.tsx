@@ -342,13 +342,13 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                     <ChevronDown className="h-4 w-4 ml-1" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64 bg-gray-900 border-gray-700">
-                  <ScrollArea className="max-h-64">
-                    <div className="space-y-1">
+                <PopoverContent className="w-64 bg-gray-900 border-gray-700 p-2">
+                  <ScrollArea className="h-72">
+                    <div className="space-y-1 pr-3">
                       {categories.map((c) => (
                         <label key={c.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-800 cursor-pointer">
                           <Checkbox checked={selectedCategories.has(c.id)} onCheckedChange={() => toggleCatFilter(c.id)} />
-                          <span className="w-3 h-3 rounded" style={{ backgroundColor: c.color }} />
+                          <span className="w-3 h-3 rounded shrink-0" style={{ backgroundColor: c.color }} />
                           <span className="text-sm text-hueso flex-1 truncate">{c.name}</span>
                           <span className="text-xs text-gray-500">{c.count}</span>
                         </label>
@@ -356,6 +356,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                     </div>
                   </ScrollArea>
                 </PopoverContent>
+
               </Popover>
 
               <Popover>
@@ -366,9 +367,9 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                     <ChevronDown className="h-4 w-4 ml-1" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64 bg-gray-900 border-gray-700">
-                  <ScrollArea className="max-h-64">
-                    <div className="space-y-1">
+                <PopoverContent className="w-64 bg-gray-900 border-gray-700 p-2">
+                  <ScrollArea className="h-72">
+                    <div className="space-y-1 pr-3">
                       {eventTemplates.map((t) => (
                         <label key={t.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-800 cursor-pointer">
                           <Checkbox checked={selectedTemplates.has(t.id)} onCheckedChange={() => toggleTplFilter(t.id)} />
@@ -382,6 +383,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                     </div>
                   </ScrollArea>
                 </PopoverContent>
+
               </Popover>
 
               <div>
