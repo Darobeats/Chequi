@@ -31,6 +31,10 @@ export const getTicketQrPayload = (attendee: Attendee) =>
   (attendee.qr_code || attendee.ticket_id || '').trim();
 
 export async function renderTicket(template: TicketTemplate, attendee: Attendee): Promise<Blob> {
+  // Ensure any @font-face loaded via CSS is available before we measure/draw text
+  // so exports use the same font metrics as the Fabric editor preview.
+  try { if (typeof document !== 'undefined' && (document as any).fonts?.ready) await (document as any).fonts.ready; } catch { /* noop */ }
+
   const canvas = document.createElement('canvas');
   let cw = template.canvas_width || 800;
   let ch = template.canvas_height || 600;
