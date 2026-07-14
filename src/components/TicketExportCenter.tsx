@@ -380,70 +380,20 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="flex-1 overflow-auto px-6 py-3">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-900 z-10">
-                <tr className="text-left text-hueso/70 border-b border-gray-800">
-                  <th className="p-2 w-10"><Checkbox checked={allVisibleSelected} onCheckedChange={toggleAll} disabled={autoSync} /></th>
-                  <th className="p-2">Nombre</th>
-                  <th className="p-2">Cédula</th>
-                  <th className="p-2">Ticket ID</th>
-                  <th className="p-2">Categoría</th>
-                  <th className="p-2">Plantilla</th>
-                  <th className="p-2 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="p-8 text-center text-gray-500">No hay resultados con los filtros aplicados.</td></tr>
-                ) : filtered.slice(0, 1000).map(({ attendee: a, template: tpl }) => (
-                  <tr key={a.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                    <td className="p-2">
-                      <Checkbox checked={selectedIds.has(a.id)} disabled={!tpl || autoSync} onCheckedChange={() => toggleOne(a.id)} />
-                    </td>
-                    <td className="p-2 text-hueso">{a.name}</td>
-                    <td className="p-2 text-gray-400">{a.cedula || '—'}</td>
-                    <td className="p-2 text-gray-400 font-mono text-xs">{a.ticket_id}</td>
-                    <td className="p-2">
-                      <Badge variant="outline" style={{ borderColor: a.ticket_category?.color || '#888', color: a.ticket_category?.color || '#888' }}>
-                        {a.ticket_category?.name || 'N/A'}
-                      </Badge>
-                    </td>
-                    <td className="p-2">
-                      {tpl ? <span className="text-hueso/80 text-xs">{tpl.name}</span> : <Badge variant="destructive" className="text-xs">Sin plantilla</Badge>}
-                    </td>
-                    <td className="p-2">
-                      <div className="flex gap-1 justify-end">
-                        <Button
-                          size="sm" variant="outline" className="h-7 border-gray-700"
-                          disabled={!tpl || bulkBusy}
-                          onClick={() => openPreview(a, tpl)}
-                          title="Vista previa"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm" variant="outline" className="h-7 border-gray-700"
-                          disabled={!tpl || downloadingId === a.id || bulkBusy}
-                          onClick={() => downloadSingle(a, tpl)}
-                        >
-                          {downloadingId === a.id
-                            ? <Loader2 className="h-3 w-3 animate-spin" />
-                            : <><Download className="h-3 w-3 mr-1" /> PNG</>}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length > 1000 && (
-                  <tr><td colSpan={7} className="p-3 text-center text-xs text-yellow-500">
-                    Mostrando 1000 de {filtered.length}. Refina filtros o usa "Descargar filtrados".
-                  </td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Table (virtualized) */}
+          <VirtualizedExportTable
+            filtered={filtered}
+            selectedIds={selectedIds}
+            allVisibleSelected={allVisibleSelected}
+            autoSync={autoSync}
+            bulkBusy={bulkBusy}
+            downloadingId={downloadingId}
+            onToggleAll={toggleAll}
+            onToggleOne={toggleOne}
+            onPreview={openPreview}
+            onDownload={downloadSingle}
+          />
+
 
           {/* Action bar */}
           <div className="border-t border-gray-800 p-4 space-y-3 bg-gray-900">
