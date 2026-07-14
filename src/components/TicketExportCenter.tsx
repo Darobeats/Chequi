@@ -283,6 +283,26 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   const selectedCount = filtered.filter((r) => selectedIds.has(r.attendee.id)).length;
   const catsInSelection = new Set(filtered.filter((r) => selectedIds.has(r.attendee.id)).map((r) => r.attendee.category_id)).size;
   const tplsInSelection = new Set(filtered.filter((r) => selectedIds.has(r.attendee.id) && r.template).map((r) => r.template!.id)).size;
+  const filteredWithTpl = filtered.filter((r) => r.template).length;
+  const filteredWithoutTpl = filtered.length - filteredWithTpl;
+  const selectedWithoutTpl = filtered.filter((r) => selectedIds.has(r.attendee.id) && !r.template).length;
+  const missingCategories = useMemo(() => {
+    const set = new Map<string, string>();
+    filtered.filter((r) => !r.template).forEach((r) => {
+      set.set(r.attendee.category_id, r.attendee.ticket_category?.name || 'Sin categoría');
+    });
+    return Array.from(set.values());
+  }, [filtered]);
+  const [confirmSource, setConfirmSource] = useState<null | 'filtered' | 'selected'>(null);
+
+  const requestBulkExport = (source: 'filtered' | 'selected') => {
+    const missing = source === 'filtered' ? filteredWithoutTpl : selectedWithoutTpl;
+    if (missing > 0) {
+      setConfirmSource(source);
+      return;
+    }
+    void runBulkExport(source);
+  };
 
   return (
     <>
