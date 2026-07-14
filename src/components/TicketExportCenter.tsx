@@ -505,15 +505,58 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                 {selectedCount > 0 && <>{selectedCount} seleccionados · {catsInSelection} categorías · {tplsInSelection} plantillas</>}
               </div>
 
-              <Button variant="outline" className="border-gray-700" disabled={bulkBusy || filtered.length === 0} onClick={() => runBulkExport('filtered')}>
-                <Package className="h-4 w-4 mr-2" /> Descargar filtrados ({filtered.length})
+              <Button variant="outline" className="border-gray-700" disabled={bulkBusy || filtered.length === 0} onClick={() => requestBulkExport('filtered')}>
+                <Package className="h-4 w-4 mr-2" /> Descargar filtrados ({filteredWithTpl})
+                {filteredWithoutTpl > 0 && (
+                  <Badge className="ml-2 bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 text-[10px]">
+                    {filteredWithoutTpl} sin plantilla
+                  </Badge>
+                )}
               </Button>
-              <Button className="bg-dorado text-empresarial hover:bg-dorado/90" disabled={bulkBusy || selectedCount === 0} onClick={() => runBulkExport('selected')}>
+              <Button className="bg-dorado text-empresarial hover:bg-dorado/90" disabled={bulkBusy || selectedCount === 0} onClick={() => requestBulkExport('selected')}>
                 {bulkBusy
                   ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {progress}%</>
-                  : <><Download className="h-4 w-4 mr-2" /> Descargar seleccionados ({selectedCount})</>}
+                  : <><Download className="h-4 w-4 mr-2" /> Descargar seleccionados ({selectedCount - selectedWithoutTpl})</>}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation when some rows lack a template */}
+      <Dialog open={!!confirmSource} onOpenChange={(v) => { if (!v) setConfirmSource(null); }}>
+        <DialogContent className="max-w-md bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-yellow-400">Faltan plantillas asignadas</DialogTitle>
+            <DialogDescription>
+              {confirmSource === 'filtered'
+                ? `${filteredWithoutTpl} de ${filtered.length} tickets no tienen plantilla y se omitirán del ZIP.`
+                : `${selectedWithoutTpl} de ${selectedCount} seleccionados no tienen plantilla y se omitirán del ZIP.`}
+            </DialogDescription>
+          </DialogHeader>
+          {missingCategories.length > 0 && (
+            <div className="text-xs text-hueso/80 bg-gray-800/60 rounded p-2 max-h-40 overflow-auto">
+              <div className="mb-1 text-gray-400">Categorías afectadas:</div>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {missingCategories.map((c) => <li key={c}>{c}</li>)}
+              </ul>
+              <div className="mt-2 text-gray-500">
+                Asigna una plantilla por defecto o un binding para estas categorías en la pestaña <strong>Plantillas</strong> para incluirlas.
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" className="border-gray-700" onClick={() => setConfirmSource(null)}>Cancelar</Button>
+            <Button
+              className="bg-dorado text-empresarial hover:bg-dorado/90"
+              onClick={() => {
+                const src = confirmSource!;
+                setConfirmSource(null);
+                void runBulkExport(src);
+              }}
+            >
+              Descargar de todas formas
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
