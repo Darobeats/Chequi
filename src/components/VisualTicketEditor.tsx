@@ -368,6 +368,9 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
         fill: element.color || '#000000',
         fontWeight: element.bold ? 'bold' : 'normal',
         textAlign: element.textAlign || 'left',
+        // Force lineHeight=1 and no char spacing so exported PNG matches editor.
+        lineHeight: 1,
+        charSpacing: 0,
       });
       obj = text;
     }
