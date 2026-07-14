@@ -75,8 +75,9 @@ export function useOfflinePrecharge(eventId: string | null) {
           .eq("event_id", eventId)
           .range(from, to) as any
       );
-      await putWhitelistEntries(eventId, whitelist);
-      setProgress({ step: "Lista de autorizados", current: whitelist.length, total: whitelist.length });
+      await putWhitelistEntries(eventId, whitelist, (w, t) =>
+        setProgress({ step: `Guardando autorizados ${w.toLocaleString()}/${t.toLocaleString()}`, current: w, total: t })
+      );
 
       // 2. Attendees
       setProgress({ step: "Descargando asistentes (QR)", current: 0, total: 1 });
@@ -87,8 +88,9 @@ export function useOfflinePrecharge(eventId: string | null) {
           .eq("event_id", eventId)
           .range(from, to) as any
       );
-      await putAttendees(eventId, attendees);
-      setProgress({ step: "Asistentes", current: attendees.length, total: attendees.length });
+      await putAttendees(eventId, attendees, (w, t) =>
+        setProgress({ step: `Guardando asistentes ${w.toLocaleString()}/${t.toLocaleString()}`, current: w, total: t })
+      );
 
       // 3. Control types
       setProgress({ step: "Descargando tipos de control", current: 0, total: 1 });
