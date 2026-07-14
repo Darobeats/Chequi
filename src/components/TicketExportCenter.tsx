@@ -17,6 +17,7 @@ import { Attendee, TicketTemplate } from '@/types/database';
 import { useTicketTemplates } from '@/hooks/useTicketTemplates';
 import { useAllTemplateBindings } from '@/hooks/useTemplateCategoryBindings';
 import { renderTicket, sanitize } from '@/lib/renderTicket';
+import VirtualizedExportTable from './tickets/VirtualizedExportTable';
 
 interface Props {
   eventId: string;
