@@ -17,6 +17,7 @@ import { Attendee, TicketTemplate } from '@/types/database';
 import { useTicketTemplates } from '@/hooks/useTicketTemplates';
 import { useAllTemplateBindings } from '@/hooks/useTemplateCategoryBindings';
 import { renderTicket, sanitize } from '@/lib/renderTicket';
+import VirtualizedExportTable from './tickets/VirtualizedExportTable';
 
 interface Props {
   eventId: string;
@@ -55,6 +56,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   const [progress, setProgress] = useState(0);
   const [lastReport, setLastReport] = useState<{ ok: number; skipped: string[]; errors: string[] } | null>(null);
   const [autoSync, setAutoSync] = useState(false);
+  const [batchSize, setBatchSize] = useState<number>(1000);
 
   // Preview dialog state
   const [previewFor, setPreviewFor] = useState<{ attendee: Attendee; template: TicketTemplate } | null>(null);
@@ -216,36 +218,58 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     if (target.length === 0) { toast({ title: 'Nada para exportar', variant: 'destructive' }); return; }
 
     setBulkBusy(true); setProgress(0); setLastReport(null);
-    const zip = new JSZip();
     const skipped: string[] = [];
     const errors: string[] = [];
     let ok = 0;
 
+    // Batch to avoid OOM in the tab. Each batch produces its own ZIP.
+    const size = Math.max(100, Math.min(5000, batchSize || 1000));
+    const totalBatches = Math.ceil(target.length / size);
+    const ts = new Date().toISOString().split('T')[0];
+
     try {
-      for (let i = 0; i < target.length; i++) {
-        const { attendee: a, template: tpl } = target[i];
-        if (!tpl) { skipped.push(a.name); setProgress(Math.round(((i + 1) / target.length) * 100)); continue; }
-        try {
-          const blob = await renderTicket(tpl, a);
-          const fname = buildFilename(a, nameFormat);
-          let path = fname;
-          if (zipStructure === 'category') path = `${sanitize(a.ticket_category?.name || 'sin_categoria')}/${fname}`;
-          else if (zipStructure === 'template') path = `${sanitize(tpl.name || 'plantilla')}/${fname}`;
-          zip.file(path, blob);
-          ok++;
-        } catch (e: any) {
-          errors.push(`${a.name}: ${e?.message || 'error'}`);
+      for (let b = 0; b < totalBatches; b++) {
+        const batch = target.slice(b * size, (b + 1) * size);
+        const zip = new JSZip();
+
+        for (let i = 0; i < batch.length; i++) {
+          const { attendee: a, template: tpl } = batch[i];
+          if (!tpl) { skipped.push(a.name); continue; }
+          try {
+            const blob = await renderTicket(tpl, a);
+            const fname = buildFilename(a, nameFormat);
+            let path = fname;
+            if (zipStructure === 'category') path = `${sanitize(a.ticket_category?.name || 'sin_categoria')}/${fname}`;
+            else if (zipStructure === 'template') path = `${sanitize(tpl.name || 'plantilla')}/${fname}`;
+            zip.file(path, blob);
+            ok++;
+          } catch (e: any) {
+            errors.push(`${a.name}: ${e?.message || 'error'}`);
+          }
+          // Throttle progress updates (every 25 items) to reduce re-renders
+          if (i % 25 === 0 || i === batch.length - 1) {
+            const done = b * size + i + 1;
+            setProgress(Math.round((done / target.length) * 100));
+            // Yield to the event loop so the UI stays responsive
+            await new Promise((r) => setTimeout(r, 0));
+          }
         }
-        setProgress(Math.round(((i + 1) / target.length) * 100));
+
+        const zipBlob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 },
+        });
+        const suffix = totalBatches > 1 ? `_lote_${String(b + 1).padStart(2, '0')}de${String(totalBatches).padStart(2, '0')}` : '';
+        saveAs(zipBlob, `tickets_${zipStructure}_${ts}${suffix}.zip`);
+        // Small pause between downloads so the browser saves them individually
+        if (b < totalBatches - 1) await new Promise((r) => setTimeout(r, 600));
       }
 
-      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-      const ts = new Date().toISOString().split('T')[0];
-      saveAs(zipBlob, `tickets_${zipStructure}_${ts}.zip`);
       setLastReport({ ok, skipped, errors });
       toast({
         title: 'Exportación completa',
-        description: `${ok} generados · ${skipped.length} sin plantilla · ${errors.length} errores`,
+        description: `${ok} generados en ${totalBatches} ZIP · ${skipped.length} sin plantilla · ${errors.length} errores`,
       });
     } catch (e: any) {
       toast({ title: 'Error', description: e?.message || 'No se pudo generar', variant: 'destructive' });
@@ -380,70 +404,20 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="flex-1 overflow-auto px-6 py-3">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-900 z-10">
-                <tr className="text-left text-hueso/70 border-b border-gray-800">
-                  <th className="p-2 w-10"><Checkbox checked={allVisibleSelected} onCheckedChange={toggleAll} disabled={autoSync} /></th>
-                  <th className="p-2">Nombre</th>
-                  <th className="p-2">Cédula</th>
-                  <th className="p-2">Ticket ID</th>
-                  <th className="p-2">Categoría</th>
-                  <th className="p-2">Plantilla</th>
-                  <th className="p-2 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="p-8 text-center text-gray-500">No hay resultados con los filtros aplicados.</td></tr>
-                ) : filtered.slice(0, 1000).map(({ attendee: a, template: tpl }) => (
-                  <tr key={a.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                    <td className="p-2">
-                      <Checkbox checked={selectedIds.has(a.id)} disabled={!tpl || autoSync} onCheckedChange={() => toggleOne(a.id)} />
-                    </td>
-                    <td className="p-2 text-hueso">{a.name}</td>
-                    <td className="p-2 text-gray-400">{a.cedula || '—'}</td>
-                    <td className="p-2 text-gray-400 font-mono text-xs">{a.ticket_id}</td>
-                    <td className="p-2">
-                      <Badge variant="outline" style={{ borderColor: a.ticket_category?.color || '#888', color: a.ticket_category?.color || '#888' }}>
-                        {a.ticket_category?.name || 'N/A'}
-                      </Badge>
-                    </td>
-                    <td className="p-2">
-                      {tpl ? <span className="text-hueso/80 text-xs">{tpl.name}</span> : <Badge variant="destructive" className="text-xs">Sin plantilla</Badge>}
-                    </td>
-                    <td className="p-2">
-                      <div className="flex gap-1 justify-end">
-                        <Button
-                          size="sm" variant="outline" className="h-7 border-gray-700"
-                          disabled={!tpl || bulkBusy}
-                          onClick={() => openPreview(a, tpl)}
-                          title="Vista previa"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm" variant="outline" className="h-7 border-gray-700"
-                          disabled={!tpl || downloadingId === a.id || bulkBusy}
-                          onClick={() => downloadSingle(a, tpl)}
-                        >
-                          {downloadingId === a.id
-                            ? <Loader2 className="h-3 w-3 animate-spin" />
-                            : <><Download className="h-3 w-3 mr-1" /> PNG</>}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length > 1000 && (
-                  <tr><td colSpan={7} className="p-3 text-center text-xs text-yellow-500">
-                    Mostrando 1000 de {filtered.length}. Refina filtros o usa "Descargar filtrados".
-                  </td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          {/* Table (virtualized) */}
+          <VirtualizedExportTable
+            filtered={filtered}
+            selectedIds={selectedIds}
+            allVisibleSelected={allVisibleSelected}
+            autoSync={autoSync}
+            bulkBusy={bulkBusy}
+            downloadingId={downloadingId}
+            onToggleAll={toggleAll}
+            onToggleOne={toggleOne}
+            onPreview={openPreview}
+            onDownload={downloadSingle}
+          />
+
 
           {/* Action bar */}
           <div className="border-t border-gray-800 p-4 space-y-3 bg-gray-900">
@@ -490,6 +464,20 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <Label className="text-xs text-hueso/70">Lote por ZIP</Label>
+                <Select value={String(batchSize)} onValueChange={(v) => setBatchSize(parseInt(v, 10))}>
+                  <SelectTrigger className="w-[130px] bg-gray-800 border-gray-700 text-hueso"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700">
+                    <SelectItem value="250">250</SelectItem>
+                    <SelectItem value="500">500</SelectItem>
+                    <SelectItem value="1000">1000</SelectItem>
+                    <SelectItem value="2000">2000</SelectItem>
+                    <SelectItem value="5000">5000</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
 
               <div className="flex-1 text-xs text-gray-400 min-w-[200px]">
                 {selectedCount > 0 && <>{selectedCount} seleccionados · {catsInSelection} categorías · {tplsInSelection} plantillas</>}

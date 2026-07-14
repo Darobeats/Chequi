@@ -1,104 +1,121 @@
 
-## Problema
+## Objetivo
 
-El módulo Análisis actual desperdicia espacio (una gráfica por fila en desktop), muestra información poco "diciente" (gráficas con una sola barra sin contexto, sin nombres de categoría/control en KPIs), y en mobile obliga a scroll infinito para ver algo. El objetivo: en una sola pantalla se debe entender qué está pasando por **categoría de ticket** (invitados, socios, VIP, etc.) y por tipo de control.
+1. Eliminar el tope de 1000 en el Centro de Exportación (lista y descarga).
+2. Alinear al 100% lo que se ve en el editor visual con el PNG exportado (misma posición, tipografía y tamaño).
+3. Auditoría profunda del proyecto pensando en un evento de ~9.500 asistentes durante 2 días (rendimiento, seguridad, código muerto, offline, escaneo, exportación masiva).
 
-## Rediseño
+---
 
-### 1. Nueva estructura de pantalla (una sola vista, sin tabs profundos)
+## 1. Quitar límite de 1000 en exportación
 
-Eliminar el modelo de 5 tabs (Resumen / Tendencias / Cobertura / En Vivo / Detalles). Se reemplaza por **una vista principal densa** + un único desplegable "Ver detalles crudos" al final para la tabla.
+**Archivos:** `src/components/TicketExportCenter.tsx`, `src/components/BulkTicketAssignment.tsx`.
 
-```text
-┌────────────────────────────────────────────────────┐
-│ Filtros (colapsables en mobile) + KPIs compactos   │
-├──────────────────────┬─────────────────────────────┤
-│ CATEGORÍAS (foco)    │ RITMO / TENDENCIA           │
-│ - Barras horizontales│ - Área acumulada + ritmo    │
-│   por categoría con  │ - Chip pico / proyección    │
-│   % participación,   │                             │
-│   ingresados / total │                             │
-├──────────────────────┼─────────────────────────────┤
-│ TIPOS DE CONTROL     │ ACTIVIDAD EN VIVO           │
-│ - Barras + donut     │ - Últimos 8 scans con       │
-│   cobertura          │   color de categoría        │
-├──────────────────────┴─────────────────────────────┤
-│ HEATMAP CATEGORÍA × HORA (una sola matriz clara)   │
-├────────────────────────────────────────────────────┤
-│ ▸ Ver registros detallados (tabla, colapsado)      │
-└────────────────────────────────────────────────────┘
-```
+- Reemplazar `filtered.slice(0, 1000)` por render virtualizado (ventana de ~200 filas visibles con `react-window` o virtualización manual por scroll) para no colapsar el DOM con 9.500 filas.
+- Eliminar los mensajes "Mostrando 1000 de X".
+- Confirmar que `runBulkExport` ya itera sobre `filtered` completo (sí lo hace); ajustar `progress` para reportar cada 25 tickets en lugar de cada uno (menos re-renders con lotes grandes).
+- En `useAttendeesPage` verificar que `fetchAllPaginated` cubre >1000 asistentes al alimentar el Centro de Exportación (ya existe; auditar el llamador).
 
-### 2. KPIs compactos (una sola fila, scroll horizontal en mobile)
+**Riesgo:** generar 9.500 PNG en el navegador puede tumbar la pestaña por memoria del ZIP. Mitigación:
+- Procesar en lotes de 500 tickets → generar un ZIP por lote (`tickets_lote_01.zip`, `..._02.zip`), o
+- Usar `jszip` con `streamFiles: true` y liberar blobs intermedios (`URL.revokeObjectURL`), sin acumular canvas.
+- Añadir opción "Tamaño de lote" (default 1000) y descargar múltiples ZIP secuencialmente.
 
-Reducir de 6 tarjetas grandes a **4 KPIs esenciales** en tira horizontal:
-- Ingresos totales (con delta vs hora anterior)
-- Asistentes únicos / total con barra de progreso
-- Pico de actividad (hora + conteo)
-- Proyección final (si es evento en curso)
+## 2. Sincronía Editor ↔ Exportación
 
-Cada tarjeta ≈ 140px de ancho, altura reducida, ícono a la izquierda, valor grande, sub-label. En mobile: `overflow-x-auto snap-x`.
+**Causa raíz identificada** en `src/lib/renderTicket.ts` vs `src/components/VisualTicketEditor.tsx`:
 
-### 3. Bloque CATEGORÍAS (nuevo, el más importante)
+- **Texto:** Fabric.js posiciona `Text` por su bounding box con métricas que incluyen ascender/descender; en `renderTicket` se dibuja con `ctx.textBaseline='top'` sobre `el.y`, lo que produce un desfase vertical de varios píxeles según la fuente. Fabric además usa `lineHeight` propio (~1.16) y padding interno.
+- **Alineación:** Fabric aplica `textAlign` moviendo el texto dentro de su bounding; el export ignora `textAlign` (siempre `left`). Coincide para "left", pero rompe si el usuario elige center/right.
+- **Fuentes:** el editor puede usar fuentes cargadas vía CSS que no estén disponibles en el contexto de `renderTicket` si el `document.fonts` aún no las resolvió → fallback a Arial y cambio de métricas.
 
-Componente nuevo `CategoryBreakdownPanel` que muestra por cada categoría de ticket:
-- Nombre + color de la categoría
-- Barra horizontal con % participación
-- Números: `ingresados / total autorizados` y `usos totales`
-- Micro-sparkline (últimas 12 horas) para ver ritmo
-- Ordenado por volumen descendente
+**Cambios:**
+- En `renderTicket.ts`: 
+  - Calcular offset vertical equivalente al de Fabric (`fontSize * 0.07` aprox, o mejor: medir `TextMetrics.actualBoundingBoxAscent`).
+  - Respetar `el.textAlign` calculando ancho con `ctx.measureText` y desplazando `x`.
+  - Antes de exportar, esperar `await document.fonts.ready` para garantizar que la fuente está cargada.
+- En `VisualTicketEditor`: al crear/editar `Text`, fijar `lineHeight: 1`, `charSpacing: 0` y guardar `textAlign` en el elemento (ya se guarda). Documentar en `elementsRef` que la caja se toma como `left/top` del texto.
+- Añadir un modo "Vista final" dentro del editor que renderice con `renderTicket` sobre el mismo canvas (misma función que exporta), para verificación visual dentro del mismo componente. Así hay una sola fuente de verdad.
+- Agregar test manual: script Playwright que renderice 3 plantillas y compare pixel-hashes del canvas Fabric vs el PNG generado (diferencia <2%).
 
-En desktop se ve tipo "league table" con todas las categorías visibles sin scroll. En mobile ocupa el 100% del ancho y cada fila es tocable para expandir detalle.
+## 3. Auditoría integral para 9.500 asistentes / 2 días
 
-### 4. Bloque TIPOS DE CONTROL
+### 3.1 Base de datos y RLS
+- Ejecutar `supabase--linter` y resolver todos los warnings de RLS/policies.
+- Revisar índices en tablas críticas:
+  - `attendees(event_id, qr_code)`, `attendees(event_id, ticket_id)` → escaneo por QR.
+  - `control_usage(attendee_id, control_type_id, used_at)` → validación de límites.
+  - `cedula_control_usage(event_id, numero_cedula, control_type_id)`.
+  - `cedulas_autorizadas(event_id, numero_cedula)` UNIQUE.
+  - `cedula_access_logs(event_id, used_at DESC)` para exportes.
+  - Crear los que falten vía migración.
+- Verificar que `get_event_analytics_summary` y `get_event_recent_activity` no hacen full scan (EXPLAIN ANALYZE con datos sintéticos).
+- Revisar constraint UNIQUE en `cedula_control_usage(event_id, numero_cedula, control_type_id)` para prevenir doble uso en carrera.
+- Revisar todas las funciones PL/pgSQL para `SET search_path TO 'public'` (ya en memoria, verificar cumplimiento).
 
-`ControlTypePanel` compacto:
-- Donut pequeño (140px) con distribución % entre tipos
-- Al lado, lista de tipos con conteo + cobertura %
-- Sustituye a `CoverageMetrics` actual (muy verboso, 2 tarjetas gigantes)
+### 3.2 Front-end: escaneo y offline
+- `useOfflinePrecharge`: probar con 9.500 filas — actual `PAGE_SIZE=1000` funciona pero `putAttendees` en una sola transacción puede ser lento en móvil. Trocear a lotes de 2.000 y mostrar progreso real.
+- IndexedDB: confirmar que hay índices por `event_id`, `numero_cedula`, `qr_code` en `offlineDB`.
+- `useOfflineScans` / `useOfflineCedulaScans`: verificar que la cola no bloquea UI y que reintentos exponenciales tienen tope.
+- Realtime: confirmar sufijos UUID en canales (memoria); auditar que ninguna suscripción se cree fuera de `useEffect`.
+- Scanner: latencia de `validate_control_access_public` con 9.500 asistentes — medir con dataset sintético.
 
-### 5. Heatmap Categoría × Hora
+### 3.3 Seguridad
+- Correr `security--run_security_scan` y `security--get_scan_results`; resolver críticos.
+- Verificar que `service_role_key` no está en frontend.
+- Edge functions: validación Zod en `process-cedula-scan`, `process-qr-scan`, `scan-cedula-ai`.
+- Rate limiting básico en `scan-cedula-ai` (Gemini) para evitar drenar el gateway.
+- Revisar policies `DELETE` en `attendees`, `control_usage`, `cedula_control_usage`, `cedula_access_logs` (solo admin del evento).
 
-Reemplaza el `CategoryBreakdownChart` de barras apiladas (ilegible con pocos datos) por un **heatmap** filas=categorías, columnas=horas, celda coloreada con el color de la categoría y opacidad = intensidad. Muy legible incluso con 1-2 scans. En mobile: scroll horizontal en el eje de horas, con la primera columna (nombre de categoría) sticky.
+### 3.4 Exportaciones masivas
+- `export-attendees-report`: ejecutar con 9.500 filas; medir tiempo y memoria. Si supera 60s, mover a streaming chunked.
+- `CedulaExportButton` y `ExportButton`: reemplazar reads paginados manuales por `fetchAllPaginated` donde falte.
+- ExcelJS: usar `stream.xlsx.WorkbookWriter` para hojas de >5.000 filas.
 
-### 6. Actividad en vivo compacta
+### 3.5 Analytics
+- `get_event_analytics_summary` ya es server-side (memoria). Verificar cache React Query con `staleTime` razonable (30–60s) para no martillar la DB con 100 controladores conectados.
+- `LiveActivityFeed`: usar Realtime con throttle en lugar de polling cada X segundos.
 
-`LiveActivityFeed` se reduce a los **últimos 8 scans** en formato lista fina: hora, punto de color (categoría), nombre, tipo de control. Sin card gigante.
+### 3.6 Código muerto / limpieza
+- Buscar componentes no referenciados (`rg` de imports); candidatos ya detectados: `TemplateCompareDialog`, `TemplateDevicePreview` (ya eliminados). Revisar `AttendeeManagement` vs `AttendeesManager` (duplicado sospechoso), `mockData.ts`.
+- Consolidar `useAttendeeManagement` y `useAttendeesPage` si comparten lógica.
+- Eliminar imports no usados detectados por ESLint (`--max-warnings 0`).
+- Unificar helpers de fetch paginado (`useOfflinePrecharge.fetchAllPaginated` vs `src/lib/fetchAllPaginated.ts`).
 
-### 7. Tendencia unificada
+### 3.7 Resiliencia
+- Verificar `ErrorBoundary` cubre todas las rutas protegidas.
+- Añadir monitoreo básico: contador de errores por sesión en `localStorage` con export desde /profile.
+- Confirmar Wake Lock en Kiosk se re-adquiere tras pérdida de foco.
 
-`TrendAnalysis` actual tiene 4 secciones grandes en single-day. Se reduce a **un único gráfico compuesto**: barras por hora + línea de acumulado + marcadores de picos. Los KPIs de "ritmo actual / proyección / próximo hito" se mueven a la fila de KPIs (punto 2).
+### 3.8 Entregables de la auditoría
+- Reporte en `.lovable/audit-9500.md` con hallazgos por severidad (crítico/alto/medio/bajo), archivo:línea y fix propuesto.
+- Migración SQL con índices faltantes y grants revisados.
+- Script Playwright (`/tmp/browser/audit/`) que simula:
+  1. Login controlador
+  2. Escaneo de 50 QR consecutivos en modo online
+  3. Escaneo de 50 en modo offline con precarga previa
+  4. Exportación de 500 tickets desde el Centro
+  5. Verifica métricas de tiempo y consola sin errores.
+- Lista de código muerto eliminado (archivos borrados).
 
-### 8. Optimización mobile
-
-- Grid `grid-cols-1 md:grid-cols-2 xl:grid-cols-3` en el contenedor principal, con reordenamiento (`order-*`) para que en mobile aparezca primero: KPIs → Categorías → Actividad en vivo → Ritmo → Heatmap → Controles → Detalles.
-- Filtros en un `<details>` colapsable en mobile (por defecto cerrado), abiertos en desktop.
-- Alturas fijas menores: charts a `h-[200px]` en mobile, `h-[260px]` desktop.
-- Padding reducido `p-3 sm:p-4` en cards.
-- Sin `overflow-x-auto` innecesario que rompe scroll vertical.
-
-### 9. Filtros mejorados
-
-Agregar un filtro extra visible: **selector de "Ver por"** (Categoría / Tipo de Control) que resalta ese eje en todos los gráficos con el color correspondiente. Rango por defecto pasa a "today" con chips rápidos (Hoy · Últ. hora · Todo) en vez del `Select` largo.
-
-## Archivos a modificar / crear
-
-- **Modificar** `src/components/ControlAnalytics.tsx` — nuevo layout, sin tabs, con secciones ordenadas y responsive.
-- **Crear** `src/components/analytics/AnalyticsKPIStrip.tsx` — reemplaza `EnhancedKPIs.tsx` con la tira compacta de 4 KPIs.
-- **Crear** `src/components/analytics/CategoryBreakdownPanel.tsx` — league table de categorías con sparkline.
-- **Crear** `src/components/analytics/ControlTypePanel.tsx` — donut + lista.
-- **Crear** `src/components/analytics/CategoryHourHeatmap.tsx` — reemplaza `CategoryBreakdownChart.tsx`.
-- **Modificar** `src/components/analytics/TrendAnalysis.tsx` — reducir a un solo gráfico compuesto por hora.
-- **Modificar** `src/components/analytics/LiveActivityFeed.tsx` — formato lista compacta, 8 items.
-- **Modificar** `src/components/analytics/CoverageMetrics.tsx` — se integra en `ControlTypePanel` o se elimina.
-- **Modificar** `src/components/analytics/DetailedDataTable.tsx` — envolver en `<details>` colapsable.
-- **Modificar** `src/hooks/useAdvancedAnalytics.ts` — agregar sparklines por categoría (últimas N horas por categoría) reutilizando `category_by_hour` que ya devuelve la RPC (no requiere cambios SQL).
+---
 
 ## Detalles técnicos
 
-- Se conservan las RPCs `get_event_analytics_summary` y `get_event_recent_activity` sin tocar SQL; toda la mejora es de presentación y agregación cliente.
-- Colores de categoría vienen del campo `category_color` (ya expuesto por la RPC). Fallback a tokens `--chart-1..5` cuando falte.
-- Se usan tokens semánticos existentes (`--primary`, `--muted`, `--card`, `--border`) — nada de colores hardcoded.
-- Componentes shadcn: `Card`, `Progress`, `Badge`, `Sheet` (para filtros en mobile), `Collapsible` (para detalles).
-- Recharts: `BarChart` horizontal para categorías, `PieChart` con innerRadius para donut, `ComposedChart` para ritmo, celdas SVG propias para heatmap (más liviano que Recharts para matrices pequeñas).
-- No se toca el módulo de cédulas ni el scanner. Cambio 100% frontend/presentación.
+- Virtualización de lista: implementación manual con `useState` + `onScroll` calculando `startIndex/endIndex` para evitar añadir dependencia si el bundle ya está grande.
+- Batching de ZIP: `for (let i=0; i<items.length; i+=batchSize)` generando un ZIP por lote y disparando `saveAs` con delay 500ms entre cada uno.
+- Font readiness: `if (document?.fonts?.ready) await document.fonts.ready;` al inicio de `renderTicket`.
+- Text metrics fix: en `renderTicket` cambiar a `textBaseline='alphabetic'` y sumar `metrics.actualBoundingBoxAscent` a `el.y` para igualar Fabric.
+- Índices SQL a crear (ejemplos):
+  ```
+  CREATE INDEX IF NOT EXISTS idx_attendees_event_qr ON public.attendees(event_id, qr_code);
+  CREATE INDEX IF NOT EXISTS idx_attendees_event_ticket ON public.attendees(event_id, ticket_id);
+  CREATE INDEX IF NOT EXISTS idx_control_usage_attendee_type_time ON public.control_usage(attendee_id, control_type_id, used_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_ccu_event_ced_type ON public.cedula_control_usage(event_id, numero_cedula, control_type_id);
+  ```
+
+## Fuera de alcance
+
+- Rediseño visual del editor (ya fue ajustado en iteraciones previas).
+- Cambio de proveedor de IA/Vision.
+- Migración a otro framework/backend.

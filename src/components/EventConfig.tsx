@@ -75,17 +75,22 @@ const EventConfig = () => {
 
   
   const { data: attendees = [] } = useQuery({
-    queryKey: ['attendees'],
+    queryKey: ['attendees', selectedEvent?.id],
+    enabled: !!selectedEvent?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('attendees')
-        .select(`
-          *,
-          ticket_category:ticket_categories(*)
-        `)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as Attendee[];
+      // Use paginated fetch: Supabase caps single queries at 1000 rows, and a
+      // real event may have 9k+ attendees. Scope by event to avoid pulling
+      // cross-event data into memory.
+      const { fetchAllPaginated } = await import('@/lib/fetchAllPaginated');
+      const rows = await fetchAllPaginated<Attendee>((from, to) =>
+        supabase
+          .from('attendees')
+          .select(`*, ticket_category:ticket_categories(*)`)
+          .eq('event_id', selectedEvent!.id)
+          .order('created_at', { ascending: false })
+          .range(from, to) as any,
+      );
+      return rows;
     },
   });
   const [newConfig, setNewConfig] = useState({

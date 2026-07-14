@@ -31,6 +31,10 @@ export const getTicketQrPayload = (attendee: Attendee) =>
   (attendee.qr_code || attendee.ticket_id || '').trim();
 
 export async function renderTicket(template: TicketTemplate, attendee: Attendee): Promise<Blob> {
+  // Ensure any @font-face loaded via CSS is available before we measure/draw text
+  // so exports use the same font metrics as the Fabric editor preview.
+  try { if (typeof document !== 'undefined' && (document as any).fonts?.ready) await (document as any).fonts.ready; } catch { /* noop */ }
+
   const canvas = document.createElement('canvas');
   let cw = template.canvas_width || 800;
   let ch = template.canvas_height || 600;
@@ -108,15 +112,34 @@ export async function renderTicket(template: TicketTemplate, attendee: Attendee)
       ctx.drawImage(img, el.x, el.y, qrSize, qrSize);
     } else if (el.type === 'text') {
       const fontSize = el.fontSize || 14;
-      ctx.font = `${el.bold ? 'bold' : 'normal'} ${fontSize}px ${el.fontFamily || 'Arial'}`;
+      const fontFamily = el.fontFamily || 'Arial';
+      const weight = el.bold ? 'bold' : 'normal';
+      ctx.font = `${weight} ${fontSize}px ${fontFamily}`;
       ctx.fillStyle = el.color || '#000000';
-      // Fabric Text in the editor is positioned by its left/top bounding box;
-      // for single-line labels textAlign does not move that box. Draw from x
-      // so export matches the editor instead of re-centering/re-right-aligning.
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
       const text = el.content || getFieldValue(attendee, el.field);
-      ctx.fillText(text, el.x, el.y);
+
+      // Fabric Text uses (left, top) as top-left of its bounding box, with a
+      // default lineHeight of ~1.16. We set lineHeight = 1 in the editor, so
+      // the text's visual top equals `top`. Canvas `textBaseline='top'` puts
+      // the top of the em box at y, which matches within 1px for most fonts.
+      // Small vertical nudge (fontSize * 0.03) compensates Fabric's internal
+      // metric padding for common web fonts.
+      const yAdjust = fontSize * 0.03;
+
+      // Respect textAlign the same way Fabric does inside the text's bounding
+      // box. For single-line labels width is auto-fit, so left/center/right
+      // shift the visible text within [x, x+width].
+      const align = (el as any).textAlign || 'left';
+      let drawX = el.x;
+      if (align !== 'left') {
+        const measured = ctx.measureText(text);
+        const boxWidth = el.width || measured.width;
+        if (align === 'center') drawX = el.x + boxWidth / 2;
+        else if (align === 'right') drawX = el.x + boxWidth;
+      }
+      ctx.textAlign = align === 'center' ? 'center' : align === 'right' ? 'right' : 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(text, drawX, el.y + yAdjust);
     }
   }
 
