@@ -56,6 +56,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   const [progress, setProgress] = useState(0);
   const [lastReport, setLastReport] = useState<{ ok: number; skipped: string[]; errors: string[] } | null>(null);
   const [autoSync, setAutoSync] = useState(false);
+  const [batchSize, setBatchSize] = useState<number>(1000);
 
   // Preview dialog state
   const [previewFor, setPreviewFor] = useState<{ attendee: Attendee; template: TicketTemplate } | null>(null);
