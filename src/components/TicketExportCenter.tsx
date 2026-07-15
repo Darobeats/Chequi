@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +64,8 @@ const makeUniqueZipPath = (path: string, usedPaths: Set<string>, attendee: Atten
   return { path: candidate, renamed: true };
 };
 
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'error';
+
 const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   const { data: templates = [] } = useTicketTemplates();
   const { data: bindings = [] } = useAllTemplateBindings();
@@ -100,13 +102,13 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     return bDef ? eventTemplates.find((t) => t.id === bDef.template_id) : eventTemplates[0];
   }, [bindings, eventTemplates]);
 
-  const resolveTemplate = (categoryId: string): TicketTemplate | undefined => {
+  const resolveTemplate = useCallback((categoryId: string): TicketTemplate | undefined => {
     const b = bindings.find((b) => b.category_id === categoryId);
     const bound = b ? eventTemplates.find((t) => t.id === b.template_id) : undefined;
     // Fallback to default template when the binding points to an archived
     // or non-visual template (would otherwise silently drop tickets in ZIP).
     return bound ?? defaultTemplate;
-  };
+  }, [bindings, defaultTemplate, eventTemplates]);
 
   const categories = useMemo(() => {
     const map = new Map<string, { id: string; name: string; color: string; count: number }>();
@@ -126,7 +128,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
 
   const rows = useMemo(() => {
     return attendees.map((a) => ({ attendee: a, template: resolveTemplate(a.category_id) }));
-  }, [attendees, bindings, eventTemplates]);
+  }, [attendees, resolveTemplate]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -182,10 +184,20 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   };
 
   const toggleCatFilter = (id: string) => {
-    setSelectedCategories((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelectedCategories((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   };
   const toggleTplFilter = (id: string) => {
-    setSelectedTemplates((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelectedTemplates((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   };
 
   const clearFilters = () => {
@@ -198,8 +210,8 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     try {
       const blob = await renderTicket(tpl, a);
       saveAs(blob, buildFilename(a, nameFormat));
-    } catch (e: any) {
-      toast({ title: 'Error al generar', description: e?.message, variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Error al generar', description: getErrorMessage(e), variant: 'destructive' });
     } finally {
       setDownloadingId(null);
     }
@@ -215,8 +227,8 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
       const blob = await renderTicket(tpl, a);
       previewBlobRef.current = blob;
       setPreviewUrl(URL.createObjectURL(blob));
-    } catch (e: any) {
-      toast({ title: 'Error al generar preview', description: e?.message, variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Error al generar preview', description: getErrorMessage(e), variant: 'destructive' });
       setPreviewFor(null);
     } finally {
       setPreviewLoading(false);
@@ -274,8 +286,8 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
             if (unique.renamed) renamed++;
             zip.file(unique.path, blob);
             ok++;
-          } catch (e: any) {
-            errors.push(`${a.name}: ${e?.message || 'error'}`);
+          } catch (e: unknown) {
+            errors.push(`${a.name}: ${getErrorMessage(e)}`);
           }
           // Throttle progress updates (every 25 items) to reduce re-renders
           if (i % 25 === 0 || i === batch.length - 1) {
@@ -302,8 +314,8 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
         title: 'Exportación completa',
         description: `${ok} generados en ${totalBatches} ZIP · ${renamed} renombrados por duplicidad · ${skipped.length} sin plantilla · ${errors.length} errores`,
       });
-    } catch (e: any) {
-      toast({ title: 'Error', description: e?.message || 'No se pudo generar', variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Error', description: getErrorMessage(e) || 'No se pudo generar', variant: 'destructive' });
     } finally {
       setBulkBusy(false); setProgress(0);
     }
