@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +39,33 @@ const buildFilename = (a: Attendee, fmt: NameFormat) => {
   }
 };
 
+const makeUniqueZipPath = (path: string, usedPaths: Set<string>, attendee: Attendee) => {
+  if (!usedPaths.has(path)) {
+    usedPaths.add(path);
+    return { path, renamed: false };
+  }
+
+  const slash = path.lastIndexOf('/');
+  const folder = slash >= 0 ? path.slice(0, slash + 1) : '';
+  const filename = slash >= 0 ? path.slice(slash + 1) : path;
+  const dot = filename.lastIndexOf('.');
+  const base = dot > 0 ? filename.slice(0, dot) : filename;
+  const ext = dot > 0 ? filename.slice(dot) : '';
+  const identity = sanitize(attendee.ticket_id || attendee.qr_code || attendee.id);
+
+  let candidate = `${folder}${base}_${identity}${ext}`;
+  let counter = 2;
+  while (usedPaths.has(candidate)) {
+    candidate = `${folder}${base}_${identity}_${counter}${ext}`;
+    counter++;
+  }
+
+  usedPaths.add(candidate);
+  return { path: candidate, renamed: true };
+};
+
+const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'error';
+
 const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   const { data: templates = [] } = useTicketTemplates();
   const { data: bindings = [] } = useAllTemplateBindings();
@@ -54,7 +81,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [lastReport, setLastReport] = useState<{ ok: number; skipped: string[]; errors: string[] } | null>(null);
+  const [lastReport, setLastReport] = useState<{ ok: number; skipped: string[]; errors: string[]; renamed: number } | null>(null);
   const [autoSync, setAutoSync] = useState(false);
   const [batchSize, setBatchSize] = useState<number>(1000);
 
@@ -75,13 +102,13 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     return bDef ? eventTemplates.find((t) => t.id === bDef.template_id) : eventTemplates[0];
   }, [bindings, eventTemplates]);
 
-  const resolveTemplate = (categoryId: string): TicketTemplate | undefined => {
+  const resolveTemplate = useCallback((categoryId: string): TicketTemplate | undefined => {
     const b = bindings.find((b) => b.category_id === categoryId);
     const bound = b ? eventTemplates.find((t) => t.id === b.template_id) : undefined;
     // Fallback to default template when the binding points to an archived
     // or non-visual template (would otherwise silently drop tickets in ZIP).
     return bound ?? defaultTemplate;
-  };
+  }, [bindings, defaultTemplate, eventTemplates]);
 
   const categories = useMemo(() => {
     const map = new Map<string, { id: string; name: string; color: string; count: number }>();
@@ -101,7 +128,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
 
   const rows = useMemo(() => {
     return attendees.map((a) => ({ attendee: a, template: resolveTemplate(a.category_id) }));
-  }, [attendees, bindings, eventTemplates]);
+  }, [attendees, resolveTemplate]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -157,10 +184,20 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   };
 
   const toggleCatFilter = (id: string) => {
-    setSelectedCategories((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelectedCategories((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   };
   const toggleTplFilter = (id: string) => {
-    setSelectedTemplates((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelectedTemplates((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   };
 
   const clearFilters = () => {
@@ -173,8 +210,8 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     try {
       const blob = await renderTicket(tpl, a);
       saveAs(blob, buildFilename(a, nameFormat));
-    } catch (e: any) {
-      toast({ title: 'Error al generar', description: e?.message, variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Error al generar', description: getErrorMessage(e), variant: 'destructive' });
     } finally {
       setDownloadingId(null);
     }
@@ -190,8 +227,8 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
       const blob = await renderTicket(tpl, a);
       previewBlobRef.current = blob;
       setPreviewUrl(URL.createObjectURL(blob));
-    } catch (e: any) {
-      toast({ title: 'Error al generar preview', description: e?.message, variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Error al generar preview', description: getErrorMessage(e), variant: 'destructive' });
       setPreviewFor(null);
     } finally {
       setPreviewLoading(false);
@@ -223,6 +260,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
     const skipped: string[] = [];
     const errors: string[] = [];
     let ok = 0;
+    let renamed = 0;
 
     // Batch to avoid OOM in the tab. Each batch produces its own ZIP.
     const size = Math.max(100, Math.min(5000, batchSize || 1000));
@@ -233,6 +271,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
       for (let b = 0; b < totalBatches; b++) {
         const batch = target.slice(b * size, (b + 1) * size);
         const zip = new JSZip();
+        const usedPaths = new Set<string>();
 
         for (let i = 0; i < batch.length; i++) {
           const { attendee: a, template: tpl } = batch[i];
@@ -243,10 +282,12 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
             let path = fname;
             if (zipStructure === 'category') path = `${sanitize(a.ticket_category?.name || 'sin_categoria')}/${fname}`;
             else if (zipStructure === 'template') path = `${sanitize(tpl.name || 'plantilla')}/${fname}`;
-            zip.file(path, blob);
+            const unique = makeUniqueZipPath(path, usedPaths, a);
+            if (unique.renamed) renamed++;
+            zip.file(unique.path, blob);
             ok++;
-          } catch (e: any) {
-            errors.push(`${a.name}: ${e?.message || 'error'}`);
+          } catch (e: unknown) {
+            errors.push(`${a.name}: ${getErrorMessage(e)}`);
           }
           // Throttle progress updates (every 25 items) to reduce re-renders
           if (i % 25 === 0 || i === batch.length - 1) {
@@ -268,13 +309,13 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
         if (b < totalBatches - 1) await new Promise((r) => setTimeout(r, 600));
       }
 
-      setLastReport({ ok, skipped, errors });
+      setLastReport({ ok, skipped, errors, renamed });
       toast({
         title: 'Exportación completa',
-        description: `${ok} generados en ${totalBatches} ZIP · ${skipped.length} sin plantilla · ${errors.length} errores`,
+        description: `${ok} generados en ${totalBatches} ZIP · ${renamed} renombrados por duplicidad · ${skipped.length} sin plantilla · ${errors.length} errores`,
       });
-    } catch (e: any) {
-      toast({ title: 'Error', description: e?.message || 'No se pudo generar', variant: 'destructive' });
+    } catch (e: unknown) {
+      toast({ title: 'Error', description: getErrorMessage(e) || 'No se pudo generar', variant: 'destructive' });
     } finally {
       setBulkBusy(false); setProgress(0);
     }
@@ -459,6 +500,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
             {lastReport && !bulkBusy && (
               <div className="text-xs text-hueso/70 bg-gray-800/50 rounded p-2">
                 Último export: <strong className="text-green-400">{lastReport.ok} OK</strong>
+                {lastReport.renamed > 0 && <> · <span className="text-blue-300">{lastReport.renamed} renombrados por duplicidad</span></>}
                 {lastReport.skipped.length > 0 && <> · <span className="text-yellow-400">{lastReport.skipped.length} sin plantilla</span></>}
                 {lastReport.errors.length > 0 && <> · <span className="text-red-400">{lastReport.errors.length} errores</span></>}
               </div>
