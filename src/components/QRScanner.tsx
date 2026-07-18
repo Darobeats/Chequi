@@ -232,9 +232,10 @@ const QRScanner: React.FC<QRScannerProps> = ({ selectedEventId: propEventId, onE
     let timer: NodeJS.Timeout;
 
     if (lastResult) {
+      // +4000 ms para que el asistente tenga tiempo de leer la información
       const duration = kioskMode
-        ? (lastResult.success ? 1800 : 2400)
-        : (lastResult.success ? 3500 : 4000);
+        ? (lastResult.success ? 5800 : 6400)
+        : (lastResult.success ? 7500 : 8000);
       timer = setTimeout(() => {
         setLastResult(null);
         setLastScannedCode('');
