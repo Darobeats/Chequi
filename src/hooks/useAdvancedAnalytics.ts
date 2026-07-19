@@ -5,6 +5,7 @@ import { useControlUsage } from './useSupabaseData';
 import { format, parseISO, isToday, isYesterday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useEventContext } from '@/context/EventContext';
+import { bogotaDateKey, bogotaHour } from '@/lib/timezone';
 
 type SummaryPayload = {
   range_start: string;
@@ -88,19 +89,19 @@ export const useAdvancedAnalytics = (filters: {
   const { data: controlUsage = [] } = useControlUsage();
 
   const filteredData = useMemo(() => {
+    const todayKey = bogotaDateKey(new Date());
+    const yesterdayKey = bogotaDateKey(new Date(Date.now() - 86_400_000));
     return controlUsage.filter((usage: any) => {
       const usageDate = parseISO(usage.used_at);
-      const now = new Date();
       let timeFilter = true;
       if (filters.timeRange === 'today') {
-        timeFilter = usageDate.toDateString() === now.toDateString();
+        timeFilter = bogotaDateKey(usageDate) === todayKey;
       } else if (filters.timeRange === 'yesterday') {
-        const yesterday = new Date(now.getTime() - 86_400_000);
-        timeFilter = usageDate.toDateString() === yesterday.toDateString();
+        timeFilter = bogotaDateKey(usageDate) === yesterdayKey;
       } else if (filters.timeRange === 'week') {
-        timeFilter = usageDate >= new Date(now.getTime() - 7 * 86_400_000);
+        timeFilter = usageDate >= new Date(Date.now() - 7 * 86_400_000);
       } else if (filters.timeRange === 'month') {
-        timeFilter = usageDate >= new Date(now.getTime() - 30 * 86_400_000);
+        timeFilter = usageDate >= new Date(Date.now() - 30 * 86_400_000);
       }
       const controlFilter = filters.controlType === 'all' || usage.control_type_id === filters.controlType;
       const categoryFilter = filters.category === 'all' || usage.attendee?.category_id === filters.category;
@@ -297,9 +298,9 @@ export const useAdvancedAnalytics = (filters: {
     });
     peaks.sort((a, b) => b.count - a.count);
 
-    // Daily rhythm + ETA
+    // Daily rhythm + ETA (Bogotá clock)
     const total = enhancedMetrics.totalUsages;
-    const currentHour = new Date().getHours();
+    const currentHour = bogotaHour(new Date());
     const currentProgress = cumulativeProgress.find(p => parseInt(p.hour.split(':')[0], 10) === currentHour);
     const currentCount = currentProgress?.cumulative ?? total;
     const hoursElapsed = Math.max(1, currentHour);
