@@ -103,6 +103,8 @@ const EventConfig = () => {
     font_family: 'Inter, sans-serif',
     is_active: false,
     event_date: null as string | null,
+    event_start_date: null as string | null,
+    event_end_date: null as string | null,
     event_status: 'active' as const,
     background_url: '',
     welcome_message: '',
@@ -150,7 +152,8 @@ const EventConfig = () => {
       toast({ title: t('eventConfig.configCreated'), description: t('eventConfig.configCreatedDesc') });
       setNewConfig({
         event_name: '', primary_color: '#D4AF37', secondary_color: '#0A0A0A', accent_color: '#F8F9FA',
-        logo_url: '', event_image_url: '', font_family: 'Inter, sans-serif', is_active: false, event_date: null, event_status: 'active' as const,
+        logo_url: '', event_image_url: '', font_family: 'Inter, sans-serif', is_active: false, event_date: null,
+        event_start_date: null, event_end_date: null, event_status: 'active' as const,
         background_url: '', welcome_message: '', background_opacity: 0.15, sponsor_logos: []
       });
       setActiveTab('configuration');
@@ -282,7 +285,11 @@ const EventConfig = () => {
                       </CardTitle>
                       <CardDescription>
                         {t('eventConfig.created')}: {new Date(config.created_at).toLocaleDateString()}
-                        {config.event_date && ` | ${t('eventConfig.date')}: ${new Date(config.event_date).toLocaleDateString()}`}
+                        {(config.event_start_date || config.event_date) && (() => {
+                          const s = config.event_start_date ?? config.event_date!;
+                          const e = config.event_end_date ?? s;
+                          return ` | ${t('eventConfig.date')}: ${new Date(s).toLocaleDateString()}${e && e !== s ? ` – ${new Date(e).toLocaleDateString()}` : ''}`;
+                        })()}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
@@ -358,6 +365,16 @@ const EventConfig = () => {
                   <div>
                     <Label htmlFor="event_name" className="text-hueso">{t('eventConfig.eventName')}</Label>
                     <Input id="event_name" value={newConfig.event_name} onChange={(e) => setNewConfig({ ...newConfig, event_name: e.target.value })} className="bg-gray-800 border-gray-700 text-hueso" placeholder={t('eventConfig.eventNamePlaceholder')} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="event_start_date" className="text-hueso flex items-center gap-2"><Calendar className="h-4 w-4" />Fecha inicio</Label>
+                      <Input id="event_start_date" type="date" value={newConfig.event_start_date ?? ''} onChange={(e) => setNewConfig({ ...newConfig, event_start_date: e.target.value || null })} className="bg-gray-800 border-gray-700 text-hueso" />
+                    </div>
+                    <div>
+                      <Label htmlFor="event_end_date" className="text-hueso flex items-center gap-2"><Calendar className="h-4 w-4" />Fecha fin</Label>
+                      <Input id="event_end_date" type="date" value={newConfig.event_end_date ?? ''} min={newConfig.event_start_date ?? undefined} onChange={(e) => setNewConfig({ ...newConfig, event_end_date: e.target.value || null })} className="bg-gray-800 border-gray-700 text-hueso" />
+                    </div>
                   </div>
                   <div className="space-y-3">
                     <Label className="text-hueso flex items-center gap-2"><Palette className="h-4 w-4" />{t('eventConfig.colors')}</Label>
@@ -612,6 +629,16 @@ const EventConfig = () => {
               <div>
                 <Label htmlFor="edit_event_name" className="text-hueso">{t('eventConfig.eventName')}</Label>
                 <Input id="edit_event_name" value={editingConfig.event_name} onChange={(e) => setEditingConfig({ ...editingConfig, event_name: e.target.value })} className="bg-gray-800 border-gray-700 text-hueso" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-hueso flex items-center gap-2"><Calendar className="h-4 w-4" />Fecha inicio</Label>
+                  <Input type="date" value={editingConfig.event_start_date ?? editingConfig.event_date ?? ''} onChange={(e) => setEditingConfig({ ...editingConfig, event_start_date: e.target.value || null })} className="bg-gray-800 border-gray-700 text-hueso" />
+                </div>
+                <div>
+                  <Label className="text-hueso flex items-center gap-2"><Calendar className="h-4 w-4" />Fecha fin</Label>
+                  <Input type="date" value={editingConfig.event_end_date ?? editingConfig.event_start_date ?? editingConfig.event_date ?? ''} min={editingConfig.event_start_date ?? editingConfig.event_date ?? undefined} onChange={(e) => setEditingConfig({ ...editingConfig, event_end_date: e.target.value || null })} className="bg-gray-800 border-gray-700 text-hueso" />
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>

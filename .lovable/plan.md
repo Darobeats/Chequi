@@ -1,78 +1,60 @@
+## Objetivo
 
-## 1. Zona horaria fija America/Bogota (UTC-5)
+Transformar el tab **Resumen** en un verdadero cierre de evento: KPIs consolidados, desglose diario (para eventos multi-día), desglose por categoría y por control, y un exportable Excel de cierre para enviar al cliente. Adicionalmente, permitir configurar **fecha inicio** y **fecha fin** del evento.
 
-Problema: los reportes y agrupaciones "hoy / ayer / por hora" se calculan con la hora del navegador/servidor (UTC en Supabase). A las 19:00 Bogotá ya es 00:00 UTC, por eso las scans se van al "día siguiente" en el informe.
+---
 
-Solución: forzar `America/Bogota` como zona única en TODO el cálculo temporal, sin depender del huso del dispositivo.
+## 1. Configuración: fechas inicio/fin del evento
 
-### Frontend
-- Nuevo helper `src/lib/timezone.ts` con:
-  - `APP_TZ = 'America/Bogota'`
-  - `nowInBogota()`, `startOfDayBogota(date)`, `endOfDayBogota(date)`, `formatBogota(date, fmt)`, `hourBucketBogota(date)`.
-  - Implementación con `Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', ... })` (sin nuevas dependencias).
-- Reemplazar todos los `new Date()`, `toLocaleDateString`, `getHours()`, `toISOString().split('T')[0]` que agrupen o filtren por fecha en:
-  - `src/hooks/useAdvancedAnalytics.ts`
-  - `src/hooks/useCedulaRegistros.ts`, `src/hooks/useCedulaControlUsage.ts` (cálculo de "today")
-  - `src/components/analytics/*` (KPIs, heatmap, tendencias, feed en vivo)
-  - `src/components/ControlAnalytics.tsx`
-  - `src/components/ExportButton.tsx` y `src/components/cedula/CedulaExportButton.tsx` (nombres de archivo con fecha)
-  - `src/components/analytics/LiveActivityFeed.tsx` y cualquier `toLocaleTimeString` en tarjetas/tablas.
+- Migración: agregar `event_start_date DATE` y `event_end_date DATE` a `event_configs` (mantener `event_date` como legacy y auto-poblarlo con `event_start_date` para no romper vistas actuales).
+- `EventConfig.tsx`: reemplazar el input único de fecha por dos date pickers (Inicio / Fin) con validación `fin >= inicio`. Al guardar, si solo hay inicio se copia a fin (evento de 1 día).
+- Backfill: setear `event_start_date = event_end_date = event_date` para eventos existentes (incluyendo "Feria Agraria Buga").
 
-### Backend (RPCs)
-- Migración que reescribe `get_event_analytics_summary` y `get_event_recent_activity` para calcular ventanas y buckets en Bogotá:
-  - `v_range_start := date_trunc('day', (now() AT TIME ZONE 'America/Bogota'))` y análogos para `yesterday/week/month`, convertidos de vuelta con `AT TIME ZONE 'America/Bogota'` antes de comparar.
-  - Todos los `date_trunc('hour'|'day', used_at)` pasan a `date_trunc(..., used_at AT TIME ZONE 'America/Bogota')` y el `to_char` se aplica sobre ese valor.
-- Sin cambios de esquema; solo `CREATE OR REPLACE FUNCTION` conservando firma para no romper llamadas.
+## 2. Rediseño del tab Resumen
 
-### Verificación
-- Consulta manual comparando conteos "hoy" antes/después con datos de las 19:00-23:59 Bogotá para confirmar que ya aparecen en el día correcto.
+Nuevo componente `src/components/summary/EventSummaryReport.tsx` que reemplaza el contenido actual (los dos cuadros básicos). Estructura:
 
-## 2. Gestión de QRs en Configuración → QR
+- **Encabezado**: nombre del evento, rango de fechas (ej. "18/07/26 – 20/07/26 · 3 días"), estado, generado en hora Bogotá.
+- **KPIs de cierre**: Total tickets emitidos · Asistentes únicos · Tasa de asistencia · Total escaneos · Escaneos promedio por asistente · Hora pico global · Día de mayor actividad.
+- **Desglose por día** (tabla + mini bar chart): fecha, escaneos, asistentes únicos, hora pico del día. Se genera iterando desde `event_start_date` hasta `event_end_date` en zona Bogotá.
+- **Desglose por categoría**: emitidos, asistieron, no-show, tasa %, usos totales.
+- **Desglose por tipo de control**: usos, % del total, usuarios únicos.
+- **Cédulas (si el evento las usa)**: total autorizados, registrados, tasa, usos por control.
+- **Botón "Exportar Resumen (Excel)"** destacado arriba.
 
-Hoy `AttendeeManagement` muestra la lista pero no dice si el QR ya fue usado ni permite acciones masivas. Se amplía sin cambiar la lógica de generación.
+Datos: nueva RPC `get_event_summary_report(p_event_id uuid)` que devuelve JSON con todas las secciones anteriores calculadas en Bogotá, cubriendo eventos multi-día (agrupa `control_usage` + `cedula_control_usage` por `date_trunc('day', used_at AT TIME ZONE 'America/Bogota')` acotado al rango del evento).
 
-### Datos
-- Nuevo hook `useAttendeesUsageMap(eventId)` que trae de `control_usage` los `attendee_id` con al menos 1 uso (paginado con `fetchAllPaginated`) y devuelve un `Map<attendeeId, { count, lastUsedAt, controls: string[] }>`.
-- Se une en memoria con el listado actual de asistentes.
+## 3. Exportable de cierre
 
-### UI en `src/components/AttendeeManagement.tsx`
-- Columna nueva **Estado QR**: `No usado` (gris) / `Usado` (verde, con tooltip: fecha último uso + controles). Se calcula desde el mapa de uso, no desde `attendee.status` (que puede quedar en "valid").
-- Barra de filtros ampliada:
-  - Búsqueda actual (nombre / ticket / QR / cédula).
-  - Select **Categoría** (multi).
-  - Select **Estado QR**: Todos / No usado / Usado.
-  - Select **Estado registro**: Todos / Válido / Usado / Bloqueado.
-- Selección masiva:
-  - Checkbox en header (seleccionar todo lo filtrado, no solo la página).
-  - Checkbox por fila. Contador "N seleccionados".
-- Acciones masivas (barra flotante cuando hay selección):
-  - **Resetear uso de QR** (borra registros de `control_usage` para los seleccionados; ya existe `useResetControlUsage`, se envuelve en un batch con progreso y confirmación).
-  - **Regenerar QR** (usa `useRegenerateQRCode` en lote, con advertencia de que invalida QRs ya distribuidos).
-  - **Cambiar estado** → Válido / Bloqueado (update masivo con confirmación).
-  - **Eliminar** (con doble confirmación, respeta RLS admin).
-- Diálogo de confirmación muestra: cantidad afectada, categorías involucradas y advertencias.
+Nueva Edge Function `export-event-summary` (basada en `export-attendees-report`) que genera un `.xlsx` con hojas:
 
-### Rendimiento
-- Paginación cliente en la tabla (50/100/200) para no renderizar 9.500 filas de golpe; se mantiene selección "todos filtrados" independiente de la página visible.
-- Uso de `React.memo` en filas para evitar re-render al marcar checkboxes.
+1. **PORTADA**: datos del evento, rango, generado por/cuándo, KPIs de cierre.
+2. **RESUMEN DIARIO**: una fila por día del evento con métricas.
+3. **POR CATEGORÍA**: tabla completa con emitidos/asistieron/no-show/tasa/usos.
+4. **POR TIPO DE CONTROL**: usos, %, únicos, por día.
+5. **HORA PICO POR DÍA**: distribución horaria de escaneos por cada día del evento.
+6. **CÉDULAS** (condicional): resumen de whitelist y usos.
+7. **DETALLE DE ACCESOS**: log completo (fecha, hora Bogotá, asistente, categoría, control, dispositivo) — reutiliza la lógica de paginación existente.
 
-### i18n
-- Añadir claves nuevas en `src/i18n/locales/{es,en}/common.json` bajo `eventConfig.qr.*` (estado, filtros, acciones masivas, confirmaciones).
+Botón se agrega en el header del tab Resumen y llama la edge function con `event_id` del `EventContext`.
 
-## Archivos a crear / editar
+## 4. Alcance
 
-**Crear**
-- `src/lib/timezone.ts`
-- `src/hooks/useAttendeesUsageMap.ts`
-- Migración Supabase: reescritura de `get_event_analytics_summary` y `get_event_recent_activity` con `America/Bogota`.
+- No se toca el tab Análisis (dashboard operativo) ni módulos de tickets/scanner.
+- Todos los cálculos temporales usan `src/lib/timezone.ts` (Bogotá).
+- Traducciones ES/EN para nuevas etiquetas.
 
-**Editar**
-- `src/hooks/useAdvancedAnalytics.ts`, `useCedulaRegistros.ts`, `useCedulaControlUsage.ts`
-- `src/components/analytics/*` (KPIStrip, TrendAnalysis, CategoryHourHeatmap, LiveActivityFeed, DetailedDataTable)
-- `src/components/ControlAnalytics.tsx`, `ExportButton.tsx`, `cedula/CedulaExportButton.tsx`
-- `src/components/AttendeeManagement.tsx` (rediseño con filtros, selección y acciones masivas)
-- `src/i18n/locales/{es,en}/common.json`
+---
 
-## Fuera de alcance
-- No se toca la generación de QR ni el payload (los ya distribuidos siguen válidos).
-- No se cambia la lógica del scanner ni de los reportes de facturación.
+## Detalles técnicos
+
+- **Migración SQL**: `ALTER TABLE event_configs ADD COLUMN event_start_date DATE, ADD COLUMN event_end_date DATE;` + backfill + trigger opcional para mantener `event_date = event_start_date`.
+- **RPC**: `SECURITY DEFINER`, `search_path = public`, valida acceso vía `user_can_access_event`.
+- **Edge function**: valida JWT + `user_can_access_event`, usa `service_role` para leer, `exceljs`, paginación `fetchAll` (como `export-attendees-report`), formato de fechas en Bogotá.
+- **Estructura de archivos nuevos**:
+  - `src/components/summary/EventSummaryReport.tsx`
+  - `src/components/summary/SummaryKpiCards.tsx`
+  - `src/components/summary/DailyBreakdownTable.tsx`
+  - `src/hooks/useEventSummary.ts`
+  - `supabase/functions/export-event-summary/index.ts`
+- **Compatibilidad**: `event_date` se mantiene para no romper `get_active_event_config`, `get_user_events`, y componentes que lo leen (`EventConfig.tsx` línea 285, Header, etc.).

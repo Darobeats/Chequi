@@ -424,8 +424,10 @@ export type Database = {
           background_url: string | null
           created_at: string
           event_date: string | null
+          event_end_date: string | null
           event_image_url: string | null
           event_name: string
+          event_start_date: string | null
           event_status: string | null
           font_family: string | null
           id: string
@@ -444,8 +446,10 @@ export type Database = {
           background_url?: string | null
           created_at?: string
           event_date?: string | null
+          event_end_date?: string | null
           event_image_url?: string | null
           event_name: string
+          event_start_date?: string | null
           event_status?: string | null
           font_family?: string | null
           id?: string
@@ -464,8 +468,10 @@ export type Database = {
           background_url?: string | null
           created_at?: string
           event_date?: string | null
+          event_end_date?: string | null
           event_image_url?: string | null
           event_name?: string
+          event_start_date?: string | null
           event_status?: string | null
           font_family?: string | null
           id?: string
@@ -1151,6 +1157,7 @@ export type Database = {
           used_at: string
         }[]
       }
+      get_event_summary_report: { Args: { p_event_id: string }; Returns: Json }
       get_user_events: {
         Args: { check_user_id?: string }
         Returns: {
