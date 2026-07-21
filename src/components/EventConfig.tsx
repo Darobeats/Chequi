@@ -362,6 +362,16 @@ const EventConfig = () => {
                     <Label htmlFor="event_name" className="text-hueso">{t('eventConfig.eventName')}</Label>
                     <Input id="event_name" value={newConfig.event_name} onChange={(e) => setNewConfig({ ...newConfig, event_name: e.target.value })} className="bg-gray-800 border-gray-700 text-hueso" placeholder={t('eventConfig.eventNamePlaceholder')} />
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="event_start_date" className="text-hueso flex items-center gap-2"><Calendar className="h-4 w-4" />Fecha inicio</Label>
+                      <Input id="event_start_date" type="date" value={newConfig.event_start_date ?? ''} onChange={(e) => setNewConfig({ ...newConfig, event_start_date: e.target.value || null })} className="bg-gray-800 border-gray-700 text-hueso" />
+                    </div>
+                    <div>
+                      <Label htmlFor="event_end_date" className="text-hueso flex items-center gap-2"><Calendar className="h-4 w-4" />Fecha fin</Label>
+                      <Input id="event_end_date" type="date" value={newConfig.event_end_date ?? ''} min={newConfig.event_start_date ?? undefined} onChange={(e) => setNewConfig({ ...newConfig, event_end_date: e.target.value || null })} className="bg-gray-800 border-gray-700 text-hueso" />
+                    </div>
+                  </div>
                   <div className="space-y-3">
                     <Label className="text-hueso flex items-center gap-2"><Palette className="h-4 w-4" />{t('eventConfig.colors')}</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
