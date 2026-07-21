@@ -14,6 +14,7 @@ import ScannerSetup from '@/components/scanner/ScannerSetup';
 import { CedulaDashboardMonitor } from '@/components/cedula/CedulaDashboardMonitor';
 import CedulaControlAnalytics from '@/components/analytics/CedulaControlAnalytics';
 import SponsorLogosBar from '@/components/SponsorLogosBar';
+import EventSummaryReport from '@/components/summary/EventSummaryReport';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
