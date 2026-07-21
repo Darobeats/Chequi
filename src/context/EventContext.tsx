@@ -11,6 +11,8 @@ export interface UserEventAssignment {
   is_primary: boolean;
   event_status: string;
   event_date: string | null;
+  event_start_date?: string | null;
+  event_end_date?: string | null;
   is_active: boolean;
 }
 
