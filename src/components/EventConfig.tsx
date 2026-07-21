@@ -103,6 +103,8 @@ const EventConfig = () => {
     font_family: 'Inter, sans-serif',
     is_active: false,
     event_date: null as string | null,
+    event_start_date: null as string | null,
+    event_end_date: null as string | null,
     event_status: 'active' as const,
     background_url: '',
     welcome_message: '',
