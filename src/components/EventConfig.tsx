@@ -152,7 +152,8 @@ const EventConfig = () => {
       toast({ title: t('eventConfig.configCreated'), description: t('eventConfig.configCreatedDesc') });
       setNewConfig({
         event_name: '', primary_color: '#D4AF37', secondary_color: '#0A0A0A', accent_color: '#F8F9FA',
-        logo_url: '', event_image_url: '', font_family: 'Inter, sans-serif', is_active: false, event_date: null, event_status: 'active' as const,
+        logo_url: '', event_image_url: '', font_family: 'Inter, sans-serif', is_active: false, event_date: null,
+        event_start_date: null, event_end_date: null, event_status: 'active' as const,
         background_url: '', welcome_message: '', background_opacity: 0.15, sponsor_logos: []
       });
       setActiveTab('configuration');
