@@ -68,6 +68,8 @@ export interface EventConfig {
   updated_at: string;
   is_active: boolean;
   event_date: string | null;
+  event_start_date: string | null;
+  event_end_date: string | null;
   event_status: 'draft' | 'active' | 'finished';
   background_url: string | null;
   sponsor_logos: any;
