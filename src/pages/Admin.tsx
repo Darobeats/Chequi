@@ -243,36 +243,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="summary" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
-                <h3 className="text-xl font-semibold text-dorado mb-4">{t('admin.usageByControlType')}</h3>
-                <div className="space-y-3">
-                  {usageByControlType.map((usage) => (
-                    <div key={usage.name} className="flex justify-between items-center">
-                      <span className="text-hueso capitalize">{usage.name}</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: usage.color || '#64748B' }} />
-                        <span className="text-dorado font-medium">{usage.count}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
-                <h3 className="text-xl font-semibold text-dorado mb-4">{t('admin.attendeesByCategory')}</h3>
-                <div className="space-y-3">
-                  {attendeesByCategory.map((category) => (
-                    <div key={category.name} className="flex justify-between items-center">
-                      <span className="text-hueso capitalize">{category.name}</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color || '#64748B' }} />
-                        <span className="text-dorado font-medium">{category.count}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <EventSummaryReport />
           </TabsContent>
 
           {canAccessConfig && (
