@@ -285,7 +285,11 @@ const EventConfig = () => {
                       </CardTitle>
                       <CardDescription>
                         {t('eventConfig.created')}: {new Date(config.created_at).toLocaleDateString()}
-                        {config.event_date && ` | ${t('eventConfig.date')}: ${new Date(config.event_date).toLocaleDateString()}`}
+                        {(config.event_start_date || config.event_date) && (() => {
+                          const s = config.event_start_date ?? config.event_date!;
+                          const e = config.event_end_date ?? s;
+                          return ` | ${t('eventConfig.date')}: ${new Date(s).toLocaleDateString()}${e && e !== s ? ` – ${new Date(e).toLocaleDateString()}` : ''}`;
+                        })()}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
