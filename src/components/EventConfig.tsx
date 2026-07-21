@@ -626,6 +626,16 @@ const EventConfig = () => {
                 <Label htmlFor="edit_event_name" className="text-hueso">{t('eventConfig.eventName')}</Label>
                 <Input id="edit_event_name" value={editingConfig.event_name} onChange={(e) => setEditingConfig({ ...editingConfig, event_name: e.target.value })} className="bg-gray-800 border-gray-700 text-hueso" />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-hueso flex items-center gap-2"><Calendar className="h-4 w-4" />Fecha inicio</Label>
+                  <Input type="date" value={editingConfig.event_start_date ?? editingConfig.event_date ?? ''} onChange={(e) => setEditingConfig({ ...editingConfig, event_start_date: e.target.value || null })} className="bg-gray-800 border-gray-700 text-hueso" />
+                </div>
+                <div>
+                  <Label className="text-hueso flex items-center gap-2"><Calendar className="h-4 w-4" />Fecha fin</Label>
+                  <Input type="date" value={editingConfig.event_end_date ?? editingConfig.event_start_date ?? editingConfig.event_date ?? ''} min={editingConfig.event_start_date ?? editingConfig.event_date ?? undefined} onChange={(e) => setEditingConfig({ ...editingConfig, event_end_date: e.target.value || null })} className="bg-gray-800 border-gray-700 text-hueso" />
+                </div>
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="text-sm text-gray-400">{t('eventConfig.primaryColor')}</Label>
