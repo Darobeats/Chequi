@@ -501,6 +501,7 @@ export type Database = {
           is_active: boolean
           lock_ui: boolean
           name: string
+          pin_hash: string | null
           require_pin: string | null
           time_schedule: Json
           updated_at: string
@@ -519,6 +520,7 @@ export type Database = {
           is_active?: boolean
           lock_ui?: boolean
           name: string
+          pin_hash?: string | null
           require_pin?: string | null
           time_schedule?: Json
           updated_at?: string
@@ -537,6 +539,7 @@ export type Database = {
           is_active?: boolean
           lock_ui?: boolean
           name?: string
+          pin_hash?: string | null
           require_pin?: string | null
           time_schedule?: Json
           updated_at?: string
@@ -1188,6 +1191,10 @@ export type Database = {
       }
       is_authenticated: { Args: never; Returns: boolean }
       is_super_admin: { Args: { check_user_id?: string }; Returns: boolean }
+      set_kiosk_pin: {
+        Args: { _pin: string; _profile_id: string }
+        Returns: undefined
+      }
       user_can_access_event: {
         Args: { check_event_id: string; check_user_id?: string }
         Returns: boolean
@@ -1221,6 +1228,10 @@ export type Database = {
           error_message: string
           max_uses: number
         }[]
+      }
+      verify_kiosk_pin: {
+        Args: { _pin: string; _profile_id: string }
+        Returns: boolean
       }
     }
     Enums: {
