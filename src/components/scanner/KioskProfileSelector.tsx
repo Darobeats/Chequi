@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Lock, Unlock, Zap } from 'lucide-react';
-import { useKioskProfiles, type KioskProfile } from '@/hooks/useKioskProfiles';
+import { useKioskProfiles, verifyKioskPin, type KioskProfile } from '@/hooks/useKioskProfiles';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
@@ -23,17 +23,23 @@ const KioskProfileSelector: React.FC<Props> = ({ eventId, activeProfileId, onAct
   if (profiles.length === 0) return null;
 
   const attemptDeactivate = () => {
-    if (active?.require_pin) { setShowPin(true); return; }
+    if (active?.has_pin) { setShowPin(true); return; }
     onActivate(null);
   };
 
-  const confirmPin = () => {
-    if (pinInput === active?.require_pin) {
-      onActivate(null);
-      setShowPin(false);
-      setPinInput('');
-    } else {
-      toast.error('PIN incorrecto');
+  const confirmPin = async () => {
+    if (!active) return;
+    try {
+      const ok = await verifyKioskPin(active.id, pinInput);
+      if (ok) {
+        onActivate(null);
+        setShowPin(false);
+        setPinInput('');
+      } else {
+        toast.error('PIN incorrecto');
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'No se pudo verificar el PIN');
     }
   };
 

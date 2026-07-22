@@ -12,7 +12,9 @@ import { useKioskProfiles, useUpsertKioskProfile, useDeleteKioskProfile, type Ki
 
 interface Props { eventId: string }
 
-const empty = (eventId: string): Partial<KioskProfile> & { event_id: string; name: string } => ({
+const empty = (
+  eventId: string
+): Partial<KioskProfile> & { event_id: string; name: string; pin?: string | null } => ({
   event_id: eventId,
   name: '',
   description: '',
@@ -23,7 +25,7 @@ const empty = (eventId: string): Partial<KioskProfile> & { event_id: string; nam
   allow_operator_override: true,
   lock_ui: false,
   auto_resume_ms: 1500,
-  require_pin: null,
+  pin: '',
   is_active: true,
 });
 
@@ -133,7 +135,13 @@ export const KioskProfilesManager: React.FC<Props> = ({ eventId }) => {
               </div>
               <div>
                 <Label>PIN de desactivación (opcional)</Label>
-                <Input value={editing.require_pin || ''} onChange={(e) => setEditing({ ...editing, require_pin: e.target.value || null })} placeholder="4 dígitos" maxLength={6} />
+                <Input
+                  type="password"
+                  value={editing.pin ?? ''}
+                  onChange={(e) => setEditing({ ...editing, pin: e.target.value })}
+                  placeholder={editing.id && editing.has_pin ? 'PIN configurado — escribir para cambiar' : '4 dígitos'}
+                  maxLength={8}
+                />
               </div>
             </div>
 
@@ -159,7 +167,7 @@ export const KioskProfilesManager: React.FC<Props> = ({ eventId }) => {
                   <span className="text-hueso font-medium">{p.name}</span>
                   <Badge variant="outline">{p.auto_select_mode}</Badge>
                   {p.lock_ui && <Badge variant="outline" className="border-yellow-500 text-yellow-500">UI bloqueada</Badge>}
-                  {p.require_pin && <Badge variant="outline">PIN</Badge>}
+                  {p.has_pin && <Badge variant="outline">PIN</Badge>}
                 </div>
                 {p.description && <p className="text-sm text-gray-400">{p.description}</p>}
               </div>
