@@ -12,7 +12,9 @@ import { useKioskProfiles, useUpsertKioskProfile, useDeleteKioskProfile, type Ki
 
 interface Props { eventId: string }
 
-const empty = (eventId: string): Partial<KioskProfile> & { event_id: string; name: string } => ({
+const empty = (
+  eventId: string
+): Partial<KioskProfile> & { event_id: string; name: string; pin?: string | null } => ({
   event_id: eventId,
   name: '',
   description: '',
@@ -23,7 +25,7 @@ const empty = (eventId: string): Partial<KioskProfile> & { event_id: string; nam
   allow_operator_override: true,
   lock_ui: false,
   auto_resume_ms: 1500,
-  require_pin: null,
+  pin: '',
   is_active: true,
 });
 
