@@ -167,7 +167,7 @@ export const KioskProfilesManager: React.FC<Props> = ({ eventId }) => {
                   <span className="text-hueso font-medium">{p.name}</span>
                   <Badge variant="outline">{p.auto_select_mode}</Badge>
                   {p.lock_ui && <Badge variant="outline" className="border-yellow-500 text-yellow-500">UI bloqueada</Badge>}
-                  {p.require_pin && <Badge variant="outline">PIN</Badge>}
+                  {p.has_pin && <Badge variant="outline">PIN</Badge>}
                 </div>
                 {p.description && <p className="text-sm text-gray-400">{p.description}</p>}
               </div>
