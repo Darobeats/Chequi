@@ -135,7 +135,13 @@ export const KioskProfilesManager: React.FC<Props> = ({ eventId }) => {
               </div>
               <div>
                 <Label>PIN de desactivación (opcional)</Label>
-                <Input value={editing.require_pin || ''} onChange={(e) => setEditing({ ...editing, require_pin: e.target.value || null })} placeholder="4 dígitos" maxLength={6} />
+                <Input
+                  type="password"
+                  value={editing.pin ?? ''}
+                  onChange={(e) => setEditing({ ...editing, pin: e.target.value })}
+                  placeholder={editing.id && editing.has_pin ? 'PIN configurado — escribir para cambiar' : '4 dígitos'}
+                  maxLength={8}
+                />
               </div>
             </div>
 
