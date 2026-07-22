@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Lock, Unlock, Zap } from 'lucide-react';
-import { useKioskProfiles, type KioskProfile } from '@/hooks/useKioskProfiles';
+import { useKioskProfiles, verifyKioskPin, type KioskProfile } from '@/hooks/useKioskProfiles';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
