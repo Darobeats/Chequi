@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Canvas as FabricCanvas, FabricImage, Line, Text, FabricObject } from 'fabric';
+import { Canvas as FabricCanvas, FabricImage, Line, Text, Textbox, FabricObject } from 'fabric';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -12,8 +12,10 @@ import {
   Crop as CropIcon,
   ChevronUp, ChevronDown, ChevronsUp, ChevronsDown,
 } from 'lucide-react';
-import QRCode from 'qrcode';
 import { toast } from '@/hooks/use-toast';
+import {
+  QR_MIN_SIZE, QR_DEFAULT_SIZE, createQrObject, createTextObject, getSampleText,
+} from '@/lib/ticketFabric';
 import { BackgroundCropDialog } from './BackgroundCropDialog';
 
 export interface BackgroundTransform {
@@ -47,9 +49,6 @@ interface HistoryEntry {
 const SNAP_GRID = 10;
 const SNAP_ANGLE = 15;
 const GUIDE_THRESHOLD = 5;
-const QR_MIN_SIZE = 100;
-const QR_DEFAULT_SIZE = 150;
-const QR_QUIET_ZONE_MODULES = 4;
 
 export interface VisualTicketEditorHandle {
   flushToState: () => TicketElement[];
@@ -340,56 +339,20 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
   }, [fabricCanvas, elements]);
 
   const addElementToCanvas = async (canvas: FabricCanvas, element: TicketElement) => {
+    // Objects are built by the SAME factories used by the export engine so the
+    // editor preview and the downloaded PNG can never diverge.
     let obj: FabricObject | null = null;
 
     if (element.type === 'qr') {
-      const qrSize = Math.max(QR_MIN_SIZE, Math.round(element.width || QR_DEFAULT_SIZE), Math.round(element.height || QR_DEFAULT_SIZE));
-      const qrDataUrl = await QRCode.toDataURL('SAMPLE-QR-' + element.id, {
-        width: qrSize,
-        margin: QR_QUIET_ZONE_MODULES,
-        errorCorrectionLevel: 'M',
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF',
-        },
-      });
-      const img = await FabricImage.fromURL(qrDataUrl);
-      img.set({
-        left: element.x, top: element.y,
-        scaleX: qrSize / (img.width || 1),
-        scaleY: qrSize / (img.height || 1),
-      });
-      obj = img;
+      obj = await createQrObject(element, 'SAMPLE-QR-' + element.id);
     } else if (element.type === 'text') {
-      const text = new Text(element.content || getSampleText(element.field), {
-        left: element.x, top: element.y,
-        fontSize: element.fontSize || 14,
-        fontFamily: element.fontFamily || 'Arial',
-        fill: element.color || '#000000',
-        fontWeight: element.bold ? 'bold' : 'normal',
-        textAlign: element.textAlign || 'left',
-        // Force lineHeight=1 and no char spacing so exported PNG matches editor.
-        lineHeight: 1,
-        charSpacing: 0,
-      });
-      obj = text;
+      obj = createTextObject(element, element.content || getSampleText(element.field));
     }
 
     if (obj) {
       (obj as any).elementId = element.id;
       (obj as any).elementType = element.type;
       canvas.add(obj);
-    }
-  };
-
-  const getSampleText = (field?: string) => {
-    switch (field) {
-      case 'name': return 'Juan Pérez';
-      case 'email': return 'juan@example.com';
-      case 'ticket_id': return 'EVT-VIP-ABC1-2024';
-      case 'category': return 'VIP';
-      case 'cedula': return 'Cc 1234567890';
-      default: return 'Texto de ejemplo';
     }
   };
 
@@ -571,7 +534,7 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
     onElementsChange(elements.map(el => el.id === selectedElement ? { ...el, ...updates } : el));
     if (fabricCanvas) {
       const obj = fabricCanvas.getObjects().find(o => (o as any).elementId === selectedElement);
-      if (obj && obj instanceof Text) {
+      if (obj && (obj instanceof Text || obj instanceof Textbox)) {
         if (updates.fontSize) obj.set('fontSize', updates.fontSize);
         if (updates.fontFamily) obj.set('fontFamily', updates.fontFamily);
         if (updates.bold !== undefined) obj.set('fontWeight', updates.bold ? 'bold' : 'normal');
