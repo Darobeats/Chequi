@@ -12,6 +12,8 @@ import { QrCode, Type, Tag, Hash, Palette } from 'lucide-react';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { VisualTicketEditor, type VisualTicketEditorHandle } from './VisualTicketEditor';
 import TemplateBindingsEditor from './TemplateBindingsEditor';
+import { TicketLivePreview } from './tickets/TicketLivePreview';
+import { buildSimpleElements, computeSimpleTicketSize } from '@/lib/ticketFabric';
 import { TemplateVersionsPanel } from './TemplateVersionsPanel';
 
 interface TicketTemplateEditorProps {
@@ -134,14 +136,21 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
       return out as TicketElement;
     });
 
+    const isSimple = !formData.use_visual_editor;
+    const simpleElements = isSimple ? buildSimpleElements(formData) : null;
+
     const payload = {
       ...formData,
+      canvas_width: isSimple ? computeSimpleTicketSize(formData).width : formData.canvas_width,
+      canvas_height: isSimple ? computeSimpleTicketSize(formData).height : formData.canvas_height,
+      background_image_url: isSimple ? null : formData.background_image_url,
+      show_qr: isSimple ? true : formData.show_qr,
       background_mode: formData.use_visual_editor ? 'full_ticket' as const : formData.background_mode,
       background_opacity: formData.use_visual_editor ? 1 : formData.background_opacity,
       background_transform: formData.use_visual_editor
         ? { x: 0, y: 0, scaleX: 1, scaleY: 1, angle: 0 }
         : formData.background_transform,
-      elements: normalizedElements,
+      elements: simpleElements ?? normalizedElements,
     };
 
     try {
@@ -202,10 +211,11 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
               <Palette className="h-5 w-5 text-primary" />
               <div>
                 <Label htmlFor="use_visual_editor" className="text-base font-semibold">
-                  Editor Visual de Tickets
+                  Diseño con arte (editor visual)
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Usa un canvas interactivo para diseñar tickets personalizados
+                  Actívalo para subir una imagen y ubicar libremente los elementos.
+                  Desactivado, se genera un ticket simple con QR sobre fondo blanco.
                 </p>
               </div>
             </div>
@@ -216,51 +226,6 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
             />
           </div>
 
-          {!formData.use_visual_editor && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="layout">Distribución</Label>
-                <Select
-                  value={formData.layout}
-                  onValueChange={(value) => {
-                    const ticketsMap: { [key: string]: number } = {
-                      '2x2': 4,
-                      '3x3': 9,
-                      '2x3': 6,
-                      '3x2': 6,
-                      '1x4': 4
-                    };
-                    setFormData({ 
-                      ...formData, 
-                      layout: value,
-                      tickets_per_page: ticketsMap[value] || 4
-                    });
-                  }}
-                >
-                  <SelectTrigger id="layout">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2x2">2x2 (4 tickets)</SelectItem>
-                    <SelectItem value="3x3">3x3 (9 tickets)</SelectItem>
-                    <SelectItem value="2x3">2x3 (6 tickets)</SelectItem>
-                    <SelectItem value="3x2">3x2 (6 tickets)</SelectItem>
-                    <SelectItem value="1x4">1x4 (4 tickets)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tickets por Página</Label>
-                <Input
-                  type="number"
-                  value={formData.tickets_per_page}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -305,173 +270,101 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
         </>
 
       ) : (
-        <>
+        <div className="grid gap-6 lg:grid-cols-2">
           <Card>
-        <CardHeader>
-          <CardTitle>Campos a Mostrar</CardTitle>
-          <CardDescription>Seleccione qué información incluir en cada ticket</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <QrCode className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="show_qr">Código QR</Label>
-            </div>
-            <Switch
-              id="show_qr"
-              checked={formData.show_qr}
-              onCheckedChange={(checked) => setFormData({ ...formData, show_qr: checked })}
-            />
-          </div>
+            <CardHeader>
+              <CardTitle>Campos a Mostrar</CardTitle>
+              <CardDescription>
+                El código QR siempre se incluye. Agrega los datos que necesites.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between opacity-80">
+                <div className="flex items-center gap-2">
+                  <QrCode className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="show_qr">Código QR (obligatorio)</Label>
+                </div>
+                <Switch id="show_qr" checked disabled />
+              </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Type className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="show_name">Nombre</Label>
-            </div>
-            <Switch
-              id="show_name"
-              checked={formData.show_name}
-              onCheckedChange={(checked) => setFormData({ ...formData, show_name: checked })}
-            />
-          </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Type className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="show_name">Nombre</Label>
+                </div>
+                <Switch
+                  id="show_name"
+                  checked={formData.show_name}
+                  onCheckedChange={(checked) => setFormData({ ...formData, show_name: checked })}
+                />
+              </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="show_email">Cédula</Label>
-            </div>
-            <Switch
-              id="show_email"
-              checked={formData.show_email}
-              onCheckedChange={(checked) => setFormData({ ...formData, show_email: checked })}
-            />
-          </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="show_email">Cédula</Label>
+                </div>
+                <Switch
+                  id="show_email"
+                  checked={formData.show_email}
+                  onCheckedChange={(checked) => setFormData({ ...formData, show_email: checked })}
+                />
+              </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Tag className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="show_category">Categoría</Label>
-            </div>
-            <Switch
-              id="show_category"
-              checked={formData.show_category}
-              onCheckedChange={(checked) => setFormData({ ...formData, show_category: checked })}
-            />
-          </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="show_category">Categoría</Label>
+                </div>
+                <Switch
+                  id="show_category"
+                  checked={formData.show_category}
+                  onCheckedChange={(checked) => setFormData({ ...formData, show_category: checked })}
+                />
+              </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Hash className="h-4 w-4 text-muted-foreground" />
-              <Label htmlFor="show_ticket_id">ID de Ticket</Label>
-            </div>
-            <Switch
-              id="show_ticket_id"
-              checked={formData.show_ticket_id}
-              onCheckedChange={(checked) => setFormData({ ...formData, show_ticket_id: checked })}
-            />
-          </div>
-        </CardContent>
-      </Card>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Hash className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="show_ticket_id">ID de Ticket</Label>
+                </div>
+                <Switch
+                  id="show_ticket_id"
+                  checked={formData.show_ticket_id}
+                  onCheckedChange={(checked) => setFormData({ ...formData, show_ticket_id: checked })}
+                />
+              </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tamaños y Formato</CardTitle>
-          <CardDescription>Ajuste los tamaños de los elementos</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label>Tamaño del QR: {formData.qr_size}px</Label>
-            <Slider
-              value={[formData.qr_size]}
-              onValueChange={(value) => setFormData({ ...formData, qr_size: value[0] })}
-              min={100}
-              max={300}
-              step={10}
-            />
-          </div>
+              <div className="space-y-2 pt-2 border-t">
+                <Label>Tamaño del QR: {formData.qr_size}px</Label>
+                <Slider
+                  value={[formData.qr_size]}
+                  onValueChange={(value) => setFormData({ ...formData, qr_size: value[0] })}
+                  min={100}
+                  max={400}
+                  step={10}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="space-y-2">
-            <Label>Tamaño Fuente Nombre: {formData.font_size_name}pt</Label>
-            <Slider
-              value={[formData.font_size_name]}
-              onValueChange={(value) => setFormData({ ...formData, font_size_name: value[0] })}
-              min={8}
-              max={24}
-              step={1}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tamaño Fuente Info: {formData.font_size_info}pt</Label>
-            <Slider
-              value={[formData.font_size_info]}
-              onValueChange={(value) => setFormData({ ...formData, font_size_info: value[0] })}
-              min={6}
-              max={16}
-              step={1}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Márgenes</CardTitle>
-          <CardDescription>Configure los márgenes de impresión (en mm)</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="margin_top">Superior</Label>
-            <Input
-              id="margin_top"
-              type="number"
-              value={formData.margin_top}
-              onChange={(e) => setFormData({ ...formData, margin_top: parseInt(e.target.value) })}
-              min={0}
-              max={50}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="margin_bottom">Inferior</Label>
-            <Input
-              id="margin_bottom"
-              type="number"
-              value={formData.margin_bottom}
-              onChange={(e) => setFormData({ ...formData, margin_bottom: parseInt(e.target.value) })}
-              min={0}
-              max={50}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="margin_left">Izquierdo</Label>
-            <Input
-              id="margin_left"
-              type="number"
-              value={formData.margin_left}
-              onChange={(e) => setFormData({ ...formData, margin_left: parseInt(e.target.value) })}
-              min={0}
-              max={50}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="margin_right">Derecho</Label>
-            <Input
-              id="margin_right"
-              type="number"
-              value={formData.margin_right}
-              onChange={(e) => setFormData({ ...formData, margin_right: parseInt(e.target.value) })}
-              min={0}
-              max={50}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-        </>
+          <Card>
+            <CardHeader>
+              <CardTitle>Vista Previa del Ticket</CardTitle>
+              <CardDescription>Así se verá el ticket impreso</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              <TicketLivePreview
+                template={{
+                  canvas_width: computeSimpleTicketSize(formData).width,
+                  canvas_height: computeSimpleTicketSize(formData).height,
+                  background_image_url: null,
+                  elements: buildSimpleElements(formData),
+                }}
+              />
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {template && (

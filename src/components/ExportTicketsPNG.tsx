@@ -17,10 +17,10 @@ export const ExportTicketsPNG = ({ template, attendees }: ExportTicketsPNGProps)
   const [progress, setProgress] = useState(0);
 
   const handleExport = async () => {
-    if (!template.use_visual_editor || !template.elements || template.elements.length === 0) {
+    if (!template.elements || template.elements.length === 0) {
       toast({
         title: 'Error',
-        description: 'Esta plantilla no tiene configuración visual. Usa el editor visual primero.',
+        description: 'Esta plantilla no tiene elementos configurados. Edítala y guarda de nuevo.',
         variant: 'destructive',
       });
       return;
