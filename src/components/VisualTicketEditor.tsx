@@ -531,24 +531,41 @@ export const VisualTicketEditor = forwardRef<VisualTicketEditorHandle, VisualTic
 
   const updateSelectedElement = (updates: Partial<TicketElement>) => {
     if (!selectedElement) return;
-    onElementsChange(elements.map(el => el.id === selectedElement ? { ...el, ...updates } : el));
-    if (fabricCanvas) {
-      const obj = fabricCanvas.getObjects().find(o => (o as any).elementId === selectedElement);
-      if (obj && (obj instanceof Text || obj instanceof Textbox)) {
-        if (updates.fontSize) obj.set('fontSize', updates.fontSize);
-        if (updates.fontFamily) obj.set('fontFamily', updates.fontFamily);
-        if (updates.bold !== undefined) obj.set('fontWeight', updates.bold ? 'bold' : 'normal');
-        if (updates.textAlign) obj.set('textAlign', updates.textAlign);
-        if (updates.color) obj.set('fill', updates.color);
-        // Force Fabric to recompute intrinsic width/height for new font metrics
-        (obj as any).initDimensions?.();
-        obj.setCoords();
-        fabricCanvas.renderAll();
-        // Persist recomputed width/height back into state so the exporter uses the same values
-        syncCanvasToElements(fabricCanvas);
+    const nextElements = elements.map(el => el.id === selectedElement ? { ...el, ...updates } : el);
+    onElementsChange(nextElements);
+    if (!fabricCanvas) return;
+
+    const obj = fabricCanvas.getObjects().find(o => (o as any).elementId === selectedElement);
+    if (!obj) return;
+
+    // Alignment changes swap the underlying Fabric class (Text <-> Textbox),
+    // so the object is rebuilt through the shared factory.
+    if (updates.textAlign) {
+      const nextEl = nextElements.find(e => e.id === selectedElement);
+      if (nextEl && nextEl.type === 'text') {
+        fabricCanvas.remove(obj);
+        addElementToCanvas(fabricCanvas, nextEl).then(() => {
+          fabricCanvas.renderAll();
+          syncCanvasToElements(fabricCanvas);
+        });
+        return;
       }
     }
+
+    if (obj instanceof Text || obj instanceof Textbox) {
+      if (updates.fontSize) obj.set('fontSize', updates.fontSize);
+      if (updates.fontFamily) obj.set('fontFamily', updates.fontFamily);
+      if (updates.bold !== undefined) obj.set('fontWeight', updates.bold ? 'bold' : 'normal');
+      if (updates.color) obj.set('fill', updates.color);
+      // Force Fabric to recompute intrinsic width/height for new font metrics
+      (obj as any).initDimensions?.();
+      obj.setCoords();
+      fabricCanvas.renderAll();
+      // Persist recomputed width/height back into state so the exporter uses the same values
+      syncCanvasToElements(fabricCanvas);
+    }
   };
+
 
   useImperativeHandle(ref, () => ({
     flushToState: () => {
