@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import { FabricImage, Text } from 'fabric';
+import { FabricImage, Text, Textbox } from 'fabric';
 import type { TicketElement, Attendee } from '@/types/database';
 
 export const QR_MIN_SIZE = 100;
@@ -71,21 +71,32 @@ export async function createQrObject(element: TicketElement, data: string) {
   return img;
 }
 
-/** Creates the Fabric text object shared by editor and export engine. */
+/**
+ * Creates the Fabric text object shared by editor and export engine.
+ * Centered/right aligned labels use a fixed-width Textbox so the alignment is
+ * applied identically in both engines (a plain Text auto-fits its width and
+ * would ignore the alignment).
+ */
 export function createTextObject(element: TicketElement, text: string) {
-  return new Text(text, {
+  const align = element.textAlign || 'left';
+  const common = {
     left: element.x,
     top: element.y,
-    originX: 'left',
-    originY: 'top',
+    originX: 'left' as const,
+    originY: 'top' as const,
     fontSize: element.fontSize || 14,
     fontFamily: element.fontFamily || 'Arial',
     fill: element.color || '#000000',
     fontWeight: element.bold ? 'bold' : 'normal',
-    textAlign: element.textAlign || 'left',
+    textAlign: align,
     lineHeight: 1,
     charSpacing: 0,
-  });
+  };
+
+  if (align !== 'left' && (element.width || 0) > 0) {
+    return new Textbox(text, { ...common, width: element.width as number, splitByGrapheme: false });
+  }
+  return new Text(text, common);
 }
 
 /** Waits for webfonts so text metrics match between editor and export. */
