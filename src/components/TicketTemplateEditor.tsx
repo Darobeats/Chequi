@@ -12,6 +12,8 @@ import { QrCode, Type, Tag, Hash, Palette } from 'lucide-react';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { VisualTicketEditor, type VisualTicketEditorHandle } from './VisualTicketEditor';
 import TemplateBindingsEditor from './TemplateBindingsEditor';
+import { TicketLivePreview } from './tickets/TicketLivePreview';
+import { buildSimpleElements, SIMPLE_TICKET_WIDTH, SIMPLE_TICKET_HEIGHT } from '@/lib/ticketFabric';
 import { TemplateVersionsPanel } from './TemplateVersionsPanel';
 
 interface TicketTemplateEditorProps {
@@ -134,14 +136,21 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
       return out as TicketElement;
     });
 
+    const isSimple = !formData.use_visual_editor;
+    const simpleElements = isSimple ? buildSimpleElements(formData) : null;
+
     const payload = {
       ...formData,
+      canvas_width: isSimple ? SIMPLE_TICKET_WIDTH : formData.canvas_width,
+      canvas_height: isSimple ? SIMPLE_TICKET_HEIGHT : formData.canvas_height,
+      background_image_url: isSimple ? null : formData.background_image_url,
+      show_qr: isSimple ? true : formData.show_qr,
       background_mode: formData.use_visual_editor ? 'full_ticket' as const : formData.background_mode,
       background_opacity: formData.use_visual_editor ? 1 : formData.background_opacity,
       background_transform: formData.use_visual_editor
         ? { x: 0, y: 0, scaleX: 1, scaleY: 1, angle: 0 }
         : formData.background_transform,
-      elements: normalizedElements,
+      elements: simpleElements ?? normalizedElements,
     };
 
     try {
@@ -202,10 +211,11 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
               <Palette className="h-5 w-5 text-primary" />
               <div>
                 <Label htmlFor="use_visual_editor" className="text-base font-semibold">
-                  Editor Visual de Tickets
+                  Diseño con arte (editor visual)
                 </Label>
                 <p className="text-sm text-muted-foreground">
-                  Usa un canvas interactivo para diseñar tickets personalizados
+                  Actívalo para subir una imagen y ubicar libremente los elementos.
+                  Desactivado, se genera un ticket simple con QR sobre fondo blanco.
                 </p>
               </div>
             </div>
@@ -216,51 +226,6 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
             />
           </div>
 
-          {!formData.use_visual_editor && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="layout">Distribución</Label>
-                <Select
-                  value={formData.layout}
-                  onValueChange={(value) => {
-                    const ticketsMap: { [key: string]: number } = {
-                      '2x2': 4,
-                      '3x3': 9,
-                      '2x3': 6,
-                      '3x2': 6,
-                      '1x4': 4
-                    };
-                    setFormData({ 
-                      ...formData, 
-                      layout: value,
-                      tickets_per_page: ticketsMap[value] || 4
-                    });
-                  }}
-                >
-                  <SelectTrigger id="layout">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2x2">2x2 (4 tickets)</SelectItem>
-                    <SelectItem value="3x3">3x3 (9 tickets)</SelectItem>
-                    <SelectItem value="2x3">2x3 (6 tickets)</SelectItem>
-                    <SelectItem value="3x2">3x2 (6 tickets)</SelectItem>
-                    <SelectItem value="1x4">1x4 (4 tickets)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tickets por Página</Label>
-                <Input
-                  type="number"
-                  value={formData.tickets_per_page}
-                  readOnly
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
