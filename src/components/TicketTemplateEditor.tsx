@@ -13,7 +13,7 @@ import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { VisualTicketEditor, type VisualTicketEditorHandle } from './VisualTicketEditor';
 import TemplateBindingsEditor from './TemplateBindingsEditor';
 import { TicketLivePreview } from './tickets/TicketLivePreview';
-import { buildSimpleElements, SIMPLE_TICKET_WIDTH, SIMPLE_TICKET_HEIGHT } from '@/lib/ticketFabric';
+import { buildSimpleElements, computeSimpleTicketSize } from '@/lib/ticketFabric';
 import { TemplateVersionsPanel } from './TemplateVersionsPanel';
 
 interface TicketTemplateEditorProps {
@@ -141,8 +141,8 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
 
     const payload = {
       ...formData,
-      canvas_width: isSimple ? SIMPLE_TICKET_WIDTH : formData.canvas_width,
-      canvas_height: isSimple ? SIMPLE_TICKET_HEIGHT : formData.canvas_height,
+      canvas_width: isSimple ? computeSimpleTicketSize(formData).width : formData.canvas_width,
+      canvas_height: isSimple ? computeSimpleTicketSize(formData).height : formData.canvas_height,
       background_image_url: isSimple ? null : formData.background_image_url,
       show_qr: isSimple ? true : formData.show_qr,
       background_mode: formData.use_visual_editor ? 'full_ticket' as const : formData.background_mode,
@@ -356,8 +356,8 @@ const TicketTemplateEditor: React.FC<TicketTemplateEditorProps> = ({ template, o
             <CardContent className="flex justify-center">
               <TicketLivePreview
                 template={{
-                  canvas_width: SIMPLE_TICKET_WIDTH,
-                  canvas_height: SIMPLE_TICKET_HEIGHT,
+                  canvas_width: computeSimpleTicketSize(formData).width,
+                  canvas_height: computeSimpleTicketSize(formData).height,
                   background_image_url: null,
                   elements: buildSimpleElements(formData),
                 }}

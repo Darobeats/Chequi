@@ -113,7 +113,8 @@ export async function waitForFonts() {
 // ---------------------------------------------------------------------------
 
 export const SIMPLE_TICKET_WIDTH = 600;
-export const SIMPLE_TICKET_HEIGHT = 800;
+/** Fallback height; the real height is derived from the active fields. */
+export const SIMPLE_TICKET_HEIGHT = 600;
 
 export interface SimpleTicketConfig {
   qr_size?: number;
@@ -127,12 +128,33 @@ export interface SimpleTicketConfig {
  * Builds the element list for a ticket without artwork: QR always present and
  * centered on top, active fields stacked underneath.
  */
+function simpleFields(config: SimpleTicketConfig) {
+  const fields: Array<{ field: TicketElement['field']; fontSize: number; bold: boolean }> = [];
+  if (config.show_name !== false) fields.push({ field: 'name', fontSize: 34, bold: true });
+  if (config.show_email) fields.push({ field: 'cedula', fontSize: 24, bold: false });
+  if (config.show_category) fields.push({ field: 'category', fontSize: 24, bold: false });
+  if (config.show_ticket_id) fields.push({ field: 'ticket_id', fontSize: 20, bold: false });
+  return fields;
+}
+
+const SIMPLE_TOP = 80;
+const SIMPLE_GAP = 48;
+
+/** Ticket size for the simple mode: fits the QR plus the active fields. */
+export function computeSimpleTicketSize(config: SimpleTicketConfig) {
+  const qrSize = Math.max(QR_MIN_SIZE, Math.round(config.qr_size || 250));
+  const fields = simpleFields(config);
+  const fieldsHeight = fields.reduce((acc, f) => acc + f.fontSize + 22, 0);
+  const height = SIMPLE_TOP + qrSize + (fields.length ? SIMPLE_GAP + fieldsHeight : 0) + SIMPLE_TOP - 22;
+  return { width: SIMPLE_TICKET_WIDTH, height: Math.round(height) };
+}
+
 export function buildSimpleElements(config: SimpleTicketConfig): TicketElement[] {
   const qrSize = Math.max(QR_MIN_SIZE, Math.round(config.qr_size || 250));
   const elements: TicketElement[] = [];
 
   const qrX = Math.round((SIMPLE_TICKET_WIDTH - qrSize) / 2);
-  const qrY = 80;
+  const qrY = SIMPLE_TOP;
   elements.push({
     id: 'simple-qr',
     type: 'qr',
@@ -142,13 +164,9 @@ export function buildSimpleElements(config: SimpleTicketConfig): TicketElement[]
     height: qrSize,
   });
 
-  const fields: Array<{ field: TicketElement['field']; fontSize: number; bold: boolean }> = [];
-  if (config.show_name !== false) fields.push({ field: 'name', fontSize: 34, bold: true });
-  if (config.show_email) fields.push({ field: 'cedula', fontSize: 24, bold: false });
-  if (config.show_category) fields.push({ field: 'category', fontSize: 24, bold: false });
-  if (config.show_ticket_id) fields.push({ field: 'ticket_id', fontSize: 20, bold: false });
+  const fields = simpleFields(config);
 
-  let y = qrY + qrSize + 48;
+  let y = qrY + qrSize + SIMPLE_GAP;
   fields.forEach((f, i) => {
     elements.push({
       id: `simple-${f.field}-${i}`,
