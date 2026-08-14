@@ -93,7 +93,7 @@ const TicketExportCenter: React.FC<Props> = ({ eventId, attendees }) => {
   const previewBlobRef = useRef<Blob | null>(null);
 
   const eventTemplates = useMemo(
-    () => templates.filter((t) => t.event_config_id === eventId && t.use_visual_editor && (t.elements?.length ?? 0) > 0),
+    () => templates.filter((t) => t.event_config_id === eventId && (t.elements?.length ?? 0) > 0),
     [templates, eventId],
   );
 
