@@ -176,18 +176,52 @@
     "cta": "Únete a cientos de organizadores que ya optimizaron sus eventos con Chequi.",
     "ctaHighlight": "Empieza a ver resultados desde el primer uso.",
     "mainBenefits": [
-      { "value": "95%", "label": "Reducción de fraude", "description": "vs métodos tradicionales" },
-      { "value": "-70%", "label": "Tiempo de registro", "description": "comparado con papel" },
-      { "value": "100%", "label": "Visibilidad", "description": "en tiempo real" },
-      { "value": "<2min", "label": "Setup", "description": "por punto de control" }
+      {
+        "value": "95%",
+        "label": "Reducción de fraude",
+        "description": "vs métodos tradicionales"
+      },
+      {
+        "value": "-70%",
+        "label": "Tiempo de registro",
+        "description": "comparado con papel"
+      },
+      {
+        "value": "100%",
+        "label": "Visibilidad",
+        "description": "en tiempo real"
+      },
+      {
+        "value": "<2min",
+        "label": "Setup",
+        "description": "por punto de control"
+      }
     ],
     "additionalBenefits": [
-      { "title": "Velocidad", "description": "Registro 3x más rápido que métodos tradicionales" },
-      { "title": "Ahorro", "description": "Elimina costos de impresión de tickets físicos" },
-      { "title": "Accesibilidad", "description": "Sin apps - funciona en cualquier navegador" },
-      { "title": "Anti-fraude", "description": "Códigos QR únicos imposibles de duplicar" },
-      { "title": "Insights", "description": "Datos accionables para mejorar futuros eventos" },
-      { "title": "Escalabilidad", "description": "Desde 10 hasta 50,000+ asistentes sin cambios" }
+      {
+        "title": "Velocidad",
+        "description": "Registro 3x más rápido que métodos tradicionales"
+      },
+      {
+        "title": "Ahorro",
+        "description": "Elimina costos de impresión de tickets físicos"
+      },
+      {
+        "title": "Accesibilidad",
+        "description": "Sin apps - funciona en cualquier navegador"
+      },
+      {
+        "title": "Anti-fraude",
+        "description": "Códigos QR únicos imposibles de duplicar"
+      },
+      {
+        "title": "Insights",
+        "description": "Datos accionables para mejorar futuros eventos"
+      },
+      {
+        "title": "Escalabilidad",
+        "description": "Desde 10 hasta 50,000+ asistentes sin cambios"
+      }
     ]
   },
   "howItWorks": {
@@ -270,7 +304,7 @@
     "title": "Preguntas Frecuentes",
     "subtitle": "Todo lo que necesitas saber sobre Chequi",
     "contactCta": "¿Tienes más preguntas?",
-    "contactLink": "Contáctanos directamente",
+    "contactLink": "Escríbenos por WhatsApp",
     "items": [
       {
         "question": "¿Necesito instalar alguna aplicación?",
@@ -302,7 +336,7 @@
       },
       {
         "question": "¿Cómo es el soporte técnico?",
-        "answer": "Ofrecemos soporte por email con respuesta en menos de 24 horas. Para clientes empresariales, hay opciones de soporte prioritario y asistencia técnica durante eventos en vivo."
+        "answer": "Ofrecemos soporte por WhatsApp con respuesta en menos de 24 horas. Para clientes empresariales, hay opciones de soporte prioritario y asistencia técnica durante eventos en vivo."
       },
       {
         "question": "¿Puedo importar mi lista de asistentes?",
@@ -321,10 +355,22 @@
     "ctaDashboard": "Ir al Dashboard",
     "ctaSales": "Hablar con Ventas",
     "stats": [
-      { "value": "500+", "label": "Eventos exitosos" },
-      { "value": "50K+", "label": "Asistentes gestionados" },
-      { "value": "95%", "label": "Satisfacción" },
-      { "value": "<2min", "label": "Setup promedio" }
+      {
+        "value": "500+",
+        "label": "Eventos exitosos"
+      },
+      {
+        "value": "50K+",
+        "label": "Asistentes gestionados"
+      },
+      {
+        "value": "95%",
+        "label": "Satisfacción"
+      },
+      {
+        "value": "<2min",
+        "label": "Setup promedio"
+      }
     ],
     "trustBadges": [
       "Sin contratos de permanencia",
@@ -362,5 +408,9 @@
     },
     "copyright": "Todos los derechos reservados.",
     "madeWith": "Hecho en Colombia con ❤️ by Daro"
+  },
+  "floatingWhatsapp": {
+    "label": "Escríbenos",
+    "aria": "Escríbenos por WhatsApp"
   }
 }

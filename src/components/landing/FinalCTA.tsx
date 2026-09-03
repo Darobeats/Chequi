@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useSupabaseAuth } from "@/context/SupabaseAuthContext";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageCircle } from "lucide-react";
+import { getWhatsAppUrl } from "@/lib/contact";
 
 const FinalCTA = () => {
   const navigate = useNavigate();
@@ -69,10 +70,7 @@ const FinalCTA = () => {
 
             <Button
               onClick={() =>
-                window.open(
-                  "https://wa.me/573505175312?text=Hola,%20estoy%20interesado%20en%20conocer%20más%20sobre%20Chequi%20para%20mis%20eventos.%20¿Podrían%20brindarme%20información?",
-                  "_blank",
-                )
+                window.open(getWhatsAppUrl(), "_blank")
               }
               variant="outline"
               className="border-2 border-dorado/50 text-dorado hover:bg-dorado/10 font-bold text-lg px-10 py-7 touch-manipulation group"

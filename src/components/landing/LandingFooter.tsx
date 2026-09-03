@@ -1,7 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/ui/separator";
-import { QrCode, Mail, MapPin, Phone } from "lucide-react";
+import { QrCode, MapPin, Phone } from "lucide-react";
+import { getWhatsAppUrl, WHATSAPP_DISPLAY } from "@/lib/contact";
 
 const LandingFooter = () => {
   const { t } = useTranslation("landing");
@@ -69,18 +70,12 @@ const LandingFooter = () => {
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4 text-dorado flex-shrink-0" />
                   <a
-                    href="https://wa.me/573204963384?text=Hola,%20estoy%20interesado%20en%20conocer%20más%20sobre%20Chequi%20para%20mis%20eventos.%20¿Podrían%20brindarme%20información?"
+                    href={getWhatsAppUrl()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-dorado transition-colors"
                   >
-                    +57 350 517 5312
-                  </a>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-dorado flex-shrink-0" />
-                  <a href="mailto:contacto@chequi.com" className="hover:text-dorado transition-colors">
-                    contacto@chequi.com
+                    {WHATSAPP_DISPLAY}
                   </a>
                 </div>
               </div>
