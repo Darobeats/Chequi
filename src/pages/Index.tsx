@@ -33,7 +33,10 @@ const Index = () => {
       
       {/* Language detection prompt for English browsers */}
       <LanguagePrompt />
-    </div>
+
+      {/* Floating WhatsApp CTA */}
+      <FloatingWhatsApp />
+
   );
 };
 
