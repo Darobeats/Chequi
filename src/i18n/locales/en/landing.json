@@ -176,18 +176,52 @@
     "cta": "Join hundreds of organizers who have already optimized their events with Chequi.",
     "ctaHighlight": "Start seeing results from the first use.",
     "mainBenefits": [
-      { "value": "95%", "label": "Fraud reduction", "description": "vs traditional methods" },
-      { "value": "-70%", "label": "Registration time", "description": "compared to paper" },
-      { "value": "100%", "label": "Visibility", "description": "in real time" },
-      { "value": "<2min", "label": "Setup", "description": "per control point" }
+      {
+        "value": "95%",
+        "label": "Fraud reduction",
+        "description": "vs traditional methods"
+      },
+      {
+        "value": "-70%",
+        "label": "Registration time",
+        "description": "compared to paper"
+      },
+      {
+        "value": "100%",
+        "label": "Visibility",
+        "description": "in real time"
+      },
+      {
+        "value": "<2min",
+        "label": "Setup",
+        "description": "per control point"
+      }
     ],
     "additionalBenefits": [
-      { "title": "Speed", "description": "3x faster registration than traditional methods" },
-      { "title": "Savings", "description": "Eliminates physical ticket printing costs" },
-      { "title": "Accessibility", "description": "No apps - works on any browser" },
-      { "title": "Anti-fraud", "description": "Unique QR codes impossible to duplicate" },
-      { "title": "Insights", "description": "Actionable data to improve future events" },
-      { "title": "Scalability", "description": "From 10 to 50,000+ attendees without changes" }
+      {
+        "title": "Speed",
+        "description": "3x faster registration than traditional methods"
+      },
+      {
+        "title": "Savings",
+        "description": "Eliminates physical ticket printing costs"
+      },
+      {
+        "title": "Accessibility",
+        "description": "No apps - works on any browser"
+      },
+      {
+        "title": "Anti-fraud",
+        "description": "Unique QR codes impossible to duplicate"
+      },
+      {
+        "title": "Insights",
+        "description": "Actionable data to improve future events"
+      },
+      {
+        "title": "Scalability",
+        "description": "From 10 to 50,000+ attendees without changes"
+      }
     ]
   },
   "howItWorks": {
@@ -270,7 +304,7 @@
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know about Chequi",
     "contactCta": "Have more questions?",
-    "contactLink": "Contact us directly",
+    "contactLink": "Message us on WhatsApp",
     "items": [
       {
         "question": "Do I need to install any app?",
@@ -302,7 +336,7 @@
       },
       {
         "question": "What is the technical support like?",
-        "answer": "We offer email support with response in less than 24 hours. For enterprise clients, there are priority support options and live event technical assistance."
+        "answer": "We offer WhatsApp support with response in less than 24 hours. For enterprise clients, there are priority support options and live event technical assistance."
       },
       {
         "question": "Can I import my attendee list?",
@@ -321,10 +355,22 @@
     "ctaDashboard": "Go to Dashboard",
     "ctaSales": "Talk to Sales",
     "stats": [
-      { "value": "500+", "label": "Successful events" },
-      { "value": "50K+", "label": "Attendees managed" },
-      { "value": "95%", "label": "Satisfaction" },
-      { "value": "<2min", "label": "Average setup" }
+      {
+        "value": "500+",
+        "label": "Successful events"
+      },
+      {
+        "value": "50K+",
+        "label": "Attendees managed"
+      },
+      {
+        "value": "95%",
+        "label": "Satisfaction"
+      },
+      {
+        "value": "<2min",
+        "label": "Average setup"
+      }
     ],
     "trustBadges": [
       "No lock-in contracts",
@@ -362,5 +408,9 @@
     },
     "copyright": "All rights reserved.",
     "madeWith": "Made in Colombia with ❤️ by Daro"
+  },
+  "floatingWhatsapp": {
+    "label": "Chat with us",
+    "aria": "Message us on WhatsApp"
   }
 }
