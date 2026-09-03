@@ -1,5 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { MessageCircle } from "lucide-react";
+import { getWhatsAppUrl } from "@/lib/contact";
+
 import {
   Accordion,
   AccordionContent,
@@ -52,11 +55,15 @@ const FAQ = () => {
             {t("faq.contactCta")}
           </p>
           <a
-            href="mailto:contacto@chequi.com"
-            className="text-dorado hover:text-dorado/80 font-semibold text-base md:text-lg underline underline-offset-4 transition-colors"
+            href={getWhatsAppUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-full border border-dorado/40 bg-dorado/10 px-6 py-3 text-base md:text-lg font-semibold text-dorado hover:bg-dorado/20 transition-colors"
           >
+            <MessageCircle className="h-5 w-5" />
             {t("faq.contactLink")}
           </a>
+
         </div>
       </div>
     </section>

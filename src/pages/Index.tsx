@@ -11,6 +11,8 @@ import FAQ from "@/components/landing/FAQ";
 import FinalCTA from "@/components/landing/FinalCTA";
 import LandingFooter from "@/components/landing/LandingFooter";
 import LanguagePrompt from "@/components/LanguagePrompt";
+import FloatingWhatsApp from "@/components/landing/FloatingWhatsApp";
+
 
 const Index = () => {
   return (
