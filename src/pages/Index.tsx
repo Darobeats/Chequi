@@ -36,6 +36,8 @@ const Index = () => {
 
       {/* Floating WhatsApp CTA */}
       <FloatingWhatsApp />
+    </div>
+
 
   );
 };
