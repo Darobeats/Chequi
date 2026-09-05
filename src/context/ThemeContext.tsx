@@ -32,10 +32,11 @@ const hexToHSL = (hex: string): string | null => {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 };
 
-export /** Las rutas legales definen su propio <title> y descripción. */
+/** Las rutas legales definen su propio <title> y descripción. */
 const isLegalRoute = () => window.location.pathname.startsWith('/legal');
 
-const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+
   const eventContext = useOptionalEventContext();
   const selectedEvent = eventContext?.selectedEvent;
   const isLoading = eventContext?.isLoadingEvents ?? false;
