@@ -1,8 +1,10 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/ui/separator";
 import { QrCode, MapPin, Phone } from "lucide-react";
 import { getWhatsAppUrl, WHATSAPP_DISPLAY } from "@/lib/contact";
+import { FOOTER_LEGAL_LINKS, LEGAL_ENTITY } from "@/lib/legal";
 
 const LandingFooter = () => {
   const { t } = useTranslation("landing");
@@ -25,12 +27,6 @@ const LandingFooter = () => {
       { label: t("footer.links.blog"), href: "#blog" },
       { label: t("footer.links.successCases"), href: "#casos-exito" },
       { label: t("footer.links.careers"), href: "#careers" },
-    ],
-    legal: [
-      { label: t("footer.links.terms"), href: "#terminos" },
-      { label: t("footer.links.privacy"), href: "#privacidad" },
-      { label: t("footer.links.cookies"), href: "#cookies" },
-      { label: t("footer.links.gdpr"), href: "#gdpr" },
     ],
   };
 
@@ -136,14 +132,14 @@ const LandingFooter = () => {
             <div>
               <h4 className="font-semibold text-gray-200 mb-4">{t("footer.sections.legal")}</h4>
               <ul className="space-y-3">
-                {footerLinks.legal.map((link, index) => (
-                  <li key={index}>
-                    <button
-                      onClick={() => handleLinkClick(link.href)}
-                      className="text-sm text-gray-400 hover:text-dorado transition-colors"
+                {FOOTER_LEGAL_LINKS.map((link) => (
+                  <li key={link.to}>
+                    <Link
+                      to={link.to}
+                      className="text-sm text-gray-400 hover:text-dorado transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dorado rounded"
                     >
                       {link.label}
-                    </button>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -158,7 +154,7 @@ const LandingFooter = () => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             {/* Copyright */}
             <p className="text-sm text-gray-500 text-center md:text-left">
-              &copy; {new Date().getFullYear()} Chequi. {t("footer.copyright")}
+              {LEGAL_ENTITY.copyright} {new Date().getFullYear()}. {t("footer.copyright")}
               <span className="hidden sm:inline"> {t("footer.madeWith")}</span>
             </p>
 
