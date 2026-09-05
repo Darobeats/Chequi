@@ -7,6 +7,8 @@ import { useCreateCedulaRegistro } from '@/hooks/useCedulaRegistros';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
 import { UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
+import PrivacyNotice from '@/components/legal/PrivacyNotice';
+import ConsentCheckbox, { buildConsentRecord } from '@/components/legal/ConsentCheckbox';
 
 interface CedulaManualRegistroProps {
   eventId: string;
@@ -17,6 +19,7 @@ export function CedulaManualRegistro({ eventId }: CedulaManualRegistroProps) {
   const [numeroCedula, setNumeroCedula] = useState('');
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [consent, setConsent] = useState(false);
   
   const { user } = useSupabaseAuth();
   const createRegistro = useCreateCedulaRegistro();
@@ -38,9 +41,16 @@ export function CedulaManualRegistro({ eventId }: CedulaManualRegistroProps) {
       return;
     }
 
+    if (!consent) {
+      toast.error('Debe confirmar la autorización de tratamiento de datos personales');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
+      const consentRecord = buildConsentRecord('cedula:registro-manual');
+
       // Intentar separar nombre en partes (básico)
       const parts = nombreTrimmed.split(' ').filter(p => p.length > 0);
       let primerApellido = '';
@@ -57,7 +67,7 @@ export function CedulaManualRegistro({ eventId }: CedulaManualRegistroProps) {
         numero_cedula: cedulaTrimmed,
         primer_apellido: primerApellido || nombreTrimmed.split(' ')[0],
         nombres: nombres,
-        raw_data: 'MANUAL_ENTRY',
+        raw_data: `MANUAL_ENTRY | consent=${consentRecord.version} @ ${consentRecord.acceptedAtBogota}`,
         scanned_by: user?.id,
         device_info: `MANUAL - ${navigator.userAgent}`,
       });
@@ -65,6 +75,7 @@ export function CedulaManualRegistro({ eventId }: CedulaManualRegistroProps) {
       // Limpiar y cerrar
       setNumeroCedula('');
       setNombreCompleto('');
+      setConsent(false);
       setOpen(false);
     } catch (error) {
       // El hook ya muestra el toast de error
@@ -127,6 +138,15 @@ export function CedulaManualRegistro({ eventId }: CedulaManualRegistroProps) {
             />
           </div>
           
+          <PrivacyNotice purpose="registro y control de acceso al evento" />
+
+          <ConsentCheckbox
+            id="cedula-consent"
+            checked={consent}
+            onCheckedChange={setConsent}
+            source="cedula:registro-manual"
+          />
+
           <div className="flex justify-end gap-3 pt-4">
             <Button 
               type="button" 
@@ -138,7 +158,7 @@ export function CedulaManualRegistro({ eventId }: CedulaManualRegistroProps) {
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={isSubmitting || !consent}
               className="bg-dorado text-empresarial hover:bg-dorado/90"
             >
               {isSubmitting ? 'Guardando...' : 'Guardar Registro'}
