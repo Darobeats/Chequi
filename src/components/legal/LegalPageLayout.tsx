@@ -22,17 +22,13 @@ const setMeta = (name: string, content: string) => {
 
 const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ document }) => {
   useEffect(() => {
-    const previousTitle = window.document.title;
     window.document.title = `${document.title} | Chequi`;
     setMeta('description', document.description.slice(0, 158));
-    return () => {
-      window.document.title = previousTitle;
-    };
   }, [document]);
 
   return (
     <div className="min-h-dvh bg-empresarial flex flex-col">
-      <Header />
+      <Header brandAsHeading={false} />
 
       <main className="flex-1">
         <div className="container mx-auto px-4 py-10 md:py-14">

@@ -14,6 +14,8 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 interface HeaderProps {
   title?: string;
   showLandingNav?: boolean;
+  /** Cuando la página tiene su propio <h1> (ej. páginas legales), la marca no debe ser encabezado. */
+  brandAsHeading?: boolean;
 }
 
 const getRoleIcon = (role: string) => {
@@ -34,7 +36,7 @@ const getRoleBadgeClass = (role: string) => {
   }
 };
 
-const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = false }) => {
+const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = false, brandAsHeading = true }) => {
   const { user, profile, signOut } = useSupabaseAuth();
   const { canAccessAdmin, canAccessScanner } = useUserRole();
   const { canManageUsers } = useAuthorizeUserManagement();
@@ -147,12 +149,23 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
               className="h-8 w-8 object-contain rounded flex-shrink-0"
             />
           )}
-          <h1 
-            className="text-lg md:text-2xl font-bold text-primary truncate cursor-pointer hover:text-primary/80 transition-colors"
-            onClick={() => handleNavigation('/')}
-          >
-            {title}
-          </h1>
+          {brandAsHeading ? (
+            <h1
+              className="text-lg md:text-2xl font-bold text-primary truncate cursor-pointer hover:text-primary/80 transition-colors"
+              onClick={() => handleNavigation('/')}
+            >
+              {title}
+            </h1>
+          ) : (
+            <button
+              type="button"
+              aria-label={`${title} - ir al inicio`}
+              className="text-lg md:text-2xl font-bold text-primary truncate hover:text-primary/80 transition-colors"
+              onClick={() => handleNavigation('/')}
+            >
+              {title}
+            </button>
+          )}
           {profile && !showLandingNav && (
             <Badge className={`${getRoleColor(profile.role)} hidden sm:flex flex-shrink-0`}>
               {getRoleText(profile.role)}
