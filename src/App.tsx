@@ -16,6 +16,7 @@ import Profile from "./pages/Profile";
 import Users from "./pages/Users";
 import CedulaRegistro from "./pages/CedulaRegistro";
 import Install from "./pages/Install";
+import LegalDocumentPage from "./pages/legal/LegalDocumentPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -82,6 +83,8 @@ const App = () => (
                   } 
                 />
                 <Route path="/install" element={<Install />} />
+                <Route path="/legal" element={<LegalDocumentPage />} />
+                <Route path="/legal/:slug" element={<LegalDocumentPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

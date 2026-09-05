@@ -7,6 +7,9 @@ import Header from "@/components/Header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { Link } from "react-router-dom";
+import { FOOTER_LEGAL_LINKS, LEGAL_ENTITY } from "@/lib/legal";
+import PrivacyNotice from "@/components/legal/PrivacyNotice";
 
 const Auth = () => {
   const { user, signIn, loading } = useSupabaseAuth();
@@ -128,14 +131,23 @@ const Auth = () => {
             </Button>
           </form>
 
+          <PrivacyNotice purpose="autenticación y gestión del acceso de usuarios a la plataforma" />
+
           <div className="text-center text-sm text-gray-400">
             <p>{t('auth.footer')}</p>
           </div>
         </div>
       </div>
 
-      <footer className="py-4 text-center text-gray-500 text-xs">
-        &copy; {new Date().getFullYear()} Chequi - {t('auth.copyright')}
+      <footer className="py-4 text-center text-gray-500 text-xs space-y-2">
+        <p>{LEGAL_ENTITY.copyright} {new Date().getFullYear()} - {t('auth.copyright')}</p>
+        <nav aria-label="Enlaces legales" className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+          {FOOTER_LEGAL_LINKS.map((link) => (
+            <Link key={link.to} to={link.to} className="hover:text-dorado transition-colors">
+              {link.label}
+            </Link>
+          ))}
+        </nav>
       </footer>
     </div>);
 

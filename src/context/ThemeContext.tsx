@@ -32,7 +32,11 @@ const hexToHSL = (hex: string): string | null => {
   return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 };
 
+/** Las rutas legales definen su propio <title> y descripción. */
+const isLegalRoute = () => window.location.pathname.startsWith('/legal');
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+
   const eventContext = useOptionalEventContext();
   const selectedEvent = eventContext?.selectedEvent;
   const isLoading = eventContext?.isLoadingEvents ?? false;
@@ -55,8 +59,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         document.body.style.fontFamily = selectedEvent.font_family;
       }
 
-      // Update document title
-      if (selectedEvent.event_name) {
+      // Update document title (las páginas legales gestionan su propio título)
+      if (selectedEvent.event_name && !isLegalRoute()) {
         document.title = `${selectedEvent.event_name} - Chequi`;
       }
 
@@ -79,7 +83,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.style.removeProperty('--event-bg-url');
       root.style.removeProperty('--event-bg-opacity');
       document.body.style.fontFamily = '';
-      document.title = 'Chequi - Control de Acceso';
+      if (!isLegalRoute()) {
+        document.title = 'Chequi - Control de Acceso';
+      }
     }
   }, [selectedEvent]);
 

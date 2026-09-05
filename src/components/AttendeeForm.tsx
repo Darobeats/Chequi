@@ -10,6 +10,8 @@ import { useCreateAttendee, useUpdateAttendee } from '@/hooks/useAttendeeManagem
 import { Attendee } from '@/types/database';
 import { toast } from '@/components/ui/sonner';
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
+import PrivacyNotice from '@/components/legal/PrivacyNotice';
+import ConsentCheckbox, { buildConsentRecord } from '@/components/legal/ConsentCheckbox';
 
 interface AttendeeFormProps {
   open: boolean;
@@ -31,6 +33,8 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
     ticket_id: '',
     event_id: ''
   });
+
+  const [consent, setConsent] = useState(false);
 
   const { data: categories = [] } = useTicketCategories();
   const { data: allEvents = [] } = useAllEventConfigs();
@@ -57,6 +61,7 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
         event_id: activeEvent?.id || ''
       });
     }
+    setConsent(false);
   }, [attendee, open, allEvents]);
 
   const generateTicketId = () => {
@@ -68,7 +73,15 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Consentimiento obligatorio solo al registrar datos personales nuevos
+    if (!attendee && !consent) {
+      toast.error('Autorización requerida', {
+        description: 'Debe confirmar la autorización de tratamiento de datos personales.'
+      });
+      return;
+    }
+
     try {
       if (attendee) {
         await updateMutation.mutateAsync({
@@ -77,6 +90,9 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
         });
         toast.success('Asistente actualizado correctamente');
       } else {
+        const consentRecord = buildConsentRecord('admin:attendee-form');
+        if (import.meta.env.DEV) console.info('Consentimiento registrado:', consentRecord);
+
         await createMutation.mutateAsync({
           ...formData,
           ticket_id: formData.ticket_id || generateTicketId()
@@ -185,6 +201,18 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
               placeholder="Se generará automáticamente si se deja vacío"
             />
           </div>
+
+          {!attendee && (
+            <>
+              <PrivacyNotice purpose="registro y control de acceso del asistente al evento" />
+              <ConsentCheckbox
+                id="attendee-consent"
+                checked={consent}
+                onCheckedChange={setConsent}
+                source="admin:attendee-form"
+              />
+            </>
+          )}
 
           {!attendee && (
             <div className="text-sm text-gray-400 p-3 bg-gray-800/50 rounded">
