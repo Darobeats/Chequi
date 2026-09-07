@@ -21,8 +21,9 @@ export interface KioskProfile {
   updated_at: string;
 }
 
+/** pin_hash is never selected: the database only exposes the boolean has_pin flag. */
 const PROFILE_COLUMNS =
-  'id,event_id,name,description,control_type_ids,default_control_type_id,auto_select_mode,time_schedule,allow_operator_override,lock_ui,auto_resume_ms,pin_hash,is_active,created_at,updated_at';
+  'id,event_id,name,description,control_type_ids,default_control_type_id,auto_select_mode,time_schedule,allow_operator_override,lock_ui,auto_resume_ms,has_pin,is_active,created_at,updated_at';
 
 export const useKioskProfiles = (eventId?: string | null) => {
   return useQuery({
@@ -35,9 +36,9 @@ export const useKioskProfiles = (eventId?: string | null) => {
         .eq('event_id', eventId)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      return ((data ?? []) as any[]).map(({ pin_hash, ...rest }) => ({
-        ...(rest as any),
-        has_pin: !!pin_hash,
+      return ((data ?? []) as any[]).map((row) => ({
+        ...(row as any),
+        has_pin: !!row.has_pin,
       })) as KioskProfile[];
     },
     enabled: !!eventId,
