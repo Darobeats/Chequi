@@ -1,0 +1,22 @@
+# Chequi
+
+> Plataforma de control de acceso para eventos: entradas con código QR, validación en tiempo real, listas de asistentes y reportes de cierre.
+
+Chequi permite a organizadores de eventos generar entradas con código QR, validar el ingreso desde cualquier teléfono (incluso sin conexión) y obtener reportes detallados de asistencia. Servicio operado por DarocodeIA en Colombia.
+
+## Pages
+
+- [Inicio](/): Qué es Chequi, funcionalidades, casos de uso y preguntas frecuentes.
+- [Acceso](/auth): Inicio de sesión para organizadores y personal de control.
+- [Instalación](/install): Cómo instalar Chequi como aplicación en el teléfono.
+
+## Legal
+
+- [Términos y Condiciones](/legal/terminos): Condiciones de uso del servicio.
+- [Política de Privacidad](/legal/privacidad): Tratamiento de datos personales.
+- [Política de Cookies](/legal/cookies): Uso de cookies y tecnologías similares.
+- [GDPR](/legal/gdpr): Privacidad internacional y derechos de los titulares.
+
+## Optional
+
+- [Uso de Inteligencia Artificial](/legal/ia): Transparencia sobre funcionalidades con IA.
