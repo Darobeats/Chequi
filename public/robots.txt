@@ -12,5 +12,10 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /scanner
+Disallow: /admin
+Disallow: /profile
+Disallow: /users
 
 Sitemap: https://chequi.online/sitemap.xml
