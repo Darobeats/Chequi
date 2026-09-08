@@ -497,6 +497,7 @@ export type Database = {
           default_control_type_id: string | null
           description: string | null
           event_id: string
+          has_pin: boolean | null
           id: string
           is_active: boolean
           lock_ui: boolean
@@ -516,6 +517,7 @@ export type Database = {
           default_control_type_id?: string | null
           description?: string | null
           event_id: string
+          has_pin?: boolean | null
           id?: string
           is_active?: boolean
           lock_ui?: boolean
@@ -535,6 +537,7 @@ export type Database = {
           default_control_type_id?: string | null
           description?: string | null
           event_id?: string
+          has_pin?: boolean | null
           id?: string
           is_active?: boolean
           lock_ui?: boolean
