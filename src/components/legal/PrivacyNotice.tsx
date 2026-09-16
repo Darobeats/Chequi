@@ -20,12 +20,21 @@ const PrivacyNotice: React.FC<PrivacyNoticeProps> = ({ purpose, className = '' }
       El organizador del evento es el {DATA_ROLES.controller.title} de estos datos y Chequi actúa
       como {DATA_ROLES.processor.title}. Finalidad: {purpose}.{' '}
       <Link
+        to={PRIVACY_NOTICE_PATH}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-dorado hover:underline"
+      >
+        Aviso de Privacidad
+      </Link>{' '}
+      ·{' '}
+      <Link
         to={PRIVACY_PATH}
         target="_blank"
         rel="noopener noreferrer"
         className="text-dorado hover:underline"
       >
-        Ver Política de Privacidad
+        Política de Tratamiento de Datos
       </Link>
       .
     </p>
