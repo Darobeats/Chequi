@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import LandingFooter from '@/components/landing/LandingFooter';
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import type { LegalDocument } from '@/lib/legal';
-import { LEGAL_DISCLAIMER, LEGAL_ENTITY } from '@/lib/legal';
+import { LEGAL_DISCLAIMER, LEGAL_EMAIL, LEGAL_ENTITY } from '@/lib/legal';
 
 interface LegalPageLayoutProps {
   document: LegalDocument;
