@@ -1,7 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CONSENT_TEXT, CONSENT_VERSION, PRIVACY_PATH, type ConsentRecord } from '@/lib/legal';
+import {
+  CONSENT_TEXT,
+  CONSENT_VERSION,
+  PRIVACY_PATH,
+  PRIVACY_NOTICE_PATH,
+  type ConsentRecord,
+} from '@/lib/legal';
 import { bogotaDateKey, bogotaTime } from '@/lib/timezone';
 
 interface ConsentCheckboxProps {
