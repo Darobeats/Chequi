@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
-import { DATA_ROLES, PRIVACY_PATH } from '@/lib/legal';
+import { DATA_ROLES, PRIVACY_PATH, PRIVACY_NOTICE_PATH } from '@/lib/legal';
 
 interface PrivacyNoticeProps {
   /** Finalidad concreta del formulario donde se muestra el aviso. */
