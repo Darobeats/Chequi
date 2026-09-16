@@ -109,6 +109,13 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ document }) => {
                           {p}
                         </p>
                       ))}
+                      {section.bullets && (
+                        <ul className="list-disc space-y-2 pl-5 text-gray-300 leading-relaxed">
+                          {section.bullets.map((b, i) => (
+                            <li key={i}>{b}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </section>
                 ))}
@@ -117,7 +124,13 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ document }) => {
               <div className="mt-12 rounded-lg border border-gray-800 bg-gray-900/50 p-5">
                 <h2 className="text-base font-semibold text-hueso">¿Dudas sobre este documento?</h2>
                 <p className="mt-2 text-sm text-gray-400">
-                  Escríbenos por {LEGAL_ENTITY.contactChannel}:{' '}
+                  Correo:{' '}
+                  <a href={`mailto:${LEGAL_EMAIL}`} className="text-dorado hover:underline">
+                    {LEGAL_EMAIL}
+                  </a>
+                </p>
+                <p className="mt-1 text-sm text-gray-400">
+                  {LEGAL_ENTITY.contactChannel}:{' '}
                   <a
                     href={LEGAL_ENTITY.contactUrl}
                     target="_blank"
