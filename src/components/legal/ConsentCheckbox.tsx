@@ -48,12 +48,21 @@ const ConsentCheckbox: React.FC<ConsentCheckboxProps> = ({
         </label>
         <p id={`${id}-description`} className="text-xs text-gray-400">
           <Link
+            to={PRIVACY_NOTICE_PATH}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-dorado hover:underline"
+          >
+            Aviso de Privacidad
+          </Link>{' '}
+          ·{' '}
+          <Link
             to={PRIVACY_PATH}
             target="_blank"
             rel="noopener noreferrer"
             className="text-dorado hover:underline"
           >
-            Leer la Política de Privacidad
+            Política de Tratamiento de Datos
           </Link>{' '}
           · Versión del texto: {CONSENT_VERSION} · Origen: {source}
         </p>
