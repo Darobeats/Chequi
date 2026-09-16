@@ -16,6 +16,11 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://chequi.online/legal/aviso</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://chequi.online/legal/terminos</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>

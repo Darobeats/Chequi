@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import LandingFooter from '@/components/landing/LandingFooter';
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
 import type { LegalDocument } from '@/lib/legal';
-import { LEGAL_DISCLAIMER, LEGAL_ENTITY } from '@/lib/legal';
+import { LEGAL_DISCLAIMER, LEGAL_EMAIL, LEGAL_ENTITY } from '@/lib/legal';
 
 interface LegalPageLayoutProps {
   document: LegalDocument;
@@ -81,13 +81,18 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ document }) => {
                 {LEGAL_ENTITY.brand} / {LEGAL_ENTITY.operator}
               </p>
 
-              <div
-                role="note"
-                className="mt-6 flex gap-3 rounded-lg border border-dorado/30 bg-dorado/10 p-4"
-              >
-                <AlertTriangle className="h-5 w-5 text-dorado flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <p className="text-sm text-hueso/90 leading-relaxed">{LEGAL_DISCLAIMER}</p>
-              </div>
+              {document.status === 'draft' && (
+                <div
+                  role="note"
+                  className="mt-6 flex gap-3 rounded-lg border border-dorado/30 bg-dorado/10 p-4"
+                >
+                  <AlertTriangle
+                    className="h-5 w-5 text-dorado flex-shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <p className="text-sm text-hueso/90 leading-relaxed">{LEGAL_DISCLAIMER}</p>
+                </div>
+              )}
 
               <div className="mt-10 space-y-10">
                 {document.sections.map((section) => (
@@ -104,6 +109,13 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ document }) => {
                           {p}
                         </p>
                       ))}
+                      {section.bullets && (
+                        <ul className="list-disc space-y-2 pl-5 text-gray-300 leading-relaxed">
+                          {section.bullets.map((b, i) => (
+                            <li key={i}>{b}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </section>
                 ))}
@@ -112,7 +124,13 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ document }) => {
               <div className="mt-12 rounded-lg border border-gray-800 bg-gray-900/50 p-5">
                 <h2 className="text-base font-semibold text-hueso">¿Dudas sobre este documento?</h2>
                 <p className="mt-2 text-sm text-gray-400">
-                  Escríbenos por {LEGAL_ENTITY.contactChannel}:{' '}
+                  Correo:{' '}
+                  <a href={`mailto:${LEGAL_EMAIL}`} className="text-dorado hover:underline">
+                    {LEGAL_EMAIL}
+                  </a>
+                </p>
+                <p className="mt-1 text-sm text-gray-400">
+                  {LEGAL_ENTITY.contactChannel}:{' '}
                   <a
                     href={LEGAL_ENTITY.contactUrl}
                     target="_blank"
