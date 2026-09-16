@@ -81,13 +81,18 @@ const LegalPageLayout: React.FC<LegalPageLayoutProps> = ({ document }) => {
                 {LEGAL_ENTITY.brand} / {LEGAL_ENTITY.operator}
               </p>
 
-              <div
-                role="note"
-                className="mt-6 flex gap-3 rounded-lg border border-dorado/30 bg-dorado/10 p-4"
-              >
-                <AlertTriangle className="h-5 w-5 text-dorado flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <p className="text-sm text-hueso/90 leading-relaxed">{LEGAL_DISCLAIMER}</p>
-              </div>
+              {document.status === 'draft' && (
+                <div
+                  role="note"
+                  className="mt-6 flex gap-3 rounded-lg border border-dorado/30 bg-dorado/10 p-4"
+                >
+                  <AlertTriangle
+                    className="h-5 w-5 text-dorado flex-shrink-0 mt-0.5"
+                    aria-hidden="true"
+                  />
+                  <p className="text-sm text-hueso/90 leading-relaxed">{LEGAL_DISCLAIMER}</p>
+                </div>
+              )}
 
               <div className="mt-10 space-y-10">
                 {document.sections.map((section) => (
