@@ -155,7 +155,17 @@ const LandingFooter = () => {
             {/* Copyright */}
             <p className="text-sm text-gray-500 text-center md:text-left">
               {LEGAL_ENTITY.copyright} {new Date().getFullYear()}. {t("footer.copyright")}
-              <span className="hidden sm:inline"> {t("footer.madeWith")}</span>
+              <span className="hidden sm:inline">
+                {' '}{t("footer.madeWith")}{' '}
+                <a
+                  href="https://darocodeia.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-dorado transition-colors"
+                >
+                  DarocodeIA
+                </a>
+              </span>
             </p>
 
             {/* Social Links */}
