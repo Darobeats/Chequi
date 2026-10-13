@@ -114,11 +114,11 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
     sections: [
       {
         id: 'identificacion',
-        title: '1. Identificación',
+        title: '1. Identificación del prestador',
         paragraphs: [
-          'Chequi es una plataforma tecnológica desarrollada y operada por DarocodeIA, actualmente bajo operación de su titular como persona natural con domicilio en Bogotá, Colombia.',
+          'Cristian G es el titular que desarrolla y opera la plataforma tecnológica Chequi bajo el nombre DarocodeIA, con domicilio en Bogotá, Colombia.',
+          'Para efectos de estos Términos y Condiciones, el prestador es Cristian G; DarocodeIA es el nombre bajo el cual opera y Chequi es la plataforma mediante la cual presta el servicio tecnológico. El cliente u organizador es quien contrata el servicio y determina las condiciones de su evento.',
           `Para consultas relacionadas con la plataforma, contratación, soporte o asuntos relacionados con estas condiciones: ${LEGAL_EMAIL}.`,
-          'La identificación legal completa del prestador será incorporada y actualizada en este documento una vez se formalice la estructura jurídica correspondiente.',
         ],
       },
       {
@@ -126,7 +126,7 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
         title: '2. Objeto de Chequi',
         paragraphs: [
           'Chequi es una herramienta tecnológica destinada a facilitar la gestión de registro, generación y validación de códigos QR, control de acceso, registro de usos y generación de información y reportes relacionados con eventos.',
-          'Chequi actúa como proveedor tecnológico y no como organizador del evento.',
+          'El prestador actúa como proveedor tecnológico a través de Chequi y no como organizador del evento.',
           'Las condiciones particulares de cada evento, incluyendo fecha, lugar, población, requisitos de ingreso, categorías, autorizaciones y demás reglas aplicables, corresponden al organizador o cliente que contrata el servicio.',
         ],
       },
@@ -173,7 +173,7 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
         paragraphs: [
           'El cliente garantiza que cuenta con las facultades, autorizaciones y bases jurídicas necesarias para suministrar a Chequi la información requerida para la prestación del servicio.',
           'El cliente será responsable de la legitimidad, exactitud y pertinencia de los datos que suministre.',
-          'Chequi no utilizará la información de los asistentes para finalidades diferentes a las necesarias para prestar el servicio contratado.',
+          'El prestador tratará la información de los asistentes a través de Chequi únicamente para las finalidades necesarias para prestar el servicio contratado, por cuenta del organizador y conforme a sus instrucciones.',
         ],
       },
       {
@@ -190,7 +190,7 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
         id: 'disponibilidad',
         title: '8. Disponibilidad del servicio',
         paragraphs: [
-          'Chequi realizará esfuerzos razonables para mantener disponible la plataforma y prestar el servicio contratado.',
+          'El prestador realizará esfuerzos razonables para mantener disponible Chequi y prestar el servicio contratado.',
           'Sin embargo, pueden presentarse interrupciones derivadas de mantenimiento, fallas de conectividad, infraestructura de terceros, fuerza mayor, problemas de dispositivos o circunstancias ajenas al control razonable de Chequi.',
         ],
       },
@@ -213,7 +213,7 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
         title: '10. Propiedad intelectual',
         paragraphs: [
           'Chequi, su software, código, arquitectura, diseño, interfaces, elementos gráficos, documentación, nombre comercial y demás componentes propios pertenecen a sus respectivos titulares y están protegidos por las normas aplicables de propiedad intelectual.',
-          'El acceso a Chequi no implica transferencia de propiedad sobre el software.',
+          'El acceso a Chequi permite su utilización dentro del servicio contratado y no implica transferencia de propiedad sobre el software ni sobre los derechos del prestador o de terceros.',
         ],
       },
       {
@@ -227,15 +227,16 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
         id: 'finalizacion',
         title: '12. Finalización del servicio',
         paragraphs: [
-          'Una vez finalizado el evento y entregado el informe de cierre correspondiente, Chequi procederá con la eliminación de los datos operativos del evento de sus sistemas activos, de acuerdo con sus procedimientos de conservación y eliminación.',
+          'Una vez finalizado el evento y entregado el informe de cierre correspondiente, el prestador procederá con la eliminación de los datos operativos del evento de los sistemas activos de Chequi, de acuerdo con sus procedimientos de conservación y eliminación.',
           'La información que deba mantenerse por obligaciones legales, contables, contractuales, de seguridad o defensa de derechos podrá conservarse durante el período correspondiente.',
         ],
       },
       {
         id: 'modificaciones',
-        title: '13. Modificaciones',
+        title: '13. Vigencia y modificaciones',
         paragraphs: [
-          'Chequi podrá actualizar estos Términos y Condiciones cuando sea necesario debido a cambios legales, tecnológicos, operativos o comerciales.',
+          'Vigencia: septiembre de 2026.',
+          'El prestador podrá actualizar estos Términos y Condiciones cuando sea necesario debido a cambios legales, tecnológicos, operativos o comerciales.',
           'Las modificaciones serán publicadas en esta página indicando su fecha de actualización.',
         ],
       },
@@ -250,7 +251,7 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
       {
         id: 'contacto-terminos',
         title: '15. Contacto',
-        paragraphs: [`Para consultas relacionadas con estos términos: ${LEGAL_EMAIL}.`],
+        paragraphs: [`Para consultas dirigidas a Cristian G, titular que opera bajo el nombre DarocodeIA, relacionadas con estos términos: ${LEGAL_EMAIL}.`],
       },
     ],
   },
