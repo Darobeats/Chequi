@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { documentCaptureBounds, documentCaptureSize } from './cedulaImage';
-import { AutoCaptureGate } from './frameQuality';
+import { documentCaptureBounds, documentCaptureSize } from './cedulaImage.ts';
+import { AutoCaptureGate } from './frameQuality.ts';
 
 describe('document preparation', () => {
   test('portrait camera captures the visible guide, not the full portrait frame', () => {
