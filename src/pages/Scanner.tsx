@@ -385,6 +385,39 @@ const Scanner = () => {
     }
   };
 
+  // Kiosko de documentos: confirmar automáticamente o descartar tras mostrar el resultado
+  const kioskHandledRef = React.useRef<string | null>(null);
+  const [kioskBanner, setKioskBanner] = useState<{ kind: 'ok' | 'denied' | 'dup'; title: string; detail?: string } | null>(null);
+  useEffect(() => {
+    if (!activeKioskProfile || !pendingScan) { kioskHandledRef.current = null; return; }
+    const key = `${pendingScan.numeroCedula}-${Date.now()}`;
+    if (kioskHandledRef.current) return;
+    kioskHandledRef.current = key;
+    const mesa = autorizadaData?.mesa ? `Mesa ${autorizadaData.mesa}` : undefined;
+    let timer: number | undefined;
+    if (!isUnauthorized && !isDuplicate) {
+      setKioskBanner({ kind: 'ok', title: pendingScan.nombreCompleto || pendingScan.numeroCedula, detail: mesa ?? 'Acceso permitido' });
+      handleConfirmCedulaScan().finally(() => {
+        setKioskScanCount((c) => c + 1);
+        timer = window.setTimeout(() => { handleCancelCedulaScan(); }, 300);
+      });
+    } else {
+      setKioskBanner({
+        kind: isDuplicate ? 'dup' : 'denied',
+        title: isDuplicate ? 'Ya registrado' : 'Acceso denegado',
+        detail: mesa ?? pendingScan.numeroCedula,
+      });
+      timer = window.setTimeout(() => handleCancelCedulaScan(), 4500);
+    }
+    return () => { if (timer) window.clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeKioskProfile, pendingScan]);
+  useEffect(() => {
+    if (!kioskBanner) return;
+    const t = window.setTimeout(() => setKioskBanner(null), 6000);
+    return () => window.clearTimeout(t);
+  }, [kioskBanner]);
+
   const handleCancelCedulaScan = () => {
     setPendingScan(null);
     setIsUnauthorized(false);
@@ -725,7 +758,17 @@ const Scanner = () => {
                   </DialogContent>
                 </Dialog>
 
-                {pendingScan ? (
+                {activeKioskProfile && kioskBanner && (
+                  <div role="status" className={`rounded-xl border-2 p-4 text-center animate-scale-in ${kioskBanner.kind === 'ok' ? 'border-green-500 bg-green-500/15' : kioskBanner.kind === 'dup' ? 'border-amber-500 bg-amber-500/15' : 'border-red-500 bg-red-500/15'}`}>
+                    <p className={`text-2xl font-extrabold ${kioskBanner.kind === 'ok' ? 'text-green-400' : kioskBanner.kind === 'dup' ? 'text-amber-400' : 'text-red-400'}`}>
+                      {kioskBanner.kind === 'ok' ? '✓ Bienvenido' : kioskBanner.title}
+                    </p>
+                    {kioskBanner.kind === 'ok' && <p className="text-hueso font-semibold mt-1 truncate">{kioskBanner.title}</p>}
+                    {kioskBanner.detail && <p className="text-hueso text-lg mt-1">{kioskBanner.detail}</p>}
+                  </div>
+                )}
+
+                {pendingScan && activeKioskProfile ? null : pendingScan ? (
                   <CedulaScanResult
                     data={pendingScan}
                     onConfirm={handleConfirmCedulaScan}
@@ -744,6 +787,7 @@ const Scanner = () => {
                   <CedulaScanner
                     onScanSuccess={handleCedulaScanSuccess}
                     isActive={!pendingScan && !!selectedControlType && !whitelistLoading}
+                    autoMode={!!activeKioskProfile}
                   />
                 )}
 
@@ -765,7 +809,7 @@ const Scanner = () => {
       </main>
 
       <footer className="py-3 md:py-4 text-center text-gray-500 text-xs flex-shrink-0">
-        &copy; {new Date().getFullYear()} Chequi - Todos los derechos reservados - Hecho en Colombia con ❤️ by Daro
+        &copy; {new Date().getFullYear()} Chequi - Todos los derechos reservados - Made in Colombia powered by DarocodeIA
       </footer>
     </div>
   );

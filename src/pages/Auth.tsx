@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/sonner";
 import { Link } from "react-router-dom";
 import { FOOTER_LEGAL_LINKS, LEGAL_ENTITY } from "@/lib/legal";
 import PrivacyNotice from "@/components/legal/PrivacyNotice";
+import LoginPartnerStrip from "@/components/LoginPartnerStrip";
 
 const Auth = () => {
   const { user, signIn, loading } = useSupabaseAuth();
@@ -64,8 +65,8 @@ const Auth = () => {
     <div className="min-h-screen bg-empresarial flex flex-col">
       <Header />
 
-      <div className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md p-8 space-y-8 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 sm:p-4">
+        <div className="w-full max-w-md p-5 sm:p-8 space-y-6 sm:space-y-8 bg-gray-900/50 rounded-lg border border-gray-800 shadow-xl">
           <div className="text-center">
             {activeEvent?.logo_url || activeEvent?.event_image_url ?
             <div className="flex justify-center mb-4">
@@ -102,7 +103,7 @@ const Auth = () => {
                 placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-hueso"
+                className="bg-gray-800 border-gray-700 text-hueso h-12 text-base"
                 required />
 
             </div>
@@ -117,14 +118,14 @@ const Auth = () => {
                 placeholder={t('auth.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-hueso"
+                className="bg-gray-800 border-gray-700 text-hueso h-12 text-base"
                 required />
 
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-dorado hover:bg-dorado/90 text-empresarial font-medium"
+              className="w-full bg-dorado hover:bg-dorado/90 text-empresarial font-medium h-12 text-base"
               disabled={submitting}>
 
               {submitting ? t('auth.processing') : t('auth.submit')}
@@ -136,6 +137,9 @@ const Auth = () => {
           <div className="text-center text-sm text-gray-400">
             <p>{t('auth.footer')}</p>
           </div>
+        </div>
+        <div className="w-full max-w-md">
+          <LoginPartnerStrip />
         </div>
       </div>
 

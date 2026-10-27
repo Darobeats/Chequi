@@ -37,6 +37,8 @@ import SponsorLogosManager from '@/components/SponsorLogosManager';
 import EventBrandingPreview from '@/components/EventBrandingPreview';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
+import DeleteEventButton from '@/components/DeleteEventButton';
+import LoginPartnerLogosManager from '@/components/LoginPartnerLogosManager';
 
 const FONT_OPTIONS = [
   { name: 'Inter', value: 'Inter, sans-serif' },
@@ -264,14 +266,15 @@ const EventConfig = () => {
         </TabsList>
 
         <TabsContent value="configuration" className="space-y-6">
+          <LoginPartnerLogosManager />
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-dorado">{t('eventConfig.existingConfigs')}</h3>
             {eventConfigs.map((config) => (
               <Card key={config.id} className={`bg-gray-900/50 border ${selectedEvent?.id === config.id ? 'border-dorado' : 'border-gray-800'}`}>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-dorado flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="min-w-0">
+                      <CardTitle className="text-dorado flex flex-wrap items-center gap-2 break-words">
                         {config.event_name}
                         {selectedEvent?.id === config.id && <Badge className="bg-dorado text-empresarial">{t('eventConfig.selected')}</Badge>}
                         <Badge variant="outline" className={
@@ -292,8 +295,8 @@ const EventConfig = () => {
                         })()}
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 min-h-[44px]">
                         <Switch
                           checked={config.is_active ?? false}
                           onCheckedChange={async (checked) => {
@@ -312,9 +315,10 @@ const EventConfig = () => {
                           {config.is_active ? t('eventConfig.active') : 'Off'}
                         </span>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => setEditingConfig(config)} className="border-dorado text-dorado hover:bg-dorado hover:text-empresarial">
+                      <Button size="sm" variant="outline" onClick={() => setEditingConfig(config)} className="h-10 border-dorado text-dorado hover:bg-dorado hover:text-empresarial">
                         {t('eventConfig.edit')}
                       </Button>
+                      <DeleteEventButton eventId={config.id} eventName={config.event_name} isActive={!!config.is_active} />
                     </div>
                   </div>
                 </CardHeader>

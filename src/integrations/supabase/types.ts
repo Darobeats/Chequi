@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_credit_ledger: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          credits: number
+          entry_type: string
+          event_id: string | null
+          id: string
+          input_tokens: number | null
+          note: string | null
+          output_tokens: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          credits: number
+          entry_type?: string
+          event_id?: string | null
+          id?: string
+          input_tokens?: number | null
+          note?: string | null
+          output_tokens?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          credits?: number
+          entry_type?: string
+          event_id?: string | null
+          id?: string
+          input_tokens?: number | null
+          note?: string | null
+          output_tokens?: number | null
+        }
+        Relationships: []
+      }
       attendees: {
         Row: {
           category_id: string
@@ -564,6 +600,42 @@ export type Database = {
           },
         ]
       }
+      login_partner_logos: {
+        Row: {
+          created_at: string
+          id: string
+          is_visible: boolean
+          kind: string
+          link_url: string | null
+          logo_url: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          kind?: string
+          link_url?: string | null
+          logo_url: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          kind?: string
+          link_url?: string | null
+          logo_url?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           attendee_id: string | null
@@ -1057,6 +1129,10 @@ export type Database = {
         Returns: boolean
       }
       can_access_scanner: { Args: { check_user_id?: string }; Returns: boolean }
+      can_manage_event_asset: {
+        Args: { object_name: string }
+        Returns: boolean
+      }
       can_manage_event_team: {
         Args: { check_event_id: string; check_user_id?: string }
         Returns: boolean
@@ -1075,6 +1151,7 @@ export type Database = {
           max_uses: number
         }[]
       }
+      delete_event_cascade: { Args: { p_event_id: string }; Returns: undefined }
       find_attendee_by_ticket: {
         Args: { ticket_id: string }
         Returns: {
@@ -1117,6 +1194,14 @@ export type Database = {
         }[]
       }
       get_active_event_id: { Args: never; Returns: string }
+      get_ai_credit_balance: {
+        Args: never
+        Returns: {
+          balance: number
+          exhausted: boolean
+          last_set_at: string
+        }[]
+      }
       get_asistentes_security_report: {
         Args: never
         Returns: {

@@ -161,6 +161,9 @@ IMPORTANTE:
       
       // Return specific error codes for credit/rate limit issues
       if (response.status === 402) {
+        try {
+          await authClient.from('ai_credit_ledger').insert({ entry_type: 'exhausted', credits: 0, created_by: user.id, note: '402 AI gateway' });
+        } catch (_) { /* ignore */ }
         return new Response(
           JSON.stringify({ 
             success: false,
@@ -193,6 +196,17 @@ IMPORTANTE:
 
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content;
+
+    // Registrar consumo estimado de créditos (gemini-2.5-flash: ~$0.30/M entrada, ~$2.50/M salida)
+    try {
+      const inTok = Number(data.usage?.prompt_tokens ?? 1600);
+      const outTok = Number(data.usage?.completion_tokens ?? 150);
+      const credits = (inTok * 0.30 + outTok * 2.50) / 1_000_000;
+      await authClient.from('ai_credit_ledger').insert({
+        entry_type: 'usage', credits, input_tokens: inTok, output_tokens: outTok,
+        created_by: user.id, note: 'scan-cedula-ai',
+      });
+    } catch (e) { console.error('ledger insert failed', e); }
     
     if (!aiResponse) {
       throw new Error('No se recibió respuesta de la IA');

@@ -38,7 +38,18 @@ const getRoleBadgeClass = (role: string) => {
 };
 
 const EventSelector: React.FC<EventSelectorProps> = ({ compact = false, showRole = true }) => {
-  const { selectedEvent, userEvents, isLoadingEvents, selectEvent, hasMultipleEvents, roleInSelectedEvent } = useEventContext();
+  const { selectedEvent, userEvents: allEvents, isLoadingEvents, selectEvent, roleInSelectedEvent } = useEventContext();
+  // Solo eventos activos en el Scanner
+  const userEvents = React.useMemo(() => allEvents.filter((e) => e.is_active), [allEvents]);
+  const hasMultipleEvents = userEvents.length > 1;
+
+  // Auto-seleccionar el único evento activo, o corregir si el seleccionado no está activo
+  React.useEffect(() => {
+    if (isLoadingEvents || userEvents.length === 0) return;
+    if (!selectedEvent || !userEvents.some((e) => e.event_id === selectedEvent.id)) {
+      selectEvent(userEvents[0].event_id);
+    }
+  }, [isLoadingEvents, userEvents, selectedEvent, selectEvent]);
 
   if (isLoadingEvents) {
     return (
@@ -51,13 +62,29 @@ const EventSelector: React.FC<EventSelectorProps> = ({ compact = false, showRole
   if (userEvents.length === 0) {
     return (
       <div className={`${compact ? 'px-2' : 'w-full mb-4 md:mb-6 p-3 md:p-4'} bg-gray-900/50 rounded-lg border border-gray-800`}>
-        <p className="text-hueso text-center text-sm">No tienes eventos asignados</p>
+        <p className="text-hueso text-center text-sm">No hay eventos activos. Activa un evento en Configuración.</p>
       </div>
     );
   }
 
-  // If only one event, show simplified view
-  if (!hasMultipleEvents && selectedEvent) {
+  // Un solo evento activo: no mostrar selector
+  if (!hasMultipleEvents) {
+    if (compact || !selectedEvent) return null;
+    return (
+      <div className="w-full mb-3 flex items-center gap-2 px-1">
+        <Calendar className="h-4 w-4 text-dorado flex-shrink-0" />
+        <span className="text-hueso text-sm font-medium truncate">{selectedEvent.event_name}</span>
+        {showRole && roleInSelectedEvent && (
+          <Badge variant="outline" className={`${getRoleBadgeClass(roleInSelectedEvent)} text-xs ml-auto`}>
+            {getRoleIcon(roleInSelectedEvent)}
+            <span className="ml-1">{getRoleLabel(roleInSelectedEvent)}</span>
+          </Badge>
+        )}
+      </div>
+    );
+  }
+
+  if (false as boolean) {
     return (
       <div className={`${compact ? 'flex items-center gap-2' : 'w-full mb-4 md:mb-6 p-3 md:p-4 bg-gray-900/50 rounded-lg border border-gray-800'}`}>
         {!compact && (

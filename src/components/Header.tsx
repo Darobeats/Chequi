@@ -1,5 +1,6 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import AiCreditsIndicator from '@/components/AiCreditsIndicator';
 import { useTranslation } from 'react-i18next';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -42,6 +43,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
   const { canManageUsers } = useAuthorizeUserManagement();
   const eventContext = useOptionalEventContext();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation('common');
 
   const handleNavigation = (path: string) => {
@@ -71,7 +73,10 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
   const renderEventSelector = () => {
     if (!eventContext || !user || showLandingNav) return null;
     
-    const { selectedEvent, userEvents, selectEvent, hasMultipleEvents, roleInSelectedEvent } = eventContext;
+    const { selectedEvent, selectEvent, roleInSelectedEvent } = eventContext;
+    const onScanner = location.pathname.startsWith('/scanner');
+    const userEvents = onScanner ? eventContext.userEvents.filter((e) => e.is_active) : eventContext.userEvents;
+    const hasMultipleEvents = userEvents.length > 1;
     
     if (!hasMultipleEvents && selectedEvent) {
       // Single event - show compact info (VISIBLE ON ALL DEVICES)
@@ -175,6 +180,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
         
         {/* Event Selector in center */}
         {renderEventSelector()}
+        {user && !showLandingNav && canManageUsers && <AiCreditsIndicator />}
         
         <nav className="flex items-center gap-1 md:gap-2 flex-shrink-0">
           {showLandingNav ? (
