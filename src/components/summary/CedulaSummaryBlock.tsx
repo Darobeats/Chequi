@@ -28,7 +28,7 @@ const CedulaSummaryBlock: React.FC<{ eventId: string }> = ({ eventId }) => {
         fetchAll<any>((f, t) => supabase.from('cedula_registros').select('numero_cedula, nombre_completo, scanned_at, was_on_whitelist').eq('event_id', eventId).order('scanned_at', { ascending: false }).range(f, t)),
         fetchAll<any>((f, t) => supabase.from('cedula_control_usage').select('control_type_id, numero_cedula').eq('event_id', eventId).range(f, t)),
         supabase.from('control_types').select('id, name, color').eq('event_id', eventId),
-        supabase.from('cedula_access_logs').select('id', { count: 'exact', head: true }).eq('event_id', eventId).neq('access_result', 'granted'),
+        supabase.from('cedula_access_logs').select('id', { count: 'exact', head: true }).eq('event_id', eventId).neq('access_result', 'authorized'),
         supabase.from('cedulas_autorizadas').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
       ]);
       return { regs, usage, controls: controls.data ?? [], denied: denied.count ?? 0, whitelist: wl.count ?? 0 };
