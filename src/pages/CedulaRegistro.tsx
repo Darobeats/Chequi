@@ -12,6 +12,7 @@ import { useEventContext } from '@/context/EventContext';
 import { useEventWhitelistConfig } from '@/hooks/useEventWhitelistConfig';
 import { useCheckCedulaAuthorization, useCreateAccessLog } from '@/hooks/useCedulasAutorizadas';
 import { useSupabaseAuth } from '@/context/SupabaseAuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import type { CedulaData, InsertCedulaRegistro, CedulaAutorizada } from '@/types/cedula';
 import { ArrowLeft, IdCard, TrendingUp, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';

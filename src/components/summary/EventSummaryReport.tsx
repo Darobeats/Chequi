@@ -9,6 +9,7 @@ import { useEventContext } from '@/context/EventContext';
 import { useEventSummary, type EventSummary } from '@/hooks/useEventSummary';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useUserRole } from '@/hooks/useUserRole';
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—';

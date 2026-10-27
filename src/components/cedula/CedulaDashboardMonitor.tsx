@@ -29,7 +29,7 @@ export function CedulaDashboardMonitor() {
   const { data: accessLogs = [] } = useCedulaAccessLogs(selectedEvent?.id || null);
   const { data: controlUsage = [] } = useCedulaControlUsage(selectedEvent?.id || null);
   const { data: controlTypes = [] } = useControlTypes();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isScanner } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
   const clearAllRegistros = useClearAllCedulaRegistros();
   const clearAccessLogs = useClearAccessLogs();

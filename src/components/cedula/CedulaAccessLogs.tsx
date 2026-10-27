@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCedulaAccessLogs } from '@/hooks/useCedulasAutorizadas';
+import { useUserRole } from '@/hooks/useUserRole';
 import { ShieldX, Search, FileDown, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
