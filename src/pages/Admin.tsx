@@ -6,6 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useEventContext } from '@/context/EventContext';
 import Header from '@/components/Header';
 import AttendeeList from '@/components/AttendeeList';
+import CedulaAttendeeList from '@/components/CedulaAttendeeList';
 import AttendeesManager from '@/components/AttendeesManager';
 import ControlAnalytics from '@/components/ControlAnalytics';
 import ExportButton from '@/components/ExportButton';
@@ -246,7 +247,14 @@ const Admin = () => {
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="text-xl font-semibold text-dorado">{t('admin.attendeeList')}</h2>
               </div>
-              <AttendeeList />
+              <Tabs defaultValue={attendees.length === 0 && hasCedulaData ? 'cedula' : 'qr'}>
+                <TabsList className="mb-3">
+                  <TabsTrigger value="qr">QR ({attendees.length})</TabsTrigger>
+                  <TabsTrigger value="cedula">Cédula ({cedulaStats?.total || 0})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="qr"><AttendeeList /></TabsContent>
+                <TabsContent value="cedula"><CedulaAttendeeList /></TabsContent>
+              </Tabs>
             </div>
           </TabsContent>
 
