@@ -8,3 +8,9 @@
 - [x] Scanner: selector solo eventos activos
 - [x] Kiosko: lectura autónoma de cédulas
 - [x] Contador de créditos IA para super admin (alerta < 50)
+- [x] Kiosko cédula más rápido (captura 1.5s máx, imagen 1024px, aviso inmediato, tiempos en consola)
+- [x] Asistentes: pestaña Cédula con registros por ID
+- [x] Resumen: bloque de registro por cédula
+- [x] Barra de patrocinadores contenida en móvil
+- [x] Contadores en cero al borrar cédulas; "Consumos" excluye ingresos
+- [ ] Medir velocidad real del kiosko en iPhone — requiere prueba física del usuario
