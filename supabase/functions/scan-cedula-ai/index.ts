@@ -150,8 +150,27 @@ IMPORTANTE:
             ]
           }
         ],
-        temperature: 0.1,
-        max_tokens: 500
+        reasoning_effort: 'low',
+        max_tokens: 1500,
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'cedula',
+            strict: true,
+            schema: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['numero_cedula', 'nombres', 'primer_apellido', 'segundo_apellido', 'fecha_nacimiento'],
+              properties: {
+                numero_cedula: { type: ['string', 'null'] },
+                nombres: { type: ['string', 'null'] },
+                primer_apellido: { type: ['string', 'null'] },
+                segundo_apellido: { type: ['string', 'null'] },
+                fecha_nacimiento: { type: ['string', 'null'] },
+              },
+            },
+          },
+        },
       }),
     });
 
@@ -214,21 +233,27 @@ IMPORTANTE:
 
     console.log('Respuesta de IA:', aiResponse);
 
+    const unreadable = () => new Response(
+      JSON.stringify({
+        success: false,
+        errorCode: 'CEDULA_UNREADABLE',
+        error: 'No se pudo leer la cédula. Acércala, evita reflejos o usa el registro manual.',
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
     let extractedData;
     try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        extractedData = JSON.parse(jsonMatch[0]);
-      } else {
-        extractedData = JSON.parse(aiResponse);
-      }
+      const cleaned = aiResponse.replace(/```(?:json)?/gi, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      extractedData = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
     } catch (parseError) {
       console.error('Error parseando JSON:', parseError, 'Respuesta:', aiResponse);
-      throw new Error('La IA no retornó un formato válido');
+      return unreadable();
     }
 
-    if (!extractedData.numero_cedula) {
-      throw new Error('No se pudo extraer el número de cédula');
+    if (!extractedData?.numero_cedula) {
+      return unreadable();
     }
 
     extractedData.numero_cedula = extractedData.numero_cedula.toString().replace(/[.\s-]/g, '');
