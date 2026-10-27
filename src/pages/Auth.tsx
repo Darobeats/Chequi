@@ -138,6 +138,9 @@ const Auth = () => {
             <p>{t('auth.footer')}</p>
           </div>
         </div>
+        <div className="w-full max-w-md">
+          <LoginPartnerStrip />
+        </div>
       </div>
 
       <footer className="py-4 text-center text-gray-500 text-xs space-y-2">
