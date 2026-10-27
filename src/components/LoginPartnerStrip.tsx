@@ -18,7 +18,7 @@ const LoginPartnerStrip: React.FC = () => {
         src={l.logo_url}
         alt={l.name}
         loading="lazy"
-        className="h-8 sm:h-10 w-auto max-w-[110px] sm:max-w-[140px] object-contain opacity-70 grayscale transition duration-500 hover:opacity-100 hover:grayscale-0 active:grayscale-0"
+        className="h-8 sm:h-10 w-auto max-w-[110px] sm:max-w-[140px] object-contain opacity-100 transition duration-500"
       />
     );
     return (
