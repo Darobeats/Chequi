@@ -29,7 +29,7 @@ export function CedulaDashboardMonitor() {
   const { data: accessLogs = [] } = useCedulaAccessLogs(selectedEvent?.id || null);
   const { data: controlUsage = [] } = useCedulaControlUsage(selectedEvent?.id || null);
   const { data: controlTypes = [] } = useControlTypes();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isScanner } = useUserRole();
   const deleteRegistro = useDeleteCedulaRegistro();
   const clearAllRegistros = useClearAllCedulaRegistros();
   const clearAccessLogs = useClearAccessLogs();
@@ -178,14 +178,16 @@ export function CedulaDashboardMonitor() {
               {selectedEvent?.id && (
                 <CedulaManualRegistro eventId={selectedEvent.id} />
               )}
-              <CedulaExportButton 
-                registros={filteredRegistros} 
-                eventName={selectedEvent?.event_name || 'Evento'}
-                autorizadas={autorizadas}
-                accessLogs={accessLogs as CedulaAccessLog[]}
-                controlUsage={controlUsage}
-                controlTypes={controlTypes}
-              />
+              {!isScanner && (
+                <CedulaExportButton 
+                  registros={filteredRegistros} 
+                  eventName={selectedEvent?.event_name || 'Evento'}
+                  autorizadas={autorizadas}
+                  accessLogs={accessLogs as CedulaAccessLog[]}
+                  controlUsage={controlUsage}
+                  controlTypes={controlTypes}
+                />
+              )}
               
               {isAdmin && registros.length > 0 && selectedEvent?.id && (
                 <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
