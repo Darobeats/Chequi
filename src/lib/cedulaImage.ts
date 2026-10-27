@@ -11,14 +11,14 @@ export function documentCaptureBounds(width: number, height: number, viewWidth: 
 }
 
 export function documentCaptureSize(width: number, height: number) {
-  const scale = Math.min(1, 1280 / Math.max(width, height));
+  const scale = Math.min(1, 1024 / Math.max(width, height));
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
 /** Bound upload bytes without further reducing text resolution. JPEG works on iOS Safari. */
 export async function encodeDocumentImage(canvas: HTMLCanvasElement): Promise<string> {
   let blob: Blob | null = null;
-  for (const quality of [0.78, 0.7, 0.62]) {
+  for (const quality of [0.72]) {
     blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
     if (!blob) throw new Error('No se pudo preparar la imagen');
     if (blob.size <= 300 * 1024) break;

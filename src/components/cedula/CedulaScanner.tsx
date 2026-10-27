@@ -227,7 +227,7 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
       setAutoProgress(r.progress);
       if (r.fire) { void runAutoCapture(); return; }
       setAutoHint(lastFailedRef.current && r.progress === 0 && motion <= 12 ? 'Retira la cédula y presenta el siguiente documento.' : motion > 12 ? 'Mantén la cédula quieta…' : 'Enfocando la cédula…');
-    }, 300);
+    }, 200);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoMode, isActive, isCameraActive, capturedImage]);
