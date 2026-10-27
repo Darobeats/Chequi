@@ -39,6 +39,7 @@ const convertDateToISO = (dateStr: string | null | undefined): string | undefine
 export default function CedulaRegistro() {
   const navigate = useNavigate();
   const { user } = useSupabaseAuth();
+  const { isScanner } = useUserRole();
   const { selectedEvent } = useEventContext();
   const { data: whitelistConfig } = useEventWhitelistConfig();
   const [pendingScan, setPendingScan] = useState<CedulaData | null>(null);
@@ -180,12 +181,14 @@ export default function CedulaRegistro() {
               </div>
             </Card>
 
-            <Card className="p-4 flex items-center justify-center">
-              <CedulaExportButton 
-                registros={registros}
-                eventName={selectedEvent?.event_name || 'Evento'}
-              />
-            </Card>
+            {!isScanner && (
+              <Card className="p-4 flex items-center justify-center">
+                <CedulaExportButton 
+                  registros={registros}
+                  eventName={selectedEvent?.event_name || 'Evento'}
+                />
+              </Card>
+            )}
           </div>
         )}
 

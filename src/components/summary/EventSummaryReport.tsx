@@ -46,6 +46,7 @@ const EventSummaryReport: React.FC = () => {
   const { selectedEvent } = useEventContext();
   const { data, isLoading, error } = useEventSummary(selectedEvent?.id);
   const { toast } = useToast();
+  const { isScanner } = useUserRole();
   const [exporting, setExporting] = React.useState(false);
 
   const handleExport = async () => {
@@ -133,9 +134,11 @@ const EventSummaryReport: React.FC = () => {
               <span>Generado {new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })} (Bogotá)</span>
             </p>
           </div>
-          <Button onClick={handleExport} disabled={exporting} className="bg-dorado text-empresarial hover:bg-dorado/90 font-semibold">
-            {exporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generando…</> : <><Download className="h-4 w-4 mr-2" />Exportar Resumen (Excel)</>}
-          </Button>
+          {!isScanner && (
+            <Button onClick={handleExport} disabled={exporting} className="bg-dorado text-empresarial hover:bg-dorado/90 font-semibold">
+              {exporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generando…</> : <><Download className="h-4 w-4 mr-2" />Exportar Resumen (Excel)</>}
+            </Button>
+          )}
         </div>
       </Card>
 

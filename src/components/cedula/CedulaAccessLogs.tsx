@@ -19,6 +19,7 @@ interface CedulaAccessLogsProps {
 
 export function CedulaAccessLogs({ eventId }: CedulaAccessLogsProps) {
   const { data: logs = [], isLoading } = useCedulaAccessLogs(eventId);
+  const { isScanner } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
   
   // Solo mostrar rechazados
@@ -97,15 +98,17 @@ export function CedulaAccessLogs({ eventId }: CedulaAccessLogsProps) {
               />
             </div>
             
-            <Button 
-              variant="outline" 
-              onClick={handleExport}
-              disabled={deniedLogs.length === 0}
-              className="border-gray-700"
-            >
-              <FileDown className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
+            {!isScanner && (
+              <Button 
+                variant="outline" 
+                onClick={handleExport}
+                disabled={deniedLogs.length === 0}
+                className="border-gray-700"
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>

@@ -178,14 +178,16 @@ export function CedulaDashboardMonitor() {
               {selectedEvent?.id && (
                 <CedulaManualRegistro eventId={selectedEvent.id} />
               )}
-              <CedulaExportButton 
-                registros={filteredRegistros} 
-                eventName={selectedEvent?.event_name || 'Evento'}
-                autorizadas={autorizadas}
-                accessLogs={accessLogs as CedulaAccessLog[]}
-                controlUsage={controlUsage}
-                controlTypes={controlTypes}
-              />
+              {!isScanner && (
+                <CedulaExportButton 
+                  registros={filteredRegistros} 
+                  eventName={selectedEvent?.event_name || 'Evento'}
+                  autorizadas={autorizadas}
+                  accessLogs={accessLogs as CedulaAccessLog[]}
+                  controlUsage={controlUsage}
+                  controlTypes={controlTypes}
+                />
+              )}
               
               {isAdmin && registros.length > 0 && selectedEvent?.id && (
                 <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
