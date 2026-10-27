@@ -21,6 +21,12 @@
 ## 4. Barra de patrocinadores en móvil
 - Mismo alto; en pantallas pequeñas: texto "Patrocinadores" más corto/oculto, logos más pequeños que se desplazan solos si no caben, y "Powered by DarocodeIA" en letra menor, todo dentro de la barra sin cortes.
 
+## 5. Contadores al borrar registros
+- Al borrar asistentes o cédulas, todos los contadores vuelven a cero (sin números negativos en "Sin registros").
+- Los contadores se calculan desde los registros actuales, no desde historiales viejos que quedaron sin su asistente.
+- Los ingresos ("Acceso") solo suman en "Cédulas escaneadas"; "Consumos registrados" cuenta únicamente controles de consumo (comida, bebida, etc.).
+- Revisar en la base de datos qué datos quedan tras borrar y limpiar los huérfanos.
+
 ## Detalles técnicos
 - `CedulaScanner.tsx` / `frameQuality.ts`: parámetros de kiosko (stableFrames menor, timeout ~1.5 s), `cedulaImage.ts` maxSize 1024 y calidad única 0.7; `Scanner.tsx` confirmación optimista; revisar modelo en la función `scan-cedula-ai`.
 - `AttendeeManagement.tsx` + hook que une `attendees` y `cedula_registros`/`cedula_control_usage` (paginado con `fetchAllPaginated`).
