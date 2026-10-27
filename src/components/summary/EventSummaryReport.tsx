@@ -10,6 +10,7 @@ import { useEventSummary, type EventSummary } from '@/hooks/useEventSummary';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
+import CedulaSummaryBlock from './CedulaSummaryBlock';
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—';
@@ -142,13 +143,15 @@ const EventSummaryReport: React.FC = () => {
         </div>
       </Card>
 
+      <CedulaSummaryBlock eventId={selectedEvent.id} />
+
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {summary.kpis.total_tickets > 0 && <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Kpi icon={<Ticket className="h-5 w-5" />} label="Tickets emitidos" value={summary.kpis.total_tickets.toLocaleString()} accent="text-primary" />
         <Kpi icon={<Users className="h-5 w-5" />} label="Asistentes únicos" value={summary.kpis.unique_attendees.toLocaleString()} sub={`Tasa ${summary.kpis.attendance_rate}%`} accent="text-emerald-400" />
         <Kpi icon={<Activity className="h-5 w-5" />} label="Total escaneos" value={summary.kpis.total_scans.toLocaleString()} sub={`${summary.kpis.avg_scans_per_attendee} por asistente`} accent="text-blue-400" />
         <Kpi icon={<Clock className="h-5 w-5" />} label="Hora pico" value={summary.kpis.peak_hour} sub={`${summary.kpis.peak_hour_count} escaneos`} accent="text-orange-400" />
-      </div>
+      </div>}
 
       {/* Daily breakdown */}
       <Card className="p-5">

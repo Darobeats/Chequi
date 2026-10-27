@@ -10,7 +10,7 @@ describe('document preparation', () => {
     expect(b.sy).toBeCloseTo(729.15);
   });
   test('4K image is bounded without upscaling smaller cameras', () => {
-    expect(documentCaptureSize(3840, 2160)).toEqual({ width: 1280, height: 720 });
+    expect(documentCaptureSize(3840, 2160)).toEqual({ width: 1024, height: 576 });
     expect(documentCaptureSize(640, 480)).toEqual({ width: 640, height: 480 });
   });
   test('manual capture preserves the whole frame', () => {

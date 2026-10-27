@@ -12,15 +12,15 @@ const SponsorLogosBar: React.FC<SponsorLogosBarProps> = ({ sponsors, showPowered
   if (validSponsors.length === 0 && !showPoweredBy) return null;
 
   return (
-    <div className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 w-auto max-w-[90vw]">
-      <div className="flex items-center gap-5 px-6 py-3 rounded-full border border-primary/30 bg-card/90 backdrop-blur-md shadow-lg shadow-black/30">
+    <div className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 w-auto max-w-[94vw]">
+      <div className="flex items-center gap-2 sm:gap-5 px-3 sm:px-6 py-3 rounded-full overflow-hidden border border-primary/30 bg-card/90 backdrop-blur-md shadow-lg shadow-black/30">
         {validSponsors.length > 0 && (
           <>
-            <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
+            <span className="hidden sm:inline text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
               Patrocinadores
             </span>
-            <div className="w-px h-5 bg-border/60" />
-            <div className="flex items-center gap-5 flex-wrap justify-center">
+            <div className="hidden sm:block w-px h-5 bg-border/60" />
+            <div className="flex items-center gap-3 sm:gap-5 min-w-0 overflow-x-auto no-scrollbar">
               {validSponsors.map((sponsor, i) => {
                 const img = (
                   <img
@@ -28,7 +28,7 @@ const SponsorLogosBar: React.FC<SponsorLogosBarProps> = ({ sponsors, showPowered
                     src={sponsor.url}
                     alt={sponsor.name}
                     title={sponsor.name}
-                    className="h-10 max-w-[120px] object-contain opacity-90 hover:opacity-100 transition-opacity"
+                    className="h-8 sm:h-10 max-w-[90px] sm:max-w-[120px] shrink-0 object-contain opacity-90 hover:opacity-100 transition-opacity"
                   />
                 );
                 return sponsor.link ? (
@@ -45,8 +45,8 @@ const SponsorLogosBar: React.FC<SponsorLogosBarProps> = ({ sponsors, showPowered
         {showPoweredBy && (
           <>
             {validSponsors.length > 0 && <div className="w-px h-5 bg-border/60" />}
-            <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-              Powered by{' '}
+            <span className="text-[9px] sm:text-[11px] leading-tight text-muted-foreground shrink-0 text-center sm:whitespace-nowrap">
+              Powered by<br className="sm:hidden" />{' '}
               <a
                 href="https://darocodeia.com/"
                 target="_blank"

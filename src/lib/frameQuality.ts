@@ -57,8 +57,8 @@ export class AutoCaptureGate {
   constructor(private readonly start: number, opts: AutoCaptureOptions = {}) {
     this.armed = !opts.requireMotion;
     this.armedAt = start;
-    this.warmup = opts.warmupMs ?? 600;
-    this.timeout = opts.timeoutMs ?? 4000;
+    this.warmup = opts.warmupMs ?? 300;
+    this.timeout = opts.timeoutMs ?? 1500;
   }
   push(sharpness: number, motion: number, now: number): GateResult {
     this.smooth = this.smooth * 0.5 + motion * 0.5;
@@ -71,10 +71,10 @@ export class AutoCaptureGate {
     if (!this.armed || now - this.start < this.warmup) return { fire: false, progress: 0 };
     const sharpOk = sharpness >= Math.max(8, this.peak * 0.55);
     if (this.smooth < 8 && sharpOk) this.stable++; else this.stable = 0;
-    if (this.stable >= 3) return { fire: true, reason: 'stable', progress: 1 };
+    if (this.stable >= 2) return { fire: true, reason: 'stable', progress: 1 };
     if (now - this.armedAt >= this.timeout && this.peak >= 15 && this.smooth < 12) {
       return { fire: true, reason: 'timeout', progress: 1 };
     }
-    return { fire: false, progress: Math.min(0.95, this.stable / 3 * 0.7 + (now - this.armedAt) / this.timeout * 0.3) };
+    return { fire: false, progress: Math.min(0.95, this.stable / 2 * 0.7 + (now - this.armedAt) / this.timeout * 0.3) };
   }
 }

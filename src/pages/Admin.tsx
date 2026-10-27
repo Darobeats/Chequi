@@ -6,6 +6,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useEventContext } from '@/context/EventContext';
 import Header from '@/components/Header';
 import AttendeeList from '@/components/AttendeeList';
+import CedulaAttendeeList from '@/components/CedulaAttendeeList';
 import AttendeesManager from '@/components/AttendeesManager';
 import ControlAnalytics from '@/components/ControlAnalytics';
 import ExportButton from '@/components/ExportButton';
@@ -65,10 +66,17 @@ const Admin = () => {
   // Unified totals: combine QR-based attendees with cédula-based whitelist
   const hasCedulaData = cedulasAutorizadas.length > 0 || cedulaControlUsage.length > 0 || (cedulaStats?.total || 0) > 0;
   const totalAttendees = attendees.length + cedulasAutorizadas.length;
-  const totalUsages = controlUsage.length + cedulaControlUsage.length;
-  const qrAttendeesWithUsage = new Set(controlUsage.map(u => u.attendee_id)).size;
-  const cedulaUniqueScanned = new Set(cedulaControlUsage.map(u => u.numero_cedula)).size;
+  const attendeeIds = new Set(attendees.map(a => a.id));
+  const totalUsages = controlUsage.filter(u => attendeeIds.has(u.attendee_id)).length + cedulaControlUsage.length;
+  const qrAttendeesWithUsage = new Set(controlUsage.filter(u => attendeeIds.has(u.attendee_id)).map(u => u.attendee_id)).size;
+  const cedulaUniqueScanned = Math.min(cedulaStats?.total || 0, new Set(cedulaControlUsage.map(u => u.numero_cedula)).size);
   const attendeesWithUsage = qrAttendeesWithUsage + cedulaUniqueScanned;
+  const withoutRecords = Math.max(0, totalAttendees - attendeesWithUsage);
+  const isAccessControl = (id: string) => /ingreso|entrada|acceso|access|entry/i.test(controlTypes.find(c => c.id === id)?.name || '');
+  const consumableItems = (cedulaControlStats?.byControl || []).filter(i => !isAccessControl(i.controlTypeId));
+  const consumablesTotal = consumableItems.reduce((s, i) => s + i.count, 0);
+  const todayKey = new Date().toISOString().split('T')[0];
+  const consumablesToday = cedulaControlUsage.filter((u: any) => !isAccessControl(u.control_type_id) && String(u.used_at).startsWith(todayKey)).length;
   const attendeesWithQR = attendees.filter(a => a.qr_code).length;
 
   // Usage by control type: combine QR + cédula counts per control
@@ -161,7 +169,7 @@ const Admin = () => {
           </div>
           <div className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-gray-800 shadow card-hover">
             <h3 className="text-hueso text-base md:text-lg font-medium mb-1">{t('admin.withoutRecords')}</h3>
-            <p className="text-2xl md:text-3xl font-bold text-dorado">{totalAttendees - attendeesWithUsage}</p>
+            <p className="text-2xl md:text-3xl font-bold text-dorado">{withoutRecords}</p>
           </div>
         </div>
 
@@ -180,10 +188,10 @@ const Admin = () => {
                 <Utensils className="h-4 w-4 text-green-400" />
                 {t('admin.consumablesRegistered')}
               </h3>
-              <p className="text-2xl md:text-3xl font-bold text-green-400">{cedulaControlStats?.total || 0}</p>
-              <p className="text-xs text-hueso/60 mt-1">{t('admin.today')}: {cedulaControlStats?.today || 0}</p>
+              <p className="text-2xl md:text-3xl font-bold text-green-400">{consumablesTotal}</p>
+              <p className="text-xs text-hueso/60 mt-1">{t('admin.today')}: {consumablesToday}</p>
             </div>
-            {(cedulaControlStats?.byControl || []).slice(0, 2).map((item) => {
+            {consumableItems.slice(0, 2).map((item) => {
               const controlType = controlTypes.find(ct => ct.id === item.controlTypeId);
               return (
                 <div key={item.controlTypeId} className="bg-gray-900/50 p-4 md:p-6 rounded-lg border border-blue-800/50 shadow card-hover">
@@ -239,7 +247,14 @@ const Admin = () => {
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="text-xl font-semibold text-dorado">{t('admin.attendeeList')}</h2>
               </div>
-              <AttendeeList />
+              <Tabs defaultValue={attendees.length === 0 && hasCedulaData ? 'cedula' : 'qr'}>
+                <TabsList className="mb-3">
+                  <TabsTrigger value="qr">QR ({attendees.length})</TabsTrigger>
+                  <TabsTrigger value="cedula">Cédula ({cedulaStats?.total || 0})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="qr"><AttendeeList /></TabsContent>
+                <TabsContent value="cedula"><CedulaAttendeeList /></TabsContent>
+              </Tabs>
             </div>
           </TabsContent>
 
