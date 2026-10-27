@@ -46,16 +46,37 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
         if (!granted) return;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'environment' } });
+      }
+
+      // Enfoque y exposición continuos cuando el dispositivo lo soporte
+      const track = stream.getVideoTracks()[0];
+      try {
+        const caps = (track?.getCapabilities?.() ?? {}) as Record<string, unknown>;
+        const advanced: Record<string, unknown> = {};
+        if (Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) advanced.focusMode = 'continuous';
+        if (Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) advanced.exposureMode = 'continuous';
+        if (Object.keys(advanced).length) await track.applyConstraints({ advanced: [advanced as MediaTrackConstraintSet] });
+      } catch { /* no soportado (iOS Safari): se ignora */ }
 
       streamRef.current = stream;
       setIsCameraActive(true);
-      
+
       requestAnimationFrame(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+        const v = videoRef.current;
+        if (v) {
+          v.srcObject = stream;
+          v.setAttribute('playsinline', 'true');
+          v.muted = true;
+          const play = () => v.play().catch(() => {});
+          if (v.readyState >= 1) play(); else v.onloadedmetadata = play;
         }
       });
     } catch (error) {
@@ -76,12 +97,14 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
     if (!videoRef.current || !canvasRef.current) return null;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    if (!video.videoWidth || !video.videoHeight) return null;
+    const scale = Math.min(1, 1600 / Math.max(video.videoWidth, video.videoHeight));
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    ctx.drawImage(video, 0, 0);
-    return canvas.toDataURL('image/jpeg', 0.85);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.8);
   };
 
   const capturePhoto = () => {
