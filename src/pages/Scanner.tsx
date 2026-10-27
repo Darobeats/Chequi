@@ -70,6 +70,8 @@ const Scanner = () => {
   const createControlUsage = useCreateCedulaControlUsage();
   const [activeKioskProfile, setActiveKioskProfile] = useState<KioskProfile | null>(null);
   const [kioskScanCount, setKioskScanCount] = useState(0);
+  const kioskHandledRef = React.useRef<string | null>(null);
+  const [kioskBanner, setKioskBanner] = useState<{ kind: 'ok' | 'denied' | 'dup' | 'error'; title: string; detail?: string } | null>(null);
   const { data: controlTypes = [], isLoading: controlTypesLoading } = useControlTypes();
   
   // Use both hooks - by ID and active event as fallback
@@ -125,24 +127,6 @@ const Scanner = () => {
       requireWhitelist: whitelistConfig?.requireWhitelist,
     });
   }, [selectedEvent, userEvents, isLoadingEvents, controlTypes, controlTypesLoading, whitelistConfig]);
-
-  // URGENT FIX: Show loading while event is not ready
-  if (isLoadingEvents || !selectedEvent) {
-    return (
-      <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation">
-        <Header title={t('scanner.title')} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-4 p-6">
-            <div className="animate-spin h-10 w-10 border-4 border-dorado border-t-transparent rounded-full mx-auto" />
-            <p className="text-hueso text-lg font-medium">{t('scanner.loadingEvent')}</p>
-            <p className="text-gray-400 text-sm">
-              {isLoadingEvents ? t('scanner.fetchingEvents') : t('scanner.selectingEvent')}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const handleCedulaScanSuccess = async (data: CedulaData) => {
     // Reset states
@@ -237,7 +221,7 @@ const Scanner = () => {
 
   // Save authorized cedula with full control usage
   const handleConfirmCedulaScan = async () => {
-    if (!pendingScan || !selectedEvent?.id || isUnauthorized) return;
+    if (!pendingScan || !selectedEvent?.id || isUnauthorized) return false;
 
     try {
       const registro: InsertCedulaRegistro = {
@@ -295,7 +279,7 @@ const Scanner = () => {
         setIsDuplicate(false);
         setAutorizadaData(null);
         setControlLimitInfo(null);
-        return;
+        return true;
       }
 
       await createCedulaMutation.mutateAsync(registroWithWhitelist as InsertCedulaRegistro);
@@ -328,6 +312,7 @@ const Scanner = () => {
       setIsDuplicate(false);
       setAutorizadaData(null);
       setControlLimitInfo(null);
+      return true;
     } catch (error) {
       console.error('[Scanner] Error saving:', error);
       const err = error as any;
@@ -341,6 +326,7 @@ const Scanner = () => {
         scanFeedback.warning();
         toast.error(t('scanner.errorSaving'));
       }
+      return false;
     }
   };
 
@@ -386,8 +372,17 @@ const Scanner = () => {
   };
 
   // Kiosko de documentos: confirmar automáticamente o descartar tras mostrar el resultado
-  const kioskHandledRef = React.useRef<string | null>(null);
-  const [kioskBanner, setKioskBanner] = useState<{ kind: 'ok' | 'denied' | 'dup'; title: string; detail?: string } | null>(null);
+  const confirmKioskScan = async () => {
+    const scan = pendingScan;
+    const mesa = autorizadaData?.mesa ? `Mesa ${autorizadaData.mesa}` : undefined;
+    const saved = await handleConfirmCedulaScan();
+    if (saved && scan) {
+      setKioskScanCount(c => c + 1);
+      setKioskBanner({ kind: 'ok', title: scan.nombreCompleto || scan.numeroCedula, detail: mesa ?? 'Acceso registrado' });
+    } else {
+      setKioskBanner({ kind: 'error', title: 'No se completó el registro', detail: 'Revisa el registro antes de continuar.' });
+    }
+  };
   useEffect(() => {
     if (!activeKioskProfile || !pendingScan) { kioskHandledRef.current = null; return; }
     const key = `${pendingScan.numeroCedula}-${Date.now()}`;
@@ -396,11 +391,7 @@ const Scanner = () => {
     const mesa = autorizadaData?.mesa ? `Mesa ${autorizadaData.mesa}` : undefined;
     let timer: number | undefined;
     if (!isUnauthorized && !isDuplicate) {
-      setKioskBanner({ kind: 'ok', title: pendingScan.nombreCompleto || pendingScan.numeroCedula, detail: mesa ?? 'Acceso permitido' });
-      handleConfirmCedulaScan().finally(() => {
-        setKioskScanCount((c) => c + 1);
-        timer = window.setTimeout(() => { handleCancelCedulaScan(); }, 300);
-      });
+      void confirmKioskScan();
     } else {
       setKioskBanner({
         kind: isDuplicate ? 'dup' : 'denied',
@@ -413,7 +404,7 @@ const Scanner = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeKioskProfile, pendingScan]);
   useEffect(() => {
-    if (!kioskBanner) return;
+    if (!kioskBanner || kioskBanner.kind === 'error') return;
     const t = window.setTimeout(() => setKioskBanner(null), 6000);
     return () => window.clearTimeout(t);
   }, [kioskBanner]);
@@ -590,6 +581,18 @@ const Scanner = () => {
   const backgroundUrl = (selectedEvent as any)?.background_url;
   const backgroundOpacity = (selectedEvent as any)?.background_opacity ?? 0.15;
 
+  // Keep hook order stable while event data loads.
+  if (isLoadingEvents || !selectedEvent) {
+    return (
+      <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation">
+        <Header title={t('scanner.title')} />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-hueso text-lg font-medium">{t('scanner.loadingEvent')}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-empresarial flex flex-col touch-manipulation relative">
       {/* Event background */}
@@ -765,10 +768,15 @@ const Scanner = () => {
                     </p>
                     {kioskBanner.kind === 'ok' && <p className="text-hueso font-semibold mt-1 truncate">{kioskBanner.title}</p>}
                     {kioskBanner.detail && <p className="text-hueso text-lg mt-1">{kioskBanner.detail}</p>}
+                    {kioskBanner.kind === 'error' && (
+                      <Button variant="outline" className="mt-3" onClick={() => { handleCancelCedulaScan(); setKioskBanner(null); }}>
+                        Continuar con otro documento
+                      </Button>
+                    )}
                   </div>
                 )}
 
-                {pendingScan && activeKioskProfile ? null : pendingScan ? (
+                {pendingScan && !activeKioskProfile ? (
                   <CedulaScanResult
                     data={pendingScan}
                     onConfirm={handleConfirmCedulaScan}

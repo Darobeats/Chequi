@@ -1,4 +1,6 @@
 # Roadmap
+- [x] Comprimir imágenes de cédula y verificar cuatro ciclos consecutivos del kiosko con cámara/IA simuladas; cinco pruebas automatizadas aprobadas.
+- [ ] Validar kiosko de cédulas en iPhone XR/15 Pro Max y persistencia real — requiere cámaras físicas y sesión; autenticación externa no disponible en el entorno de pruebas.
 - [x] Subida de logos de patrocinadores (permisos storage)
 - [x] Eliminar eventos (super admin, cascada)
 - [x] Logos de aliados en pantalla de ingreso

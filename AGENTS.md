@@ -1,3 +1,4 @@
 - Event images live in the event-assets bucket under '<event_id>/...' (login partner logos under 'login-partners/'); storage RLS derives event access from that first folder.
 - Events are deleted only through the delete_event_cascade RPC (super admin, inactive events) because attendees restrict deletes on categories.
 - AI credit balance is an estimate kept in ai_credit_ledger (manual set_balance/topup + usage rows written by scan-cedula-ai); the app cannot read Lovable billing.
+- Document capture uses cedulaImage geometry and asynchronous JPEG encoding; kiosk scanners stay mounted with live media while validation pauses capture, avoiding repeated iOS camera acquisition.

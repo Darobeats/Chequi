@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { CedulaData } from '@/types/cedula';
@@ -19,14 +19,20 @@ interface CedulaAIResponse {
 export const useCedulaAI = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiUnavailable, setAiUnavailable] = useState(false);
+  const busyRef = useRef(false);
 
   const analyzeCedula = async (imageBase64: string): Promise<CedulaData | null> => {
+    if (busyRef.current) return null;
+    busyRef.current = true;
     setIsAnalyzing(true);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 45000);
     try {
       console.log('Enviando imagen a IA para análisis...');
       
       const { data, error } = await supabase.functions.invoke<CedulaAIResponse>('scan-cedula-ai', {
-        body: { image: imageBase64 }
+        body: { image: imageBase64 },
+        signal: controller.signal,
       });
 
       if (error) {
@@ -81,6 +87,8 @@ export const useCedulaAI = () => {
       toast.error(error instanceof Error ? error.message : 'Error al analizar la cédula');
       return null;
     } finally {
+      window.clearTimeout(timeout);
+      busyRef.current = false;
       setIsAnalyzing(false);
     }
   };
