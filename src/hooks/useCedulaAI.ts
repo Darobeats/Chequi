@@ -28,12 +28,14 @@ export const useCedulaAI = () => {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 45000);
     try {
-      console.log('Enviando imagen a IA para análisis...');
-      
+      const t0 = performance.now();
+      console.info(`[cedula-ai] enviando ${Math.round(imageBase64.length * 0.75 / 1024)}KB`);
+
       const { data, error } = await supabase.functions.invoke<CedulaAIResponse>('scan-cedula-ai', {
         body: { image: imageBase64 },
         signal: controller.signal,
       });
+      console.info(`[cedula-ai] respuesta ${Math.round(performance.now() - t0)}ms`);
 
       if (error) {
         console.error('Error invocando función:', error);
