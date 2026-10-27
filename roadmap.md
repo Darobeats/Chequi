@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Comprimir imágenes de cédula antes de IA y verificar ciclos consecutivos del kiosko.
 - [x] Subida de logos de patrocinadores (permisos storage)
 - [x] Eliminar eventos (super admin, cascada)
 - [x] Logos de aliados en pantalla de ingreso
