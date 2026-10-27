@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { analyzeFrame, AutoCaptureGate } from '@/lib/frameQuality';
+import { documentCaptureBounds, documentCaptureSize, encodeDocumentImage } from '@/lib/cedulaImage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Camera, CameraOff, AlertCircle, Loader2, IdCard, RotateCcw } from 'lucide-react';
@@ -10,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import type { CedulaData } from '@/types/cedula';
 
 interface CedulaScannerProps {
-  onScanSuccess: (data: CedulaData) => void;
+  onScanSuccess: (data: CedulaData) => void | Promise<void>;
   isActive: boolean;
   /** Modo kiosko: captura y analiza automáticamente cuando la cédula está quieta y nítida */
   autoMode?: boolean;
@@ -38,10 +39,17 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
   const [autoProgress, setAutoProgress] = useState(0);
   const autoBusyRef = useRef(false);
   const lastFailedRef = useRef(false);
+  const startingRef = useRef(false);
+  const mountedRef = useRef(true);
+  const previousFrameRef = useRef<Uint8ClampedArray | null>(null);
+  const activeRef = useRef(isActive);
+  activeRef.current = isActive;
   const onScanRef = useRef(onScanSuccess);
   onScanRef.current = onScanSuccess;
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
+    if (startingRef.current || streamRef.current?.active) return;
+    startingRef.current = true;
     try {
       if (permissionStatus !== 'granted') {
         const granted = await requestCameraPermission();
@@ -57,6 +65,10 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
       } catch {
         stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: 'environment' } });
       }
+      if (!mountedRef.current || !activeRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
 
       // Enfoque y exposición continuos cuando el dispositivo lo soporte
       const track = stream.getVideoTracks()[0];
@@ -65,7 +77,7 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
         const advanced: Record<string, unknown> = {};
         if (Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) advanced.focusMode = 'continuous';
         if (Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) advanced.exposureMode = 'continuous';
-        if (Object.keys(advanced).length) await track.applyConstraints({ advanced: [advanced as MediaTrackConstraintSet] });
+        if (track && Object.keys(advanced).length) await track.applyConstraints({ advanced: [advanced as MediaTrackConstraintSet] });
       } catch { /* no soportado (iOS Safari): se ignora */ }
 
       streamRef.current = stream;
@@ -73,7 +85,7 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
 
       requestAnimationFrame(() => {
         const v = videoRef.current;
-        if (v) {
+        if (v && mountedRef.current && streamRef.current === stream) {
           v.srcObject = stream;
           v.setAttribute('playsinline', 'true');
           v.muted = true;
@@ -83,8 +95,10 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
       });
     } catch (error) {
       console.error('Error al iniciar cámara:', error);
+    } finally {
+      startingRef.current = false;
     }
-  };
+  }, [permissionStatus, requestCameraPermission]);
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -95,31 +109,37 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
     setIsCameraActive(false);
   };
 
-  const captureFrame = (): string | null => {
+  const captureFrame = async (): Promise<string | null> => {
     if (!videoRef.current || !canvasRef.current) return null;
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video.videoWidth || !video.videoHeight) return null;
-    const scale = Math.min(1, 1600 / Math.max(video.videoWidth, video.videoHeight));
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = Math.round(video.videoHeight * scale);
+    const bounds = documentCaptureBounds(video.videoWidth, video.videoHeight, video.clientWidth, video.clientHeight, autoMode);
+    const size = documentCaptureSize(bounds.sw, bounds.sh);
+    canvas.width = size.width;
+    canvas.height = size.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.8);
+    ctx.drawImage(video, bounds.sx, bounds.sy, bounds.sw, bounds.sh, 0, 0, canvas.width, canvas.height);
+    return encodeDocumentImage(canvas);
   };
 
-  const capturePhoto = () => {
-    const imageData = captureFrame();
-    if (!imageData) return;
-    setCapturedImage(imageData);
-    stopCamera();
+  const capturePhoto = async () => {
+    if (autoBusyRef.current) return;
+    autoBusyRef.current = true;
+    try {
+      const imageData = await captureFrame();
+      if (!imageData || !mountedRef.current) return;
+      setCapturedImage(imageData);
+      stopCamera();
+    } catch { setAutoHint('No se pudo capturar. Intenta de nuevo.'); }
+    finally { autoBusyRef.current = false; }
   };
 
   const handleAnalyze = async () => {
     if (!capturedImage) return;
     const result = await analyzeCedula(capturedImage);
-    if (result) onScanSuccess(result);
+    if (result) await onScanSuccess(result);
   };
 
   const handleRetry = () => {
@@ -127,33 +147,59 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
     startCamera();
   };
 
-  // Arranque automático de cámara en modo kiosko
   useEffect(() => {
-    if (autoMode && isActive && !isCameraActive && !capturedImage && permissionStatus !== 'denied') {
-      startCamera();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoMode, isActive, capturedImage]);
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; stopCamera(); };
+  }, []);
 
-  useEffect(() => () => stopCamera(), []); // liberar cámara al desmontar
+  // Reactivar captura sin cerrar el stream durante validación/guardado del kiosko.
+  useEffect(() => {
+    if (autoMode && isActive && hasCamera && !isCameraActive && permissionStatus !== 'denied') {
+      void startCamera();
+    }
+    if (!autoMode && !isActive) stopCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMode, isActive, hasCamera, isCameraActive, permissionStatus, startCamera]);
+
+  useEffect(() => {
+    const resume = () => {
+      if (document.hidden || !autoMode) return;
+      const stream = streamRef.current;
+      if (stream?.active && stream.getVideoTracks().some(track => track.readyState === 'live')) {
+        void videoRef.current?.play().catch(() => {});
+      } else {
+        streamRef.current = null;
+        setIsCameraActive(false);
+      }
+    };
+    document.addEventListener('visibilitychange', resume);
+    return () => document.removeEventListener('visibilitychange', resume);
+  }, [autoMode]);
 
   const runAutoCapture = async () => {
-    if (autoBusyRef.current) return;
+    if (autoBusyRef.current || !activeRef.current) return;
     autoBusyRef.current = true;
     setAutoHint('Leyendo documento…');
-    const img = captureFrame();
-    if (!img) { autoBusyRef.current = false; return; }
-    setCapturedImage(img);
-    stopCamera();
-    const result = await analyzeCedula(img);
-    autoBusyRef.current = false;
-    if (result && /^\d{5,12}$/.test(String(result.numeroCedula ?? '').replace(/\D/g, ''))) {
-      lastFailedRef.current = false;
-      onScanRef.current(result);
-    } else {
+    try {
+      const img = await captureFrame();
+      if (!img || !mountedRef.current) return;
+      setCapturedImage(img);
+      const result = await analyzeCedula(img);
+      if (!mountedRef.current) return;
+      // Both success and error require a new document, not another photo of the same one.
       lastFailedRef.current = true;
-      setAutoHint('No se pudo leer. Retira y vuelve a acercar la cédula.');
-      setCapturedImage(null);
+      if (result && /^\d{5,12}$/.test(String(result.numeroCedula ?? '').replace(/\D/g, ''))) {
+        await onScanRef.current(result);
+        setAutoHint('Retira la cédula y presenta el siguiente documento.');
+      } else {
+        setAutoHint('No se pudo leer. Retira y vuelve a acercar la cédula.');
+      }
+    } catch {
+      lastFailedRef.current = true;
+      setAutoHint('No se completó la lectura. Intenta de nuevo.');
+    } finally {
+      autoBusyRef.current = false;
+      if (mountedRef.current) setCapturedImage(null);
     }
   };
 
@@ -162,25 +208,25 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
     if (!autoMode || !isActive || !isCameraActive || capturedImage) return;
     const small = document.createElement('canvas');
     const ctx = small.getContext('2d', { willReadFrequently: true });
-    let prev: Uint8ClampedArray | null = null;
+    let prev = previousFrameRef.current;
     const gate = new AutoCaptureGate(Date.now(), { requireMotion: lastFailedRef.current });
     setAutoProgress(0);
     const id = window.setInterval(() => {
       const v = videoRef.current;
       if (!v || !ctx || v.readyState < 2 || !v.videoWidth || autoBusyRef.current) return;
       // Región central (coincide con la guía), sin deformar la proporción real
-      const sx = v.videoWidth * 0.12, sy = v.videoHeight * 0.12;
-      const sw = v.videoWidth * 0.76, sh = v.videoHeight * 0.76;
+      const { sx, sy, sw, sh } = documentCaptureBounds(v.videoWidth, v.videoHeight, v.clientWidth, v.clientHeight, true);
       const w = 160, h = Math.max(40, Math.round(160 * sh / sw));
-      if (small.width !== w || small.height !== h) { small.width = w; small.height = h; prev = null; }
+      if (small.width !== w || small.height !== h) { small.width = w; small.height = h; if (prev?.length !== w * h * 4) prev = null; }
       ctx.drawImage(v, sx, sy, sw, sh, 0, 0, w, h);
       const frame = ctx.getImageData(0, 0, w, h).data;
       const { sharpness, motion } = analyzeFrame(frame, prev, w, h);
       prev = frame;
+      previousFrameRef.current = frame;
       const r = gate.push(sharpness, motion, Date.now());
       setAutoProgress(r.progress);
       if (r.fire) { void runAutoCapture(); return; }
-      setAutoHint(motion > 12 ? 'Mantén la cédula quieta…' : 'Enfocando la cédula…');
+      setAutoHint(lastFailedRef.current && r.progress === 0 && motion <= 12 ? 'Retira la cédula y presenta el siguiente documento.' : motion > 12 ? 'Mantén la cédula quieta…' : 'Enfocando la cédula…');
     }, 300);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -221,10 +267,10 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
             autoPlay
             playsInline
             muted
-            className={`w-full h-full object-cover ${(!isCameraActive || capturedImage) ? 'hidden' : ''}`}
+            className={`w-full h-full object-cover ${(!isCameraActive || (capturedImage && !autoMode)) ? 'hidden' : ''}`}
           />
 
-          {capturedImage && (
+          {capturedImage && !autoMode && (
             <img src={capturedImage} alt="Cédula capturada" className="w-full h-full object-contain" />
           )}
 
@@ -235,7 +281,7 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
               {isCameraActive && <div className="absolute inset-[12%] rounded-xl border-2 border-dorado/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />}
               <span className="relative z-10 rounded-full bg-black/70 px-4 py-1.5 text-sm font-semibold text-hueso flex items-center gap-2">
                 {(isAnalyzing || capturedImage) && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isAnalyzing || capturedImage ? 'Leyendo documento…' : autoHint}
+                {isAnalyzing || capturedImage ? 'Leyendo documento…' : !isActive ? 'Validando documento…' : autoHint}
               </span>
               {isCameraActive && !capturedImage && (
                 <div className="relative z-10 mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-black/50">
@@ -271,7 +317,7 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
           )}
 
           {isCameraActive && !capturedImage && autoMode && (
-            <Button onClick={() => void runAutoCapture()} disabled={isAnalyzing} variant="outline" className="w-full" size="lg">
+            <Button onClick={() => void runAutoCapture()} disabled={isAnalyzing || !isActive} variant="outline" className="w-full" size="lg">
               <Camera className="h-4 w-4 mr-2" />Capturar ahora
             </Button>
           )}
