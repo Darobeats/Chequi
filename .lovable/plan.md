@@ -34,6 +34,13 @@ Revisión pantalla por pantalla a 360, 390 y 430 px de ancho: Ingreso, Scanner (
 - Pausa entre capturas para no leer dos veces la misma cédula ni gastar créditos de IA de más.
 - Sin conexión: guarda en la cola local como hoy.
 
+## 7. Contador de créditos para super admin
+- Limitación importante: Lovable no permite que la app consulte el saldo real de créditos de tu cuenta; solo se puede ver aquí en el chat o en Facturación.
+- Solución: el super admin registra el saldo cuando recarga (ej. "100 créditos"), y la app descuenta en tiempo real el costo estimado de cada lectura de cédula con IA.
+- Indicador visible en el encabezado: "Créditos estimados: 72".
+- Alerta amarilla bajo 50 y roja bajo 10, con botón para ir a recargar; aviso también en el Scanner para el super admin.
+- Si la IA responde "sin créditos", la alerta pasa a roja de inmediato y el escáner sigue en Registro Manual (como hoy).
+
 ## Notas
 - La lectura automática consume créditos de IA por cada intento; la cuenta debe tener saldo.
 - No se cambia el contenido de los QR ya distribuidos.
@@ -44,4 +51,5 @@ Revisión pantalla por pantalla a 360, 390 y 430 px de ancho: Ingreso, Scanner (
 - Tabla `login_partner_logos` (name, logo_url, link_url, kind, sort_order, is_visible) con GRANT SELECT a anon, escritura solo super admin; componente en `Auth.tsx`.
 - `EventSelector`/`Scanner.tsx`: filtrar `is_active`, auto-seleccionar si hay uno.
 - Kiosko cédula: bucle de captura con detección de nitidez/estabilidad (varianza del Laplaciano sobre canvas), cooldown, llamada a `scan-cedula-ai`, auto-confirmación con umbral; reutiliza cola offline.
+- Créditos: tabla `ai_credit_ledger` (recargas manuales + consumo por llamada registrado desde `scan-cedula-ai` con tokens reales de la respuesta), vista de saldo, solo super admin; Realtime en el contador; 402 marca saldo agotado.
 - Verificación con Playwright en viewports móviles.
