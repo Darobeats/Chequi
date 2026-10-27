@@ -237,6 +237,11 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
                 {(isAnalyzing || capturedImage) && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isAnalyzing || capturedImage ? 'Leyendo documento…' : autoHint}
               </span>
+              {isCameraActive && !capturedImage && (
+                <div className="relative z-10 mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-black/50">
+                  <div className="h-full bg-dorado transition-all duration-300" style={{ width: `${Math.round(autoProgress * 100)}%` }} />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -262,6 +267,12 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
               ) : (
                 <><Camera className="h-4 w-4 mr-2" />{needsPermission ? t('cedulaScanner.allowCamera') : t('cedulaScanner.startCamera')}</>
               )}
+            </Button>
+          )}
+
+          {isCameraActive && !capturedImage && autoMode && (
+            <Button onClick={() => void runAutoCapture()} disabled={isAnalyzing} variant="outline" className="w-full" size="lg">
+              <Camera className="h-4 w-4 mr-2" />Capturar ahora
             </Button>
           )}
 
