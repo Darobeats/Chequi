@@ -115,21 +115,21 @@ const Admin = () => {
       
       <Header title={t('admin.title')} />
       
-      <div className="container mx-auto px-4 py-8 relative z-10">
+      <div className={`container mx-auto px-3 sm:px-4 py-4 sm:py-8 relative z-10 ${sponsorLogos.length > 0 ? 'pb-28' : ''}`}>
         {welcomeMessage && (
           <div className="mb-4 p-3 rounded-lg border border-primary/30 bg-primary/5">
             <p className="text-foreground text-sm">{welcomeMessage}</p>
           </div>
         )}
 
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-primary">{t('admin.controlPanel')}</h1>
+        <div className="mb-4 sm:mb-8 flex items-center justify-between gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-primary truncate">{t('admin.controlPanel')}</h1>
           {isAdmin && (
             <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2 h-10 flex-shrink-0">
                   <ClipboardCheck className="h-4 w-4" />
-                  {t('admin.preEventCheck')}
+                  <span className="hidden sm:inline">{t('admin.preEventCheck')}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
@@ -235,7 +235,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="attendees" className="space-y-6">
-            <div className="bg-gray-900/50 p-6 rounded-lg border border-gray-800 shadow">
+            <div className="bg-gray-900/50 p-3 sm:p-6 rounded-lg border border-gray-800 shadow">
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="text-xl font-semibold text-dorado">{t('admin.attendeeList')}</h2>
               </div>
