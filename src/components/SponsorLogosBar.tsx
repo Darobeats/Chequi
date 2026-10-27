@@ -46,7 +46,15 @@ const SponsorLogosBar: React.FC<SponsorLogosBarProps> = ({ sponsors, showPowered
           <>
             {validSponsors.length > 0 && <div className="w-px h-5 bg-border/60" />}
             <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-              Powered by <span className="text-primary font-semibold">Chequi</span>
+              Powered by{' '}
+              <a
+                href="https://darocodeia.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary font-semibold hover:underline"
+              >
+                DarocodeIA
+              </a>
             </span>
           </>
         )}
