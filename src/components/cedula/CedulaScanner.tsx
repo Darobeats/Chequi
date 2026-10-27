@@ -36,6 +36,8 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
   const { analyzeCedula, isAnalyzing } = useCedulaAI();
   const [autoHint, setAutoHint] = useState<string>('Acerca la cédula al recuadro');
   const autoBusyRef = useRef(false);
+  const onScanRef = useRef(onScanSuccess);
+  onScanRef.current = onScanSuccess;
 
   const startCamera = async () => {
     try {
@@ -141,7 +143,7 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
         const result = await analyzeCedula(img);
         autoBusyRef.current = false;
         if (result && /^\d{5,12}$/.test(String(result.numeroCedula ?? '').replace(/\D/g, ''))) {
-          onScanSuccess(result);
+          onScanRef.current(result);
         } else {
           setAutoHint('No se pudo leer. Vuelve a acercar la cédula.');
           setCapturedImage(null);
