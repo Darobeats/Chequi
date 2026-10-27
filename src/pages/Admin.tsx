@@ -247,7 +247,10 @@ const Admin = () => {
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="text-xl font-semibold text-dorado">{t('admin.attendeeList')}</h2>
               </div>
-              <Tabs defaultValue={attendees.length === 0 && hasCedulaData ? 'cedula' : 'qr'}>
+              <Tabs
+                key={attendees.length === 0 && hasCedulaData ? 'cedula' : 'qr'}
+                defaultValue={attendees.length === 0 && hasCedulaData ? 'cedula' : 'qr'}
+              >
                 <TabsList className="mb-3">
                   <TabsTrigger value="qr">QR ({attendees.length})</TabsTrigger>
                   <TabsTrigger value="cedula">Cédula ({cedulaStats?.total || 0})</TabsTrigger>
