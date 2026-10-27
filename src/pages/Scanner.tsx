@@ -375,10 +375,12 @@ const Scanner = () => {
   const confirmKioskScan = async () => {
     const scan = pendingScan;
     const mesa = autorizadaData?.mesa ? `Mesa ${autorizadaData.mesa}` : undefined;
+    if (scan) setKioskBanner({ kind: 'ok', title: scan.nombreCompleto || scan.numeroCedula, detail: mesa ?? 'Acceso registrado' });
+    const t0 = performance.now();
     const saved = await handleConfirmCedulaScan();
+    console.info(`[kiosk] guardado ${Math.round(performance.now() - t0)}ms`);
     if (saved && scan) {
       setKioskScanCount(c => c + 1);
-      setKioskBanner({ kind: 'ok', title: scan.nombreCompleto || scan.numeroCedula, detail: mesa ?? 'Acceso registrado' });
     } else {
       setKioskBanner({ kind: 'error', title: 'No se completó el registro', detail: 'Revisa el registro antes de continuar.' });
     }
