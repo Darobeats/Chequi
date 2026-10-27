@@ -63,7 +63,7 @@ const LanguagePrompt: React.FC = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-300">
+    <div className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 sm:left-auto z-[9999] sm:max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-300">
       <div className="bg-gray-900 border border-dorado/30 rounded-lg shadow-2xl shadow-dorado/10 p-4 md:p-5">
         {/* Close button */}
         <button

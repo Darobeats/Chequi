@@ -12,7 +12,7 @@ const SponsorLogosBar: React.FC<SponsorLogosBarProps> = ({ sponsors, showPowered
   if (validSponsors.length === 0 && !showPoweredBy) return null;
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-auto max-w-[90vw]">
+    <div className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 w-auto max-w-[90vw]">
       <div className="flex items-center gap-5 px-6 py-3 rounded-full border border-primary/30 bg-card/90 backdrop-blur-md shadow-lg shadow-black/30">
         {validSponsors.length > 0 && (
           <>
