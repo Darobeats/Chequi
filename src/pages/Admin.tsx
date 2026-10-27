@@ -65,8 +65,8 @@ const Admin = () => {
   // Unified totals: combine QR-based attendees with cédula-based whitelist
   const hasCedulaData = cedulasAutorizadas.length > 0 || cedulaControlUsage.length > 0 || (cedulaStats?.total || 0) > 0;
   const totalAttendees = attendees.length + cedulasAutorizadas.length;
-  const totalUsages = controlUsage.length + cedulaControlUsage.length;
   const attendeeIds = new Set(attendees.map(a => a.id));
+  const totalUsages = controlUsage.filter(u => attendeeIds.has(u.attendee_id)).length + cedulaControlUsage.length;
   const qrAttendeesWithUsage = new Set(controlUsage.filter(u => attendeeIds.has(u.attendee_id)).map(u => u.attendee_id)).size;
   const cedulaUniqueScanned = Math.min(cedulaStats?.total || 0, new Set(cedulaControlUsage.map(u => u.numero_cedula)).size);
   const attendeesWithUsage = qrAttendeesWithUsage + cedulaUniqueScanned;
