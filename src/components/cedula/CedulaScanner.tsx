@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { analyzeFrame } from '@/lib/frameQuality';
+import { analyzeFrame, AutoCaptureGate } from '@/lib/frameQuality';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Camera, CameraOff, AlertCircle, Loader2, IdCard, RotateCcw } from 'lucide-react';
@@ -35,7 +35,9 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
 
   const { analyzeCedula, isAnalyzing } = useCedulaAI();
   const [autoHint, setAutoHint] = useState<string>('Acerca la cédula al recuadro');
+  const [autoProgress, setAutoProgress] = useState(0);
   const autoBusyRef = useRef(false);
+  const lastFailedRef = useRef(false);
   const onScanRef = useRef(onScanSuccess);
   onScanRef.current = onScanSuccess;
 
@@ -135,44 +137,51 @@ export const CedulaScanner = ({ onScanSuccess, isActive, autoMode = false }: Ced
 
   useEffect(() => () => stopCamera(), []); // liberar cámara al desmontar
 
-  // Bucle de detección: espera movimiento (nuevo documento), luego estabilidad + nitidez
+  const runAutoCapture = async () => {
+    if (autoBusyRef.current) return;
+    autoBusyRef.current = true;
+    setAutoHint('Leyendo documento…');
+    const img = captureFrame();
+    if (!img) { autoBusyRef.current = false; return; }
+    setCapturedImage(img);
+    stopCamera();
+    const result = await analyzeCedula(img);
+    autoBusyRef.current = false;
+    if (result && /^\d{5,12}$/.test(String(result.numeroCedula ?? '').replace(/\D/g, ''))) {
+      lastFailedRef.current = false;
+      onScanRef.current(result);
+    } else {
+      lastFailedRef.current = true;
+      setAutoHint('No se pudo leer. Retira y vuelve a acercar la cédula.');
+      setCapturedImage(null);
+    }
+  };
+
+  // Bucle de detección: estabilidad + nitidez relativa (sin exigir movimiento previo), con respaldo por tiempo
   useEffect(() => {
     if (!autoMode || !isActive || !isCameraActive || capturedImage) return;
     const small = document.createElement('canvas');
-    small.width = 160; small.height = 100;
     const ctx = small.getContext('2d', { willReadFrequently: true });
     let prev: Uint8ClampedArray | null = null;
-    let armed = false;
-    let stableCount = 0;
-    const startedAt = Date.now();
-    const id = window.setInterval(async () => {
+    const gate = new AutoCaptureGate(Date.now(), { requireMotion: lastFailedRef.current });
+    setAutoProgress(0);
+    const id = window.setInterval(() => {
       const v = videoRef.current;
-      if (!v || !ctx || v.readyState < 2 || autoBusyRef.current) return;
-      ctx.drawImage(v, 0, 0, small.width, small.height);
-      const frame = ctx.getImageData(0, 0, small.width, small.height).data;
-      const { sharpness, motion } = analyzeFrame(frame, prev, small.width, small.height);
+      if (!v || !ctx || v.readyState < 2 || !v.videoWidth || autoBusyRef.current) return;
+      // Región central (coincide con la guía), sin deformar la proporción real
+      const sx = v.videoWidth * 0.12, sy = v.videoHeight * 0.12;
+      const sw = v.videoWidth * 0.76, sh = v.videoHeight * 0.76;
+      const w = 160, h = Math.max(40, Math.round(160 * sh / sw));
+      if (small.width !== w || small.height !== h) { small.width = w; small.height = h; prev = null; }
+      ctx.drawImage(v, sx, sy, sw, sh, 0, 0, w, h);
+      const frame = ctx.getImageData(0, 0, w, h).data;
+      const { sharpness, motion } = analyzeFrame(frame, prev, w, h);
       prev = frame;
-      if (motion > 12) { armed = true; stableCount = 0; setAutoHint('Mantén la cédula quieta…'); return; }
-      if (!armed || Date.now() - startedAt < 1200) return;
-      if (motion < 5 && sharpness > 35) stableCount++; else stableCount = 0;
-      if (stableCount >= 3) {
-        autoBusyRef.current = true;
-        armed = false; stableCount = 0;
-        setAutoHint('Leyendo documento…');
-        const img = captureFrame();
-        if (!img) { autoBusyRef.current = false; return; }
-        setCapturedImage(img);
-        stopCamera();
-        const result = await analyzeCedula(img);
-        autoBusyRef.current = false;
-        if (result && /^\d{5,12}$/.test(String(result.numeroCedula ?? '').replace(/\D/g, ''))) {
-          onScanRef.current(result);
-        } else {
-          setAutoHint('No se pudo leer. Vuelve a acercar la cédula.');
-          setCapturedImage(null);
-        }
-      }
-    }, 450);
+      const r = gate.push(sharpness, motion, Date.now());
+      setAutoProgress(r.progress);
+      if (r.fire) { void runAutoCapture(); return; }
+      setAutoHint(motion > 12 ? 'Mantén la cédula quieta…' : 'Enfocando la cédula…');
+    }, 300);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoMode, isActive, isCameraActive, capturedImage]);
