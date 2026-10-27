@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { Link } from "react-router-dom";
 import { FOOTER_LEGAL_LINKS, LEGAL_ENTITY } from "@/lib/legal";
-import PrivacyNotice from "@/components/legal/PrivacyNotice";
 import LoginPartnerStrip from "@/components/LoginPartnerStrip";
 
 const Auth = () => {
@@ -131,8 +130,6 @@ const Auth = () => {
               {submitting ? t('auth.processing') : t('auth.submit')}
             </Button>
           </form>
-
-          <PrivacyNotice purpose="autenticación y gestión del acceso de usuarios a la plataforma" />
 
           <div className="text-center text-sm text-gray-400">
             <p>{t('auth.footer')}</p>
