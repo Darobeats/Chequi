@@ -266,6 +266,7 @@ const EventConfig = () => {
         </TabsList>
 
         <TabsContent value="configuration" className="space-y-6">
+          <LoginPartnerLogosManager />
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-dorado">{t('eventConfig.existingConfigs')}</h3>
             {eventConfigs.map((config) => (
