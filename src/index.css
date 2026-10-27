@@ -136,3 +136,8 @@
 @layer utilities {
   /* Utility classes can be added here */
 }
+
+@layer utilities {
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}
