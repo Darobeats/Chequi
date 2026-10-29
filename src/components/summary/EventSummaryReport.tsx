@@ -11,6 +11,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import CedulaSummaryBlock from './CedulaSummaryBlock';
+import { useQuery as useRegQuery } from '@tanstack/react-query';
+import { supabase as regDb } from '@/integrations/supabase/client';
+
+const RegistrationCount: React.FC<{ eventId: string }> = ({ eventId }) => {
+  const { data } = useRegQuery({
+    queryKey: ['registration-count', eventId],
+    queryFn: async () => (await (regDb as any).from('event_form_submissions').select('id', { count: 'exact', head: true }).eq('event_id', eventId)).count ?? 0,
+  });
+  if (!data) return null;
+  return <Card className="p-4 bg-gray-900/50 border-gray-800"><p className="text-sm text-gray-400">Registros por formulario QR</p><p className="text-2xl font-bold text-dorado">{data}</p></Card>;
+};
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—';
@@ -144,6 +155,7 @@ const EventSummaryReport: React.FC = () => {
       </Card>
 
       <CedulaSummaryBlock eventId={selectedEvent.id} />
+      {!isScanner && <RegistrationCount eventId={selectedEvent.id} />}
 
       {/* KPIs */}
       {summary.kpis.total_tickets > 0 && <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

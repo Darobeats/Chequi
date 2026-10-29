@@ -18,6 +18,7 @@ import CedulaRegistro from "./pages/CedulaRegistro";
 import Install from "./pages/Install";
 import LegalDocumentPage from "./pages/legal/LegalDocumentPage";
 import NotFound from "./pages/NotFound";
+import PublicRegistration from "./pages/PublicRegistration";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +83,7 @@ const App = () => (
                     </ProtectedRoute>
                   } 
                 />
+                <Route path="/registro/:eventId" element={<PublicRegistration />} />
                 <Route path="/install" element={<Install />} />
                 <Route path="/legal" element={<LegalDocumentPage />} />
                 <Route path="/legal/:slug" element={<LegalDocumentPage />} />

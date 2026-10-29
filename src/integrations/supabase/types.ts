@@ -522,6 +522,97 @@ export type Database = {
         }
         Relationships: []
       }
+      event_form_submissions: {
+        Row: {
+          consent_at: string
+          consent_version: string
+          created_at: string
+          data: Json
+          dedupe_value: string | null
+          event_id: string
+          id: string
+          ip_hash: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          consent_at?: string
+          consent_version: string
+          created_at?: string
+          data?: Json
+          dedupe_value?: string | null
+          event_id: string
+          id?: string
+          ip_hash?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          consent_at?: string
+          consent_version?: string
+          created_at?: string
+          data?: Json
+          dedupe_value?: string | null
+          event_id?: string
+          id?: string
+          ip_hash?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_form_submissions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_registration_forms: {
+        Row: {
+          created_at: string
+          dedupe_keys: string[]
+          event_id: string
+          fields: Json
+          id: string
+          is_enabled: boolean
+          success_message: string | null
+          title: string
+          updated_at: string
+          welcome_message: string | null
+        }
+        Insert: {
+          created_at?: string
+          dedupe_keys?: string[]
+          event_id: string
+          fields?: Json
+          id?: string
+          is_enabled?: boolean
+          success_message?: string | null
+          title?: string
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Update: {
+          created_at?: string
+          dedupe_keys?: string[]
+          event_id?: string
+          fields?: Json
+          id?: string
+          is_enabled?: boolean
+          success_message?: string | null
+          title?: string
+          updated_at?: string
+          welcome_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_registration_forms_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kiosk_profiles: {
         Row: {
           allow_operator_override: boolean

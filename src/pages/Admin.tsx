@@ -16,6 +16,9 @@ import { CedulaDashboardMonitor } from '@/components/cedula/CedulaDashboardMonit
 import CedulaControlAnalytics from '@/components/analytics/CedulaControlAnalytics';
 import SponsorLogosBar from '@/components/SponsorLogosBar';
 import EventSummaryReport from '@/components/summary/EventSummaryReport';
+import RegistrationFormBuilder from '@/components/registration/RegistrationFormBuilder';
+import RegistrationSubmissions from '@/components/registration/RegistrationSubmissions';
+import { useAuthorizeUserManagement } from '@/hooks/useAuthorizeUserManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -24,7 +27,7 @@ import { useAttendees, useControlUsage, useControlTypes, useTicketCategories } f
 import { useCedulaStats } from '@/hooks/useCedulaRegistros';
 import { useCedulaControlStats, useCedulaControlUsage } from '@/hooks/useCedulaControlUsage';
 import { useCedulasAutorizadas } from '@/hooks/useCedulasAutorizadas';
-import { BarChart3, Users, FileText, Settings, ClipboardCheck, IdCard, Utensils } from 'lucide-react';
+import { BarChart3, Users, FileText, QrCode, Settings, ClipboardCheck, IdCard, Utensils } from 'lucide-react';
 
 const Admin = () => {
   const { user, loading } = useSupabaseAuth();
@@ -32,6 +35,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const { t } = useTranslation('common');
+  const { isAuthorized: isSuperAdmin } = useAuthorizeUserManagement();
   
   const { selectedEvent } = useEventContext();
   const { data: attendees = [] } = useAttendees();
@@ -207,7 +211,7 @@ const Admin = () => {
         )}
 
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-4' : 'grid-cols-3'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
+          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-5' : 'grid-cols-4'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
             <TabsTrigger value="analytics" className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
               <BarChart3 className="h-4 w-4 flex-shrink-0" />
               <span className="text-xs sm:text-sm">{t('admin.analytics')}</span>
@@ -219,6 +223,10 @@ const Admin = () => {
             <TabsTrigger value="summary" className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
               <FileText className="h-4 w-4 flex-shrink-0" />
               <span className="text-xs sm:text-sm">{t('admin.summary')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="registration" className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
+              <QrCode className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">Registro</span>
             </TabsTrigger>
             {canAccessConfig && (
               <TabsTrigger value="config" className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
@@ -263,6 +271,23 @@ const Admin = () => {
 
           <TabsContent value="summary" className="space-y-6">
             <EventSummaryReport />
+          </TabsContent>
+
+          <TabsContent value="registration" className="space-y-6">
+            {selectedEvent ? (
+              <>
+                {isSuperAdmin && (
+                  <div className="bg-gray-900/50 p-3 sm:p-6 rounded-lg border border-gray-800">
+                    <h2 className="text-xl font-semibold text-dorado mb-4">Formulario de registro por QR</h2>
+                    <RegistrationFormBuilder eventId={selectedEvent.id} eventName={selectedEvent.event_name} />
+                  </div>
+                )}
+                <div className="bg-gray-900/50 p-3 sm:p-6 rounded-lg border border-gray-800">
+                  <h2 className="text-xl font-semibold text-dorado mb-4">Registros del formulario</h2>
+                  <RegistrationSubmissions eventId={selectedEvent.id} />
+                </div>
+              </>
+            ) : <p className="text-hueso">Selecciona un evento.</p>}
           </TabsContent>
 
           {canAccessConfig && (
