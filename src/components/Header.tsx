@@ -1,3 +1,4 @@
+import chequiLogo from "@/assets/chequi-logo.png.asset.json";
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import AiCreditsIndicator from '@/components/AiCreditsIndicator';
@@ -159,7 +160,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
               className="text-lg md:text-2xl font-bold text-primary truncate cursor-pointer hover:text-primary/80 transition-colors"
               onClick={() => handleNavigation('/')}
             >
-              {title}
+              {title === 'CHEQUI' ? <img src={chequiLogo.url} alt="CHEQUI" className="h-6 md:h-8 w-auto" /> : title}
             </h1>
           ) : (
             <button
@@ -168,7 +169,7 @@ const Header: React.FC<HeaderProps> = ({ title = 'CHEQUI', showLandingNav = fals
               className="text-lg md:text-2xl font-bold text-primary truncate hover:text-primary/80 transition-colors"
               onClick={() => handleNavigation('/')}
             >
-              {title}
+              {title === 'CHEQUI' ? <img src={chequiLogo.url} alt="CHEQUI" className="h-6 md:h-8 w-auto" /> : title}
             </button>
           )}
           {profile && !showLandingNav && (
