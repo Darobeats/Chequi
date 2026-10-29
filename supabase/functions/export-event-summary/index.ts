@@ -277,6 +277,35 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ---------------- 7. REGISTROS FORMULARIO ----------------
+    const [{ data: regForm }, regRows] = await Promise.all([
+      admin.from("event_registration_forms").select("fields").eq("event_id", eventId).maybeSingle(),
+      fetchAll<any>(admin, "event_form_submissions", "id,data,created_at,consent_version", (q) =>
+        q.eq("event_id", eventId).order("created_at", { ascending: true })),
+    ]);
+    if (regRows.length || regForm) {
+      const regFields: any[] = Array.isArray(regForm?.fields) ? regForm!.fields : [];
+      const s7 = wb.addWorksheet("REGISTROS FORMULARIO");
+      s7.columns = [
+        { header: "Fecha (Bogotá)", key: "date", width: 12 },
+        { header: "Hora (Bogotá)", key: "time", width: 10 },
+        ...regFields.map((f) => ({ header: String(f.label), key: `f_${f.key}`, width: 24 })),
+        { header: "Versión consentimiento", key: "consent", width: 18 },
+      ];
+      stylize(s7.getRow(1));
+      s7.views = [{ state: "frozen", ySplit: 1 }];
+      for (const r of regRows) {
+        const row: Record<string, unknown> = {
+          date: dayKey(r.created_at),
+          time: fmtInTZ(r.created_at, { hour: "2-digit", minute: "2-digit", hour12: false }),
+          consent: r.consent_version,
+        };
+        for (const f of regFields) row[`f_${f.key}`] = r.data?.[f.key] ?? "";
+        s7.addRow(row);
+      }
+      s1.addRow(["Registros por formulario", regRows.length]);
+    }
+
     const buffer = await wb.xlsx.writeBuffer();
     return new Response(buffer, {
       status: 200,
