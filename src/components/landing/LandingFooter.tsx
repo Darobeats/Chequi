@@ -48,10 +48,7 @@ const LandingFooter = () => {
             {/* Brand Column */}
             <div className="sm:col-span-2 lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 rounded-lg bg-dorado flex items-center justify-center">
-                  <QrCode className="h-6 w-6 text-empresarial" />
-                </div>
-                <h3 className="text-2xl font-bold text-dorado">CHEQUI</h3>
+                <img src={chequiLogo.url} alt="CHEQUI" className="h-8 w-auto" />
               </div>
               <p className="text-sm text-gray-400 mb-6 leading-relaxed">
                 {t("footer.brandDescription")}
