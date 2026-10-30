@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
         // Do NOT enable SW in dev/Lovable preview (iframes break it)
         enabled: false,
       },
-      includeAssets: ["favicon.ico", "icon-192.png", "icon-512.png", "apple-touch-icon.png"],
+      includeAssets: ["icon-192.png", "icon-512.png", "apple-touch-icon.png"],
       manifest: false, // We ship our own manifest.webmanifest in /public
       workbox: {
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
