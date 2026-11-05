@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { decodeTextBytes, parseCsvRows } from './importText';
+import { describe, it, expect } from 'bun:test';
+import { decodeTextBytes, parseCsvRows } from './importText.ts';
 
 describe('decodeTextBytes', () => {
   it('decodes Windows-1252 CSV accents correctly', () => {
