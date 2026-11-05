@@ -14,3 +14,10 @@
 - [x] Barra de patrocinadores contenida en móvil
 - [x] Contadores en cero al borrar cédulas; "Consumos" excluye ingresos
 - [ ] Medir velocidad real del kiosko en iPhone — requiere prueba física del usuario
+
+## Envío de boletas por correo (contacto@chequi.online)
+- [x] Correo en asistentes (formulario e importación)
+- [x] Pestaña Envíos: mensaje, prueba, filtros, envío por lotes, seguimiento, reintentos
+- [x] Página pública /boleta/:token y hoja ENVÍOS en el Excel
+- [ ] Verificar chequi.online en Resend (bloqueado: registros DNS que debe agregar el usuario)
+- [ ] Prueba real con 3–5 correos internos (bloqueado: dominio sin verificar)
