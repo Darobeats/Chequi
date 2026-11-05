@@ -306,6 +306,36 @@ Deno.serve(async (req) => {
       s1.addRow(["Registros por formulario", regRows.length]);
     }
 
+    // ---------------- 8. ENVÍOS ----------------
+    const sendRows = await fetchAll<any>(admin, "email_campaign_recipients",
+      "email,status,error,sent_at,attempts, attendees(name,ticket_id), email_campaigns(subject)", (q) =>
+        q.eq("event_id", eventId).order("created_at", { ascending: true }));
+    if (sendRows.length) {
+      const label: Record<string, string> = { sent: "Enviado", failed: "Fallido", pending: "En cola" };
+      const s8 = wb.addWorksheet("ENVÍOS");
+      s8.columns = [
+        { header: "Asistente", key: "name", width: 28 },
+        { header: "Ticket", key: "ticket", width: 18 },
+        { header: "Correo", key: "email", width: 30 },
+        { header: "Campaña", key: "campaign", width: 28 },
+        { header: "Estado", key: "status", width: 12 },
+        { header: "Fecha (Bogotá)", key: "date", width: 12 },
+        { header: "Hora (Bogotá)", key: "time", width: 10 },
+        { header: "Intentos", key: "attempts", width: 9 },
+        { header: "Error", key: "error", width: 40 },
+      ];
+      stylize(s8.getRow(1));
+      s8.views = [{ state: "frozen", ySplit: 1 }];
+      for (const r of sendRows) s8.addRow({
+        name: r.attendees?.name ?? "", ticket: r.attendees?.ticket_id ?? "", email: r.email,
+        campaign: r.email_campaigns?.subject ?? "", status: label[r.status] ?? r.status,
+        date: r.sent_at ? dayKey(r.sent_at) : "",
+        time: r.sent_at ? fmtInTZ(r.sent_at, { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
+        attempts: r.attempts, error: r.error ?? "",
+      });
+      s1.addRow(["Boletas enviadas por correo", sendRows.filter((r: any) => r.status === "sent").length]);
+    }
+
     const buffer = await wb.xlsx.writeBuffer();
     return new Response(buffer, {
       status: 200,

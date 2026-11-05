@@ -20,6 +20,8 @@ import RegistrationFormBuilder from '@/components/registration/RegistrationFormB
 import RegistrationSubmissions from '@/components/registration/RegistrationSubmissions';
 import { useAuthorizeUserManagement } from '@/hooks/useAuthorizeUserManagement';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import TicketEmailCampaigns from '@/components/email/TicketEmailCampaigns';
+import { Mail } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -211,7 +213,7 @@ const Admin = () => {
         )}
 
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className={`grid w-full ${canAccessConfig ? 'grid-cols-5' : 'grid-cols-4'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
+          <TabsList className={`grid w-full ${canAccessConfig && isAdmin ? 'grid-cols-3 sm:grid-cols-6' : canAccessConfig || isAdmin ? 'grid-cols-5' : 'grid-cols-4'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
             <TabsTrigger value="analytics" className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
               <BarChart3 className="h-4 w-4 flex-shrink-0" />
               <span className="text-xs sm:text-sm">{t('admin.analytics')}</span>
@@ -228,6 +230,12 @@ const Admin = () => {
               <QrCode className="h-4 w-4 flex-shrink-0" />
               <span className="text-xs sm:text-sm">Registro</span>
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="emails" className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
+                <Mail className="h-4 w-4 flex-shrink-0" />
+                <span className="text-xs sm:text-sm">Envíos</span>
+              </TabsTrigger>
+            )}
             {canAccessConfig && (
               <TabsTrigger value="config" className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
                 <Settings className="h-4 w-4 flex-shrink-0" />
@@ -289,6 +297,12 @@ const Admin = () => {
               </>
             ) : <p className="text-hueso">Selecciona un evento.</p>}
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="emails" className="space-y-6">
+              {selectedEvent ? <TicketEmailCampaigns eventId={selectedEvent.id} eventName={selectedEvent.event_name} /> : <p className="text-hueso">Selecciona un evento.</p>}
+            </TabsContent>
+          )}
 
           {canAccessConfig && (
             <TabsContent value="config" className="space-y-6">

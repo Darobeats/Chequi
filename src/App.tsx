@@ -19,6 +19,7 @@ import Install from "./pages/Install";
 import LegalDocumentPage from "./pages/legal/LegalDocumentPage";
 import NotFound from "./pages/NotFound";
 import PublicRegistration from "./pages/PublicRegistration";
+import TicketView from "./pages/TicketView";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,6 +85,7 @@ const App = () => (
                   } 
                 />
                 <Route path="/registro/:eventId" element={<PublicRegistration />} />
+                <Route path="/boleta/:token" element={<TicketView />} />
                 <Route path="/install" element={<Install />} />
                 <Route path="/legal" element={<LegalDocumentPage />} />
                 <Route path="/legal/:slug" element={<LegalDocumentPage />} />
