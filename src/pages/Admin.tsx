@@ -213,7 +213,7 @@ const Admin = () => {
         )}
 
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className={`grid w-full ${canAccessConfig && isAdmin ? 'grid-cols-3 sm:grid-cols-6' : canAccessConfig || isAdmin ? 'grid-cols-5' : 'grid-cols-4'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
+          <TabsList className={`grid w-full ${canAccessConfig && isAdmin ? 'grid-cols-3 sm:grid-cols-6 h-auto' : canAccessConfig || isAdmin ? 'grid-cols-5' : 'grid-cols-4'} bg-gray-900/50 border border-gray-800 p-2 gap-2`}>
             <TabsTrigger value="analytics" className="flex items-center justify-center gap-2 py-2.5 rounded-md data-[state=active]:bg-dorado data-[state=active]:text-empresarial">
               <BarChart3 className="h-4 w-4 flex-shrink-0" />
               <span className="text-xs sm:text-sm">{t('admin.analytics')}</span>
