@@ -11,10 +11,12 @@ export const useCreateAttendee = () => {
   return useMutation({
     mutationFn: async (attendeeData: {
       name: string;
+      email?: string | null;
       cedula?: string | null;
       category_id: string;
       ticket_id: string;
     }) => {
+      attendeeData = { ...attendeeData, email: attendeeData.email?.trim().toLowerCase() || null };
       const eventId = selectedEvent?.id;
       if (!eventId) throw new Error('No hay evento seleccionado');
 
@@ -42,6 +44,7 @@ export const useUpdateAttendee = () => {
   return useMutation({
     mutationFn: async ({ id, ...updateData }: Partial<Attendee> & { id: string }) => {
       const { ticket_category: _tc, ...safeUpdate } = updateData as any;
+      if ('email' in safeUpdate) safeUpdate.email = safeUpdate.email?.trim().toLowerCase() || null;
       const { data, error } = await supabase
         .from('attendees')
         .update(safeUpdate)
@@ -170,6 +173,7 @@ export const useUpsertAttendees = () => {
         const updatePayload: any = {};
         if (rec.name !== undefined && rec.name.trim()) updatePayload.name = rec.name.trim();
         if (rec.cedula !== undefined) updatePayload.cedula = rec.cedula;
+        if ((rec as any).email) updatePayload.email = (rec as any).email;
         if (rec.category_id) updatePayload.category_id = rec.category_id;
         
         // Try to update existing record
@@ -201,7 +205,8 @@ export const useUpsertAttendees = () => {
           ticket_id: rec.ticket_id,
           category_id: rec.category_id,
           event_id: targetEventId,
-          cedula: rec.cedula || null
+          cedula: rec.cedula || null,
+          email: (rec as any).email || null,
         };
         
         const { data: inserted, error: insertErr } = await supabase
