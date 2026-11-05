@@ -28,6 +28,7 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     name: '',
+    email: '',
     cedula: '',
     category_id: '',
     ticket_id: '',
@@ -45,6 +46,7 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
     if (attendee) {
       setFormData({
         name: attendee.name,
+        email: (attendee as any).email || '',
         cedula: (attendee as any).cedula || '',
         category_id: attendee.category_id,
         ticket_id: attendee.ticket_id,
@@ -55,6 +57,7 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
       const activeEvent = allEvents.find(e => e.is_active);
       setFormData({
         name: '',
+        email: '',
         cedula: '',
         category_id: '',
         ticket_id: '',
@@ -131,6 +134,19 @@ const AttendeeForm: React.FC<AttendeeFormProps> = ({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="bg-gray-800 border-gray-700"
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value.trim().toLowerCase() })}
+              className="bg-gray-800 border-gray-700"
+              placeholder="Para enviar la boleta por correo"
+              maxLength={255}
             />
           </div>
 
