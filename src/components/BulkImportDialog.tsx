@@ -10,6 +10,7 @@ import { useBulkCreateAttendees, useUpsertAttendees } from '@/hooks/useAttendeeM
 import { useAllEventConfigs } from '@/hooks/useEventConfig';
 import { toast } from '@/components/ui/sonner';
 import { Upload, Download, FileText } from 'lucide-react';
+import { decodeTextBytes, parseCsvRows, parseXlsxRows } from '@/lib/importText';
 
 interface BulkImportDialogProps {
   open: boolean;
@@ -58,7 +59,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     });
   };
 
-  const parseCSV = (text: string) => {
+  const parseCSV = (allRows: string[][]) => {
     const normalize = (s: string) => s?.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
     const headerMap: Record<string, string> = {
       // nombre
@@ -79,10 +80,9 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       codigo: 'ticket_id', 'codigo_ticket': 'ticket_id'
     };
 
-    const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length < 2) return { data: [], hasCedulaColumn: false, detectedCedulaHeader: null };
+    if (allRows.length < 2) return { data: [], hasCedulaColumn: false, detectedCedulaHeader: null };
 
-    const rawHeaders = lines[0].split(',').map(h => h.trim());
+    const rawHeaders = allRows[0].map(h => (h || '').trim());
     const normalizedHeaders = rawHeaders.map(h => normalize(h));
     
     // Detect cedula column with pattern matching
@@ -108,8 +108,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       return mapped || normalized;
     });
 
-    const parsedData = lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.replace(/^\"|\"$/g, '').trim());
+    const parsedData = allRows.slice(1).map(values => {
       const row: any = {};
       headers.forEach((header, index) => {
         row[header] = values[index] || '';
@@ -126,18 +125,20 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.endsWith('.csv')) {
-      toast.error('Por favor selecciona un archivo CSV');
+    const lower = file.name.toLowerCase();
+    const isXlsx = lower.endsWith('.xlsx');
+    if (!isXlsx && !lower.endsWith('.csv')) {
+      toast.error('Selecciona un archivo Excel (.xlsx) o CSV');
       return;
     }
 
     setSelectedFile(file);
     
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
+    (async () => {
       try {
-        const { data, hasCedulaColumn: hasCC, detectedCedulaHeader: detectedHeader } = parseCSV(text);
+        const buf = await file.arrayBuffer();
+        const rows = isXlsx ? await parseXlsxRows(buf) : parseCsvRows(decodeTextBytes(buf));
+        const { data, hasCedulaColumn: hasCC, detectedCedulaHeader: detectedHeader } = parseCSV(rows);
         setCsvData(data);
         setHasCedulaColumn(hasCC);
         setDetectedCedulaHeader(detectedHeader);
@@ -153,11 +154,9 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           });
         }
       } catch (error) {
-        toast.error('Error al procesar el archivo CSV');
+        toast.error('Error al procesar el archivo');
       }
-    };
-    
-    reader.readAsText(file);
+    })();
   };
 
   const generateTicketId = () => {
@@ -353,12 +352,12 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label>Archivo CSV *</Label>
+            <Label>Archivo Excel (.xlsx) o CSV *</Label>
             <div className="flex items-center gap-4">
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv"
+                accept=".xlsx,.csv"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -407,7 +406,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           )}
 
           <div className="text-sm text-gray-400 p-3 bg-gray-800/50 rounded">
-            <strong>Formato CSV esperado:</strong>
+            <strong>Formato esperado (Excel .xlsx o CSV; tildes y eñes se conservan):</strong>
             <br />• Columnas: nombre, correo, cedula, categoria, ticket_id
             <br />• <strong>Cédula:</strong> Puede usar cualquiera de estos nombres: cedula, cédula, DNI, CC, CI, documento, identificación, no. documento, doc id, etc.
             <br />• La columna de cédula debe contener solo números
