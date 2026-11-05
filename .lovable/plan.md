@@ -12,7 +12,7 @@ Desde el panel del evento, enviar a cada asistente un correo con su boleta (la m
 6. **Excel del evento**: hoja nueva "ENVÍOS" con estado y hora (Bogotá) por asistente.
 
 ## Qué recibe el asistente
-Correo desde `boletas@notify.chequi.online` (subdominio de envío de chequi.online) con el logo del evento, sus datos, la boleta como imagen y un botón "Ver mi boleta" que abre una página pública con la boleta lista para mostrar en la entrada. Pie con aviso de privacidad y enlace a `/legal/aviso`.
+Correo desde `contacto@chequi.online` (las respuestas de los asistentes llegan a ese mismo buzón) con el logo del evento, sus datos, la boleta como imagen y un botón "Ver mi boleta" que abre una página pública con la boleta lista para mostrar en la entrada. Pie con aviso de privacidad y enlace a `/legal/aviso`.
 
 ## Pasos de puesta en marcha
 1. Configurar el dominio de envío de chequi.online (registros DNS; la verificación puede tardar hasta unas horas). Se hace primero para que esté listo antes del evento.
