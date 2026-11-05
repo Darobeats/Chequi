@@ -38,10 +38,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   const isPending = bulkCreateMutation.isPending || upsertMutation.isPending;
 
   const downloadTemplate = () => {
-    const csvContent = 'nombre,cedula,categoria,ticket_id\n' +
-                      'Juan Pérez,12345678,basico,\n' +
-                      'María García,87654321,premium,\n' +
-                      'Carlos López,11223344,vip,';
+    const csvContent = 'nombre,correo,cedula,categoria,ticket_id\n' +
+                      'Juan Pérez,juan@ejemplo.com,12345678,basico,\n' +
+                      'María García,maria@ejemplo.com,87654321,premium,\n' +
+                      'Carlos López,,11223344,vip,';
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -63,6 +63,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     const headerMap: Record<string, string> = {
       // nombre
       nombre: 'nombre', name: 'nombre',
+      correo: 'email', email: 'email', 'e-mail': 'email', mail: 'email', 'correo electronico': 'email',
       // cedula - extended patterns
       cedula: 'cedula', 'cedula_ci': 'cedula', 'cedulaid': 'cedula', 'cedula_numero': 'cedula', 
       'cedula numero': 'cedula', 'cedula #': 'cedula', 'cedula n': 'cedula', 'cédula': 'cedula',
@@ -91,6 +92,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     const headers = rawHeaders.map((h, idx) => {
       const normalized = normalizedHeaders[idx];
       const mapped = headerMap[normalized];
+      if (mapped === 'email' || normalized.includes('correo') || normalized.includes('mail')) return 'email';
       
       // Check if this header maps to cedula or matches cedula patterns
       if (mapped === 'cedula' || 
@@ -217,6 +219,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
           attendeeData.name = row.nombre.trim();
         }
         
+        if (row.email && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(row.email.trim())) {
+          attendeeData.email = row.email.trim().toLowerCase();
+        }
+
         if (row.cedula && row.cedula.trim()) {
           attendeeData.cedula = row.cedula.trim().replace(/\D/g, '');
         }
@@ -402,7 +408,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
 
           <div className="text-sm text-gray-400 p-3 bg-gray-800/50 rounded">
             <strong>Formato CSV esperado:</strong>
-            <br />• Columnas: nombre, cedula, categoria, ticket_id
+            <br />• Columnas: nombre, correo, cedula, categoria, ticket_id
             <br />• <strong>Cédula:</strong> Puede usar cualquiera de estos nombres: cedula, cédula, DNI, CC, CI, documento, identificación, no. documento, doc id, etc.
             <br />• La columna de cédula debe contener solo números
             <br />• La columna 'categoria' debe coincidir con los nombres de categorías existentes

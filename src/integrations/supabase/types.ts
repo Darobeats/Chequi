@@ -55,6 +55,7 @@ export type Database = {
           category_id: string
           cedula: string | null
           created_at: string
+          email: string | null
           event_id: string
           id: string
           name: string
@@ -67,6 +68,7 @@ export type Database = {
           category_id: string
           cedula?: string | null
           created_at?: string
+          email?: string | null
           event_id: string
           id?: string
           name: string
@@ -79,6 +81,7 @@ export type Database = {
           category_id?: string
           cedula?: string | null
           created_at?: string
+          email?: string | null
           event_id?: string
           id?: string
           name?: string
@@ -449,6 +452,136 @@ export type Database = {
             columns: ["control_type_id"]
             isOneToOne: false
             referencedRelation: "control_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_campaign_recipients: {
+        Row: {
+          attempts: number
+          attendee_id: string
+          campaign_id: string
+          created_at: string
+          email: string
+          error: string | null
+          event_id: string
+          id: string
+          message_id: string | null
+          sent_at: string | null
+          status: string
+          ticket_url: string | null
+          view_token: string
+        }
+        Insert: {
+          attempts?: number
+          attendee_id: string
+          campaign_id: string
+          created_at?: string
+          email: string
+          error?: string | null
+          event_id: string
+          id?: string
+          message_id?: string | null
+          sent_at?: string | null
+          status?: string
+          ticket_url?: string | null
+          view_token?: string
+        }
+        Update: {
+          attempts?: number
+          attendee_id?: string
+          campaign_id?: string
+          created_at?: string
+          email?: string
+          error?: string | null
+          event_id?: string
+          id?: string
+          message_id?: string | null
+          sent_at?: string | null
+          status?: string
+          ticket_url?: string | null
+          view_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaign_recipients_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "attendees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaign_recipients_attendee_id_fkey"
+            columns: ["attendee_id"]
+            isOneToOne: false
+            referencedRelation: "attendees_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaign_recipients_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_campaigns: {
+        Row: {
+          body: string | null
+          created_at: string
+          created_by: string | null
+          event_id: string
+          failed: number
+          greeting: string | null
+          id: string
+          sent: number
+          status: string
+          subject: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          event_id: string
+          failed?: number
+          greeting?: string | null
+          id?: string
+          sent?: number
+          status?: string
+          subject: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          created_by?: string | null
+          event_id?: string
+          failed?: number
+          greeting?: string | null
+          id?: string
+          sent?: number
+          status?: string
+          subject?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_configs"
             referencedColumns: ["id"]
           },
         ]
