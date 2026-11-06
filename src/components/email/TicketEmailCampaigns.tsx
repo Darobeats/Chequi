@@ -294,7 +294,7 @@ const TicketEmailCampaigns: React.FC<{ eventId: string; eventName: string }> = (
             <div><Label>Asunto</Label><Input value={subject} maxLength={150} onChange={(e) => setSubject(e.target.value)} /></div>
             <div><Label>Saludo</Label><Input value={greeting} maxLength={120} onChange={(e) => setGreeting(e.target.value)} /></div>
             <div><Label>Mensaje</Label><Textarea rows={5} value={body} maxLength={2000} onChange={(e) => setBody(e.target.value)} /></div>
-            <p className="text-xs text-muted-foreground">Puedes usar {'{nombre}'}, {'{evento}'}, {'{fecha}'} y {'{categoria}'}. Remitente: contacto@chequi.online</p>
+            <p className="text-xs text-muted-foreground">Puedes usar {'{nombre}'}, {'{evento}'}, {'{fecha}'} y {'{categoria}'}. Remitente: contacto@ticket.chequi.online</p>
           </div>
           <div className="rounded-md border border-border bg-background p-3 text-sm space-y-2">
             <p className="text-xs text-muted-foreground">Vista previa</p>
@@ -428,7 +428,7 @@ const TicketEmailCampaigns: React.FC<{ eventId: string; eventName: string }> = (
           <AlertDialogHeader>
             <AlertDialogTitle>Vas a enviar {plan.send.length} boletas</AlertDialogTitle>
             <AlertDialogDescription>
-              Cada asistente recibirá su boleta desde contacto@chequi.online. Mantén esta pantalla abierta hasta que termine (unos segundos por cada 25 correos).
+              Cada asistente recibirá su boleta desde contacto@ticket.chequi.online. Mantén esta pantalla abierta hasta que termine (unos segundos por cada 25 correos).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
