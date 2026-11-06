@@ -6,7 +6,8 @@ import { z } from "npm:zod@3";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
-const FROM_EMAIL = "contacto@chequi.online";
+const FROM_EMAIL = "contacto@ticket.chequi.online";
+const REPLY_TO = "contacto@chequi.online";
 const SITE_URL = "https://chequi.online";
 
 const json = (b: unknown, status = 200) =>
@@ -49,7 +50,7 @@ ${o.ticketUrl ? `<tr><td align="center" style="padding:10px 0"><img src="${esc(o
 </td></tr>
 <tr><td style="border-top:1px solid #eee;padding-top:14px;font-size:11px;color:#888;line-height:1.5">
 Recibes este correo porque estás registrado en ${esc(o.eventName)}. El organizador del evento es el responsable del tratamiento de tus datos y Chequi actúa como encargado.
-Consulta el <a href="${SITE_URL}/legal/aviso" style="color:#888">aviso de privacidad</a>. Dudas: ${FROM_EMAIL}.
+Consulta el <a href="${SITE_URL}/legal/aviso" style="color:#888">aviso de privacidad</a>. Dudas: ${REPLY_TO}.
 </td></tr></table></td></tr></table></body></html>`;
 }
 
@@ -128,7 +129,7 @@ Deno.serve(async (req) => {
         payload: {
           from: `${fromName} <${FROM_EMAIL}>`,
           to: [test_email ?? r.email],
-          reply_to: FROM_EMAIL,
+          reply_to: REPLY_TO,
           subject: test_email ? `[PRUEBA] ${subject}` : subject,
           html: buildHtml({
             subject, greeting: fill(campaign.greeting || "Hola {nombre},", vars),
