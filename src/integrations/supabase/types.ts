@@ -1503,6 +1503,13 @@ export type Database = {
       }
       is_authenticated: { Args: never; Returns: boolean }
       is_super_admin: { Args: { check_user_id?: string }; Returns: boolean }
+      my_profile_locked_fields: {
+        Args: never
+        Returns: {
+          attendee_id: string
+          email: string
+        }[]
+      }
       set_kiosk_pin: {
         Args: { _pin: string; _profile_id: string }
         Returns: undefined

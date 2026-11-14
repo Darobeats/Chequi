@@ -53,6 +53,17 @@ const Dashboard = () => {
     );
   }
 
+  if (role === 'viewer') {
+    return (
+      <div className="min-h-screen bg-empresarial flex items-center justify-center p-6">
+        <div className="text-center max-w-sm">
+          <p className="text-hueso mb-2 font-semibold">Tu cuenta no tiene acceso asignado</p>
+          <p className="text-gray-400 text-sm">Contacta al administrador para que te asigne un rol (Control, Scanner o Admin) y vuelve a iniciar sesión.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-empresarial flex items-center justify-center">
       <div className="text-center">

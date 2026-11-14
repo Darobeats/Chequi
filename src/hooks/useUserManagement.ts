@@ -88,16 +88,6 @@ export const useUserManagement = () => {
       }) => {
         const { role, ...profileUpdates } = updates;
 
-        // Update profile fields (excluding role)
-        if (Object.keys(profileUpdates).length > 0) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update(profileUpdates)
-            .eq('id', userId);
-
-          if (profileError) throw profileError;
-        }
-
         // Update role using edge function (bypasses RLS with service_role_key)
         if (role) {
           const { data, error } = await supabase.functions.invoke('update-user-role', {
@@ -106,6 +96,17 @@ export const useUserManagement = () => {
 
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
+        }
+
+
+        // Update profile fields (excluding role)
+        if (Object.keys(profileUpdates).length > 0) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update(profileUpdates)
+            .eq('id', userId);
+
+          if (profileError) throw profileError;
         }
 
         return updates;
