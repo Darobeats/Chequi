@@ -51,6 +51,7 @@ const TicketEmailCampaigns: React.FC<{ eventId: string; eventName: string }> = (
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
+  const [batch, setBatch] = useState('all');
   const [sendFilter, setSendFilter] = useState<'unsent' | 'sent' | 'failed' | 'all'>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [subject, setSubject] = useState('Tu boleta para {evento}');
@@ -116,20 +117,31 @@ const TicketEmailCampaigns: React.FC<{ eventId: string; eventName: string }> = (
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [attendees]);
 
+  const batches = useMemo(() => {
+    const m = new Map<string, { n: number; at: string }>();
+    attendees.forEach((a: any) => {
+      const k = a.import_batch || '__none__';
+      const cur = m.get(k);
+      m.set(k, { n: (cur?.n ?? 0) + 1, at: cur && cur.at > a.created_at ? cur.at : a.created_at });
+    });
+    return [...m.entries()].sort((a, b) => b[1].at.localeCompare(a[1].at));
+  }, [attendees]);
+
   const withEmail = attendees.filter((a) => isValidEmail(a.email)).length;
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     return attendees.filter((a) => {
       if (category !== 'all' && a.category_id !== category) return false;
+      if (batch !== 'all' && ((a as any).import_batch || '__none__') !== batch) return false;
       const st = lastStatus.get(a.id)?.status;
-      if (sendFilter === 'unsent' && st === 'sent') return false;
+      if (sendFilter === 'unsent' && st) return false;
       if (sendFilter === 'sent' && st !== 'sent') return false;
       if (sendFilter === 'failed' && st !== 'failed') return false;
       if (s && !`${a.name} ${a.email ?? ''} ${a.cedula ?? ''} ${a.ticket_id}`.toLowerCase().includes(s)) return false;
       return true;
     });
-  }, [attendees, search, category, sendFilter, lastStatus]);
+  }, [attendees, search, category, batch, sendFilter, lastStatus]);
 
   const selectedRows = attendees.filter((a) => selected.has(a.id));
   const plan = pickRecipients(selectedRows, alreadySent, sendFilter === 'sent');
@@ -390,10 +402,17 @@ const TicketEmailCampaigns: React.FC<{ eventId: string; eventName: string }> = (
               {categories.map(([id, n]) => <SelectItem key={id} value={id}>{n}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={batch} onValueChange={setBatch}>
+            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              <SelectItem value="all">Todos los lotes</SelectItem>
+              {batches.map(([k, v]) => <SelectItem key={k} value={k}>{k === '__none__' ? 'Sin lote (anteriores)' : k} ({v.n})</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Select value={sendFilter} onValueChange={(v) => setSendFilter(v as any)}>
             <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="unsent">Sin enviar</SelectItem>
+              <SelectItem value="unsent">Nunca enviados (nuevos)</SelectItem>
               <SelectItem value="failed">Fallidos</SelectItem>
               <SelectItem value="sent">Ya enviados (reenviar)</SelectItem>
               <SelectItem value="all">Todos</SelectItem>

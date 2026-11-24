@@ -58,6 +58,7 @@ export type Database = {
           email: string | null
           event_id: string
           id: string
+          import_batch: string | null
           name: string
           qr_code: string | null
           status: string
@@ -71,6 +72,7 @@ export type Database = {
           email?: string | null
           event_id: string
           id?: string
+          import_batch?: string | null
           name: string
           qr_code?: string | null
           status?: string
@@ -84,6 +86,7 @@ export type Database = {
           email?: string | null
           event_id?: string
           id?: string
+          import_batch?: string | null
           name?: string
           qr_code?: string | null
           status?: string

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useTicketCategories } from '@/hooks/useSupabaseData';
 import { useBulkCreateAttendees, useUpsertAttendees } from '@/hooks/useAttendeeManagement';
@@ -30,6 +31,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
   const [hasCedulaColumn, setHasCedulaColumn] = useState(false);
   const [detectedCedulaHeader, setDetectedCedulaHeader] = useState<string | null>(null);
   const [updateExisting, setUpdateExisting] = useState(false);
+  const [batchName, setBatchName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: categories = [] } = useTicketCategories();
@@ -133,6 +135,8 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
     }
 
     setSelectedFile(file);
+    const d = new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: 'short' });
+    setBatchName(`${file.name.replace(/\.(xlsx|csv)$/i, '')} · ${d}`);
     
     (async () => {
       try {
@@ -229,6 +233,10 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
         if (categoryId) {
           attendeeData.category_id = categoryId;
         }
+
+        if (batchName.trim()) {
+          attendeeData.import_batch = batchName.trim().slice(0, 120);
+        }
         
         return attendeeData;
       });
@@ -255,6 +263,7 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
       setDetectedCedulaHeader(null);
       setDefaultCategoryId('');
       setSelectedEventId('');
+      setBatchName('');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -377,6 +386,14 @@ const BulkImportDialog: React.FC<BulkImportDialogProps> = ({
               )}
             </div>
           </div>
+
+          {selectedFile && (
+            <div className="space-y-2">
+              <Label>Nombre del lote</Label>
+              <Input value={batchName} maxLength={120} onChange={(e) => setBatchName(e.target.value)} placeholder="Ej: Lote 2 - Confirmados" />
+              <p className="text-xs text-gray-400">Te permitirá filtrar y enviar las boletas solo de esta base en Envíos.</p>
+            </div>
+          )}
 
           {csvData.length > 0 && (
             <div className="bg-gray-800/50 p-4 rounded space-y-2">
